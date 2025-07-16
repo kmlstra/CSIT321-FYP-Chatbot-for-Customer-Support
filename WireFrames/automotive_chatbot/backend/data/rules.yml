@@ -1,75 +1,143 @@
 version: "3.1"
 
 rules:
+  - rule: Greet user
+    steps:
+      - intent: greet
+      - action: utter_greet
 
-- rule: Greet user
-  steps:
-  - intent: greet
-  - action: utter_greet
+  - rule: Say goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
 
-- rule: Say goodbye
-  steps:
-  - intent: goodbye
-  - action: utter_goodbye
+  - rule: Provide COE prices
+    steps:
+      - intent: ask_coe_prices
+      - action: action_coe_prices
 
-- rule: Provide COE prices
-  steps:
-  - intent: ask_coe_prices
-  - action: action_coe_prices
+  - rule: Provide vehicle information
+    steps:
+      - intent: ask_vehicle_info
+      - action: action_get_vehicle_info
 
-- rule: Provide vehicle information
-  steps:
-  - intent: ask_vehicle_info
-  - action: action_get_vehicle_info
+  - rule: Provide pricing information
+    steps:
+      - intent: ask_pricing
+      - action: action_vehicle_pricing
 
-- rule: Provide pricing information
-  steps:
-  - intent: ask_pricing
-  - action: action_vehicle_pricing
+  - rule: Handle test drive booking
+    steps:
+      - intent: book_test_drive
+      - action: action_book_test_drive
 
-- rule: Handle test drive booking
-  steps:
-  - intent: book_test_drive
-  - action: action_book_test_drive
+  - rule: Provide maintenance information
+    steps:
+      - intent: ask_maintenance
+      - action: action_get_maintenance_info
 
-- rule: Provide maintenance information
-  steps:
-  - intent: ask_maintenance
-  - action: action_get_maintenance_info
+  - rule: Provide registration information
+    steps:
+      - intent: ask_registration
+      - action: utter_registration
 
-- rule: Provide registration information
-  steps:
-  - intent: ask_registration
-  - action: utter_registration
+  - rule: Show features
+    steps:
+      - intent: ask_features
+      - action: utter_features
 
-- rule: Show features
-  steps:
-  - intent: ask_features
-  - action: utter_features
+  - rule: Provide contact information
+    steps:
+      - intent: ask_contact
+      - action: action_contact_us
 
-- rule: Provide contact information
-  steps:
-  - intent: ask_contact
-  - action: action_contact_us
+  - rule: Handle out of scope
+    steps:
+      - intent: out_of_scope
+      - action: utter_out_of_scope
 
-- rule: Handle out of scope
-  steps:
-  - intent: out_of_scope
-  - action: utter_out_of_scope
+  - rule: Handle affirmation
+    steps:
+      - intent: affirm
+      - action: utter_greet
 
-- rule: Handle affirmation
-  steps:
-  - intent: affirm
-  - action: utter_greet
+  - rule: Handle denial
+    steps:
+      - intent: deny
+      - action: utter_features
 
-- rule: Handle denial
-  steps:
-  - intent: deny
-  - action: utter_features
+  - rule: Fallback for unknown intents
+    condition:
+      - active_loop: null
+    steps:
+      - intent: nlu_fallback
+      - action: utter_default
+  - rule: Ask for feedback
+    steps:
+      - intent: ask_feedback
+      - action: action_feedback_request
 
-- rule: Fallback for unknown intents
-  condition:
-  - active_loop: null
-  steps:
-  - intent: nlu_fallback
-  - action: utter_default
+  - rule: Give feedback
+    steps:
+      - intent: give_feedback
+      - action: action_process_feedback
+
+  - rule: Ask car reviews
+    steps:
+      - intent: ask_car_reviews
+      - action: action_get_car_reviews
+
+  - rule: Request specific car reviews
+    steps:
+      - intent: request_specific_car_reviews
+      - action: action_show_car_reviews
+
+  - rule: Calculate loan
+    steps:
+      - intent: calculate_loan
+      - action: action_calculate_loan
+
+  - rule: Provide loan details
+    steps:
+      - intent: provide_loan_details
+      - action: action_loan_calculation_result
+
+  - rule: Provide insurance information
+    steps:
+      - intent: ask_insurance
+      - action: action_get_insurance_info
+
+  - rule: Provide road tax info
+    steps:
+      - intent: ask_road_tax
+      - action: action_get_road_tax_info
+
+  - rule: Ask EV info
+    steps:
+      - intent: ask_electric_vehicles
+      - action: action_get_ev_info
+
+  - rule: Ask parking info
+    steps:
+      - intent: ask_parking
+      - action: action_get_parking_info
+
+  - rule: Ask fuel prices
+    steps:
+      - intent: ask_fuel_prices
+      - action: action_get_fuel_prices
+
+  - rule: Ask email only
+    steps:
+      - intent: ask_email_only
+      - action: action_email_only
+
+  - rule: Ask phone only
+    steps:
+      - intent: ask_phone_only
+      - action: action_phone_only
+
+  - rule: Ask WhatsApp only
+    steps:
+      - intent: ask_whatsapp_only
+      - action: action_whatsapp_only
