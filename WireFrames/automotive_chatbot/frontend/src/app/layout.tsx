@@ -1,6 +1,6 @@
 import '../styles/globals.css'
 import { StagewiseToolbar } from '@stagewise/toolbar-next'
-import { ReactPlugin } from '@stagewise-plugins/react'
+import ReactPlugin from '@stagewise-plugins/react';
 
 export const metadata = {
   title: 'Automotive Chatbot Platform',
