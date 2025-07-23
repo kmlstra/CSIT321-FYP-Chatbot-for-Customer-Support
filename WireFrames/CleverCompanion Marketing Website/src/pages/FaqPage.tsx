@@ -118,6 +118,7 @@ const FaqPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState(0);
   const [openFaqs, setOpenFaqs] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const { data: apiData, loading, error } = useApi<FaqCategory[]>('/api/faqs');
 
   const toggleFaq = (index: number) => {
     if (openFaqs.includes(index)) {
@@ -128,7 +129,7 @@ const FaqPage: React.FC = () => {
   };
 
   const filteredFaqs = searchQuery
-    ? faqCategories.flatMap((category) =>
+    ? (apiData || faqCategories).flatMap((category) =>
         category.faqs
           .filter(
             (faq) =>
@@ -138,6 +139,9 @@ const FaqPage: React.FC = () => {
           .map((faq) => ({ ...faq, category: category.name }))
       )
     : [];
+
+  // Use API data if available, otherwise fall back to hardcoded data
+  const displayCategories = apiData || faqCategories;
 
   return (
     <div className="pt-20">
@@ -231,9 +235,18 @@ const FaqPage: React.FC = () => {
           {/* FAQ Categories */}
           {!searchQuery && (
             <>
+              {loading ? (
+                <div className="mb-8">
+                  <div className="animate-pulse flex space-x-2">
+                    {[...Array(4)].map((_, index) => (
+                      <div key={index} className="h-10 bg-gray-200 rounded-full w-32"></div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
               <div className="mb-8 overflow-x-auto">
                 <div className="flex space-x-2 min-w-max">
-                  {faqCategories.map((category, index) => (
+                  {displayCategories.map((category, index) => (
                     <button
                       key={index}
                       className={`px-5 py-2 rounded-full font-medium whitespace-nowrap transition-colors ${
@@ -248,9 +261,21 @@ const FaqPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+              )}
 
-              <div className="space-y-4">
-                {faqCategories[activeCategory].faqs.map((faq, index) => (
+              {loading ? (
+                <div className="space-y-4">
+                  {[...Array(4)].map((_, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="animate-pulse p-5 bg-gray-50">
+                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {displayCategories[activeCategory]?.faqs.map((faq, index) => (
                   <div
                     key={index}
                     className="border border-gray-200 rounded-lg overflow-hidden"
@@ -280,7 +305,8 @@ const FaqPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -48,12 +48,14 @@ export const Header: React.FC = () => {
         {/* Desktop Navigation */}
         <nav className="hidden md:block">
           <ul className="flex space-x-8">
-            {['Features', 'Pricing', 'FAQ', 'Contact Us'].map((item) => (
+            {['Features', 'Pricing', 'FAQ', 'Testimonials', 'Contact Us'].map((item) => (
               <li key={item}>
                 <Link
                   to={
                     item === 'Contact Us'
                       ? '/contact'
+                      : item === 'Testimonials'
+                      ? '/testimonials'
                       : `/${item.toLowerCase()}`
                   }
                   className={`text-base font-medium transition-colors duration-200 hover:text-[#0A74DA] ${
@@ -82,12 +84,14 @@ export const Header: React.FC = () => {
           <div className="fixed inset-0 top-[60px] bg-white z-40 md:hidden">
             <nav className="container mx-auto px-5 py-5">
               <ul className="flex flex-col space-y-4">
-                {['Features', 'Pricing', 'FAQ', 'Contact Us'].map((item) => (
+                {['Features', 'Pricing', 'FAQ', 'Testimonials', 'Contact Us'].map((item) => (
                   <li key={item}>
                     <Link
                       to={
                         item === 'Contact Us'
                           ? '/contact'
+                          : item === 'Testimonials'
+                          ? '/testimonials'
                           : `/${item.toLowerCase()}`
                       }
                       className="text-xl font-medium text-gray-800 hover:text-[#0A74DA] block py-2"

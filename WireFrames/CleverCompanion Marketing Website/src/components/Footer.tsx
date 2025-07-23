@@ -34,10 +34,10 @@ export const Footer: React.FC = () => {
           <div className="col-span-1">
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              {['Home', 'Features', 'Pricing', 'FAQ'].map((item) => (
+              {['Home', 'Features', 'Pricing', 'FAQ', 'Testimonials'].map((item) => (
                 <li key={item}>
                   <Link
-                    to={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
+                    to={item === 'Home' ? '/' : item === 'Testimonials' ? '/testimonials' : `/${item.toLowerCase()}`}
                     className="text-gray-400 hover:text-[#0A74DA] transition-colors"
                   >
                     {item}

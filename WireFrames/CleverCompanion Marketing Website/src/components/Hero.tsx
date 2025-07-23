@@ -28,15 +28,6 @@ export const Hero: React.FC = () => {
               the automotive industry.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button className="flex items-center justify-center gap-2 bg-[#0A74DA] text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors duration-300 shadow-lg hover:shadow-xl">
-                Try Demo
-                <ArrowRight size={18} />
-              </button>
-              <button className="flex items-center justify-center gap-2 bg-white text-gray-800 px-8 py-3 rounded-lg font-medium border border-gray-300 hover:bg-gray-100 transition-colors duration-300">
-                Watch Video
-              </button>
-            </div>
           </div>
 
           <div className="relative w-full lg:w-[45%] aspect-[4/3] bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
