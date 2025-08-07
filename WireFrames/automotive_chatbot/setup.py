@@ -28,22 +28,22 @@ def print_colored(message, color='white'):
     print(f"{color_code}{message}{reset_code}")
 
 def animate_progress(stop_event, package_name):
-    """Show animated progress while installation is running"""
+    """Show animated progress while installation is running - Windows safe"""
     animation = "|/-\\"
     idx = 0
     while not stop_event.is_set():
-        print(f"\r🔄 Installing {package_name}... {animation[idx % len(animation)]}", end='', flush=True)
+        print(f"\r[INSTALLING] {package_name}... {animation[idx % len(animation)]}", end='', flush=True)
         idx += 1
         time.sleep(0.3)
 
 def run_command_with_progress(command, description, timeout=300, show_output=False):
     """Run a command with animated progress and return success status"""
     try:
-        print_colored(f"🔧 {description}...", 'cyan')
+        print_colored(f"[SETUP] {description}...", 'cyan')
         
         if show_output:
             # For RASA and other large packages, show live output
-            print_colored("📺 Live installation output (this may take several minutes):", 'blue')
+            print_colored("[OUTPUT] Live installation output (this may take several minutes):", 'blue')
             print_colored("=" * 60, 'blue')
             
             process = subprocess.Popen(
@@ -67,7 +67,7 @@ def run_command_with_progress(command, description, timeout=300, show_output=Fal
                 # Check timeout
                 if time.time() - start_time > timeout:
                     process.terminate()
-                    print_colored(f"⏰ {description} - TIMEOUT after {timeout} seconds", 'yellow')
+                    print_colored(f"[TIMEOUT] {description} - TIMEOUT after {timeout} seconds", 'yellow')
                     return False
             
             return_code = process.poll()
@@ -95,18 +95,18 @@ def run_command_with_progress(command, description, timeout=300, show_output=Fal
                 print()  # New line after progress animation
         
         if return_code == 0:
-            print_colored(f"✅ {description} - SUCCESS", 'green')
+            print_colored(f"[OK] {description} - SUCCESS", 'green')
             return True
         else:
-            print_colored(f"❌ {description} - FAILED (Exit code: {return_code})", 'red')
+            print_colored(f"[ERROR] {description} - FAILED (Exit code: {return_code})", 'red')
             return False
             
     except subprocess.TimeoutExpired:
-        print_colored(f"⏰ {description} - TIMEOUT after {timeout} seconds", 'yellow')
-        print_colored(f"💡 Tip: RASA installation can take 5-10 minutes on slower systems", 'cyan')
+        print_colored(f"[TIMEOUT] {description} - TIMEOUT after {timeout} seconds", 'yellow')
+        print_colored(f"[TIP] RASA installation can take 5-10 minutes on slower systems", 'cyan')
         return False
     except Exception as e:
-        print_colored(f"❌ {description} - ERROR: {str(e)}", 'red')
+        print_colored(f"[ERROR] {description} - ERROR: {str(e)}", 'red')
         return False
 
 def run_command(command, description, timeout=120):
@@ -156,67 +156,63 @@ def estimate_time(package):
         return "⏱️ 30-60 seconds", 120  # 2 minutes timeout
 
 def main():
-    print_colored("============================================================", 'cyan')
-    print_colored("🤖 RASA 3.6.4 Automotive Chatbot Setup - ENHANCED VERSION", 'cyan')
-    print_colored("============================================================", 'cyan')
+    print_colored("=" * 60, 'cyan')
+    print_colored("[SETUP] RASA 3.6.4 Automotive Chatbot Setup - ENHANCED VERSION", 'cyan')
+    print_colored("=" * 60, 'cyan')
     
     # Check Python version
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    print_colored(f"🐍 Python {python_version}", 'blue')
-    print_colored("============================================================", 'cyan')
-    print_colored(f"🐍 Python {python_version}", 'blue')
-    print_colored("============================================================", 'cyan')
-    print_colored(f"🐍 Python {python_version}", 'blue')
+    print_colored(f"[PYTHON] Python {python_version}", 'blue')
     
     if sys.version_info < (3, 9):
-        print_colored("❌ Python 3.9+ required for this setup", 'red')
+        print_colored("[ERROR] Python 3.9+ required for this setup", 'red')
         return
     
-    print_colored("✅ Perfect! Python 3.9+ - compatible versions", 'green')
+    print_colored("[OK] Perfect! Python 3.9+ - compatible versions", 'green')
     
     # Check virtual environment
     if not os.path.exists('.venv'):
-        print_colored("❌ Virtual environment not found! Please create .venv first", 'red')
+        print_colored("[ERROR] Virtual environment not found! Please create .venv first", 'red')
         return
     
-    print_colored("📦 Virtual environment exists", 'blue')
+    print_colored("[INFO] Virtual environment exists", 'blue')
     
     # Upgrade pip
     if not run_command(".venv\\Scripts\\python.exe -m pip install --upgrade pip", "Upgrading pip"):
-        print_colored("⚠️ Pip upgrade failed, continuing anyway...", 'yellow')
+        print_colored("[WARN] Pip upgrade failed, continuing anyway...", 'yellow')
     
     # Install RASA core first with proper timeout and progress
-    print_colored("📦 Step 1: Installing RASA core...", 'blue')
-    print_colored("⚠️ IMPORTANT: RASA installation typically takes 5-10 minutes!", 'yellow')
-    print_colored("📥 Downloading and compiling 80+ dependencies including TensorFlow...", 'cyan')
+    print_colored("[STEP 1] Installing RASA core...", 'blue')
+    print_colored("[IMPORTANT] RASA installation typically takes 5-10 minutes!", 'yellow')
+    print_colored("[INFO] Downloading and compiling 80+ dependencies including TensorFlow...", 'cyan')
     
     time_estimate, timeout_val = estimate_time("rasa==3.6.4")
-    print_colored(f"🕐 Estimated time: {time_estimate}", 'blue')
+    print_colored(f"[TIME] Estimated time: {time_estimate}", 'blue')
     
     rasa_success = install_package_individually("rasa==3.6.4", timeout_val, True)
     
     if rasa_success:
-        print_colored("🎉 RASA core installed successfully!", 'green')
+        print_colored("[SUCCESS] RASA core installed successfully!", 'green')
         time_estimate, timeout_val = estimate_time("rasa-sdk==3.6.1")
-        print_colored(f"🕐 Installing RASA SDK - Estimated time: {time_estimate}", 'blue')
+        print_colored(f"[TIME] Installing RASA SDK - Estimated time: {time_estimate}", 'blue')
         rasa_sdk_success = install_package_individually("rasa-sdk==3.6.1", timeout_val, False)
     else:
-        print_colored("💔 RASA core installation failed", 'red')
-        print_colored("🔍 Common causes:", 'yellow')
-        print_colored("   • Slow internet connection", 'yellow')
-        print_colored("   • Insufficient disk space", 'yellow')
-        print_colored("   • Missing Visual Studio Build Tools (Windows)", 'yellow')
-        print_colored("   • Conflicting dependencies", 'yellow')
+        print_colored("[ERROR] RASA core installation failed", 'red')
+        print_colored("[INFO] Common causes:", 'yellow')
+        print_colored("   - Slow internet connection", 'yellow')
+        print_colored("   - Insufficient disk space", 'yellow')
+        print_colored("   - Missing Visual Studio Build Tools (Windows)", 'yellow')
+        print_colored("   - Conflicting dependencies", 'yellow')
         rasa_sdk_success = False
     
     # Read requirements and install one by one
-    print_colored("📦 Step 2: Installing dependencies ONE BY ONE...", 'blue')
+    print_colored("[STEP 2] Installing dependencies ONE BY ONE...", 'blue')
     packages = read_requirements()
     
     # Remove RASA packages since we already installed them
     packages = [p for p in packages if not p.startswith('rasa==') and not p.startswith('rasa-sdk==')]
     
-    print_colored(f"🔍 Found {len(packages)} additional packages to install", 'blue')
+    print_colored(f"[INFO] Found {len(packages)} additional packages to install", 'blue')
     
     success_list = []
     failed_list = []
@@ -234,8 +230,8 @@ def main():
     # Install each package individually with time estimates
     for i, package in enumerate(packages, 1):
         time_estimate, timeout_val = estimate_time(package)
-        print_colored(f"📦 [{i}/{len(packages)}] Processing: {package}", 'blue')
-        print_colored(f"🕐 {time_estimate}", 'cyan')
+        print_colored(f"[PACKAGE] [{i}/{len(packages)}] Processing: {package}", 'blue')
+        print_colored(f"[TIME] {time_estimate}", 'cyan')
         
         # Show live output for heavy packages
         show_live = any(heavy in package.lower() for heavy in ['tensorflow', 'torch', 'transformers', 'scipy'])
@@ -248,29 +244,29 @@ def main():
         print()  # Add spacing
     
     # Summary Report
-    print_colored("============================================================", 'cyan')
-    print_colored("📊 INSTALLATION SUMMARY REPORT", 'cyan')
-    print_colored("============================================================", 'cyan')
+    print_colored("=" * 60, 'cyan')
+    print_colored("[SUMMARY] INSTALLATION SUMMARY REPORT", 'cyan')
+    print_colored("=" * 60, 'cyan')
     
-    print_colored(f"✅ SUCCESSFUL INSTALLATIONS ({len(success_list)}):", 'green')
+    print_colored(f"[OK] SUCCESSFUL INSTALLATIONS ({len(success_list)}):", 'green')
     for package in success_list:
-        print_colored(f"   ✓ {package}", 'green')
+        print_colored(f"   + {package}", 'green')
     
     print()
-    print_colored(f"❌ FAILED INSTALLATIONS ({len(failed_list)}):", 'red')
+    print_colored(f"[ERROR] FAILED INSTALLATIONS ({len(failed_list)}):", 'red')
     for package in failed_list:
-        print_colored(f"   ✗ {package}", 'red')
+        print_colored(f"   - {package}", 'red')
     
     # CRITICAL FIX: Force packaging version for RASA compatibility
     print()
-    print_colored("🔧 CRITICAL FIX: Enforcing RASA-compatible packaging version...", 'yellow')
+    print_colored("[FIX] CRITICAL FIX: Enforcing RASA-compatible packaging version...", 'yellow')
     if run_command(".venv\\Scripts\\python.exe -m pip install packaging==20.9 --force-reinstall --no-deps", "Fixing packaging version for RASA"):
-        print_colored("✅ Packaging version fixed for RASA compatibility", 'green')
+        print_colored("[OK] Packaging version fixed for RASA compatibility", 'green')
     else:
-        print_colored("⚠️ Warning: Could not fix packaging version", 'yellow')
+        print_colored("[WARN] Warning: Could not fix packaging version", 'yellow')
     
     print()
-    print_colored("🧪 Testing core installations...", 'blue')
+    print_colored("[TEST] Testing core installations...", 'blue')
     
     # Test installations
     test_results = {}
@@ -286,62 +282,62 @@ def main():
     
     for name, test_code in test_packages.items():
         if run_command(f".venv\\Scripts\\python.exe -c \"{test_code}\"", f"Testing {name}"):
-            test_results[name] = "✅ Working"
+            test_results[name] = "[OK] Working"
         else:
-            test_results[name] = "❌ Failed"
+            test_results[name] = "[ERROR] Failed"
     
     print()
-    print_colored("🔍 COMPONENT TEST RESULTS:", 'blue')
+    print_colored("[RESULTS] COMPONENT TEST RESULTS:", 'blue')
     for name, result in test_results.items():
-        color = 'green' if '✅' in result else 'red'
+        color = 'green' if '[OK]' in result else 'red'
         print_colored(f"   {result} {name}", color)
     
     # Install frontend dependencies
     print()
-    print_colored("🌐 Installing frontend dependencies...", 'blue')
+    print_colored("[FRONTEND] Installing frontend dependencies...", 'blue')
     if run_command("npm --version", "Checking npm"):
-        print_colored("✅ npm available", 'green')
+        print_colored("[OK] npm available", 'green')
         
         # Install root dependencies
         if run_command("npm install", "Installing root package dependencies"):
-            print_colored("✅ Root dependencies installed", 'green')
+            print_colored("[OK] Root dependencies installed", 'green')
         else:
-            print_colored("⚠️ Root dependencies failed", 'yellow')
+            print_colored("[WARN] Root dependencies failed", 'yellow')
         
         # Install frontend dependencies
         if run_command("cd frontend && npm install", "Installing frontend dependencies"):
-            print_colored("✅ Frontend dependencies installed", 'green')
+            print_colored("[OK] Frontend dependencies installed", 'green')
         else:
-            print_colored("⚠️ Frontend dependencies failed", 'yellow')
+            print_colored("[WARN] Frontend dependencies failed", 'yellow')
     else:
-        print_colored("⚠️ npm not found - frontend setup needed", 'yellow')
+        print_colored("[WARN] npm not found - frontend setup needed", 'yellow')
     
     print()
-    print_colored("============================================================", 'cyan')
+    print_colored("=" * 60, 'cyan')
     if len(failed_list) == 0:
-        print_colored("🎉 ALL PACKAGES INSTALLED SUCCESSFULLY!", 'green')
-        print_colored("🚀 Your RASA automotive chatbot is ready to go!", 'green')
+        print_colored("[SUCCESS] ALL PACKAGES INSTALLED SUCCESSFULLY!", 'green')
+        print_colored("[READY] Your RASA automotive chatbot is ready to go!", 'green')
     elif len(success_list) > len(failed_list):
-        print_colored("🎯 MOSTLY SUCCESSFUL - Core functionality available!", 'yellow')
+        print_colored("[PARTIAL] MOSTLY SUCCESSFUL - Core functionality available!", 'yellow')
         if "rasa==3.6.4" in success_list:
-            print_colored("✅ RASA core is working - You can proceed with development!", 'green')
+            print_colored("[OK] RASA core is working - You can proceed with development!", 'green')
     else:
-        print_colored("⚠️ MANY FAILURES - Check dependency conflicts", 'red')
+        print_colored("[WARN] MANY FAILURES - Check dependency conflicts", 'red')
         if "rasa==3.6.4" not in success_list:
-            print_colored("❌ RASA installation failed - This is critical for the project", 'red')
-    print_colored("============================================================", 'cyan')
+            print_colored("[ERROR] RASA installation failed - This is critical for the project", 'red')
+    print_colored("=" * 60, 'cyan')
     
     # Additional tips based on results
     if "rasa==3.6.4" not in success_list:
         print()
-        print_colored("🆘 RASA INSTALLATION TROUBLESHOOTING TIPS:", 'yellow')
+        print_colored("[HELP] RASA INSTALLATION TROUBLESHOOTING TIPS:", 'yellow')
         print_colored("1. Check internet connection speed", 'cyan')
         print_colored("2. Free up disk space (RASA needs ~2GB)", 'cyan')
         print_colored("3. On Windows: Install Visual Studio Build Tools", 'cyan')
         print_colored("4. Try running: pip install --upgrade setuptools wheel", 'cyan')
         print_colored("5. Consider using conda instead: conda install rasa", 'cyan')
     
-    print_colored("🚀 Setup complete! Check the summary above for details.", 'cyan')
+    print_colored("[COMPLETE] Setup complete! Check the summary above for details.", 'cyan')
 
 if __name__ == "__main__":
     main() 

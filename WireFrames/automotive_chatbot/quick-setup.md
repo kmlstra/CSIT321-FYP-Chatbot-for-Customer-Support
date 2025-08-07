@@ -5,10 +5,24 @@
 - **Node.js 18+** and **npm**
 - **Git** installed
 - **Windows 10/11** (this guide is Windows-specific)
+- **MongoDB Atlas Account** (for SaaS database)
 
 ---
 
 ## 🛠️ Step-by-Step Installation
+
+### Step 0: MongoDB Atlas Setup (NEW - REQUIRED)
+```bash
+# First, set up your MongoDB Atlas database
+cd backend
+python setup_mongodb_collections.py
+```
+
+**This creates:**
+- ✅ All SaaS collections (clients, client_users, conversations, etc.)
+- ✅ Sample client data for testing
+- ✅ Super admin user (admin@clevercompanion.com / SuperAdmin123!)
+- ✅ Proper security indexes and validation
 
 ### Step 1: Enable Long Path Support (Git Bash)
 ```bash
@@ -41,38 +55,104 @@ python setup.py
 
 ### Step 4: Environment Configuration
 ```powershell
-# Copy environment template
-copy env_template.txt .env
-
-# Edit .env file with your settings (optional for basic setup)
-notepad .env
+# The .env file is already configured with MongoDB Atlas credentials
+# No changes needed for basic setup
 ```
 
-### Step 5: Start All Services
+### Step 5: Train RASA Model (UPDATED)
 ```powershell
-# Option 1: Start everything at once
+# Train the RASA model with SaaS multi-tenant actions
+npm run rasa:train
+```
+
+### Step 6: Start All Services (UPDATED)
+```powershell
+# Option 1: Start everything at once (includes SaaS backend)
 npm run dev:all
 
 # Option 2: Clean start (kills existing processes first)
 npm run clean-start
-
-# Option 3: Core only (Backend + Frontend)
-npm run dev:core
-```
-
-### Step 6: Initial RASA Training
-```powershell
-# Train the RASA model with your data
-npm run rasa:train
-
-# Train and generate evaluation report
-npm run rasa:train-evaluate
-
-# Generate comprehensive training report
-npm run rasa:full-report
 ```
 
 ---
+
+## 🌐 **NEW: SaaS Access Points**
+
+Once running, access these NEW SaaS URLs:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Client Signup** | http://localhost:3000/client-signup | New automotive businesses register |
+| **Client Login** | http://localhost:3000/client-login | Client admin login |
+| **Client Dashboard** | http://localhost:3000/client-dashboard | Configure chatbot settings |
+| **Super Admin** | http://localhost:3000/super-admin | Manage all clients |
+| **Super Admin Login** | http://localhost:3000/super-admin-login | Platform management |
+| **Widget API** | http://localhost:8000/api/widget | Multi-tenant chat API |
+
+### **Original Access Points (Still Available):**
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Frontend** | http://localhost:3000 | Main web interface |
+| **Backend API** | http://localhost:8000 | REST API endpoints |
+| **API Docs** | http://localhost:8000/docs | Interactive API documentation |
+| **RASA API** | http://localhost:5005 | RASA NLU/Core API |
+| **RASA Actions** | http://localhost:5055 | Custom actions server |
+| **Admin Dashboard** | http://localhost:3000/page | System monitoring |
+
+---
+
+## 🧪 **Testing the SaaS Platform**
+
+### **1. Test Client Registration Flow:**
+```bash
+# 1. Visit client signup
+# http://localhost:3000/client-signup
+
+# 2. Register a new automotive business
+# Business: "ABC Motors Singapore"
+# Domain: "abcmotors.com.sg"
+# Email: "admin@abcmotors.com.sg"
+
+# 3. Account will be "pending" status
+```
+
+### **2. Test Super Admin Approval:**
+```bash
+# 1. Visit super admin login
+# http://localhost:3000/super-admin-login
+
+# 2. Login with:
+# Email: admin@clevercompanion.com
+# Password: SuperAdmin123!
+
+# 3. Approve the pending client account
+```
+
+### **3. Test Client Dashboard:**
+```bash
+# 1. Visit client login
+# http://localhost:3000/client-login
+
+# 2. Login with approved client credentials
+
+# 3. Configure chatbot:
+#    - Branding (logo, colors)
+#    - Features (enable/disable)
+#    - Contact information
+#    - Vehicle inventory
+
+# 4. Get embed code for website
+```
+
+### **4. Test Sample Client (Pre-created):**
+```bash
+# Login with sample client:
+# Email: admin@abcmotors.com.sg
+# Password: password123
+
+# This client is already approved and configured
+```
 
 ## 📊 RASA Training Reports & Evaluation
 
@@ -191,21 +271,6 @@ start backend\results\intent_confusion_matrix.png
 
 ---
 
-## 🌐 Access Points
-
-Once running, access these URLs:
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Main web interface |
-| **Backend API** | http://localhost:8000 | REST API endpoints |
-| **API Docs** | http://localhost:8000/docs | Interactive API documentation |
-| **RASA API** | http://localhost:5005 | RASA NLU/Core API |
-| **RASA Actions** | http://localhost:5055 | Custom actions server |
-| **Admin Dashboard** | http://localhost:3000/page | Admin interface |
-
----
-
 ## 🐛 Troubleshooting
 
 ### Port Conflicts
@@ -233,10 +298,21 @@ npm install --force
 npm run build
 ```
 
-### Database Connection
+### Database Connection (UPDATED)
 ```powershell
-# Test MongoDB connection
-npm run db:check
+# Test MongoDB Atlas connection
+cd backend
+python -c "
+from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
+
+async def test():
+    client = AsyncIOMotorClient('mongodb+srv://darknesscrawler:P%40ssw0rd%211@aichatbot.ygakb6r.mongodb.net/?retryWrites=true&w=majority&appName=AiChatBot')
+    await client.admin.command('ping')
+    print('✅ MongoDB Atlas connected successfully')
+
+asyncio.run(test())
+"
 ```
 
 ---
@@ -260,6 +336,28 @@ npm run kill-ports          # Clean up processes
 npm run clean-start         # Fresh start
 ```
 
+## 🎯 **SaaS Platform Workflow**
+
+```powershell
+# Complete SaaS setup workflow:
+
+# 1. Setup database
+cd backend
+python setup_mongodb_collections.py
+
+# 2. Train RASA model
+npm run rasa:train
+
+# 3. Start all services
+npm run dev:all
+
+# 4. Test the platform:
+# - Register client: http://localhost:3000/client-signup
+# - Approve client: http://localhost:3000/super-admin-login
+# - Configure chatbot: http://localhost:3000/client-login
+# - Test widget: Get embed code from dashboard
+```
+
 ---
 
 ## 🏗️ BCE Architecture Overview
@@ -275,6 +373,12 @@ npm run clean-start         # Fresh start
 - **Services:** HTTP API calls to backend
 - **Hooks:** Custom React hooks for state management
 
+**SaaS Extensions:**
+- **Client Management:** Multi-tenant client handling
+- **Authentication:** JWT-based auth for clients and super admin
+- **Widget API:** Dynamic widget generation per client
+- **Security:** Role-based access control and data isolation
+
 ---
 
 ## ✅ Success Indicators
@@ -286,12 +390,22 @@ npm run clean-start         # Fresh start
 - ✅ RASA API responds at localhost:5005/status
 - ✅ RASA actions server running on localhost:5055
 - ✅ Training reports generate successfully
+- ✅ MongoDB Atlas connection successful
+- ✅ SaaS pages load (client-signup, super-admin, etc.)
+- ✅ Client registration and approval flow works
 
 **Training Reports Ready When:**
 - ✅ `backend/results/` directory contains evaluation files
 - ✅ Intent accuracy > 85%
 - ✅ Entity F1-score > 80%
 - ✅ Cross-validation shows consistent performance
+
+**SaaS Platform Ready When:**
+- ✅ Can register new automotive business clients
+- ✅ Super admin can approve/manage clients
+- ✅ Clients can configure their chatbot branding
+- ✅ Multi-tenant widget works with client-specific data
+- ✅ Database properly isolates client data
 
 ---
 
@@ -302,6 +416,9 @@ npm run clean-start         # Fresh start
 3. **Python 3.9.13:** Required for RASA compatibility
 4. **Clean File Management:** Temporary/debug files are auto-removed
 5. **BCE Backend Only:** Frontend uses standard React patterns
+6. **MongoDB Atlas:** All client data stored in cloud database
+7. **SaaS Ready:** Multi-tenant architecture for multiple automotive businesses
+8. **Security:** Role-based access control and data isolation built-in
 
 ---
 
@@ -312,5 +429,7 @@ npm run clean-start         # Fresh start
 3. **Test individual services** using the npm run commands
 4. **Review training reports** for model performance insights
 5. **Use clean-start** if processes are stuck
+6. **Test SaaS flow** using the client registration and approval process
+7. **Check MongoDB Atlas** connection if database issues occur
 
 **Working Configuration Verified:** ✅ RASA 3.6.4 + FastAPI + Next.js + MongoDB 

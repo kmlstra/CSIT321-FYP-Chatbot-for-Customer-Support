@@ -1,28 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove invalid experimental options
   experimental: {
-    // serverComponents is not a valid Next.js option
+    appDir: true,
   },
-  // Remove invalid server configuration - use CLI options instead
-  // Only bind to localhost for development
-  async rewrites() {
-    return [];
-  },
-  // Additional security headers
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-        ],
-      },
-    ];
-  },
+  // Remove the problematic redirects that were causing infinite loops
 };
 
-module.exports = nextConfig; 
+module.exports = nextConfig;

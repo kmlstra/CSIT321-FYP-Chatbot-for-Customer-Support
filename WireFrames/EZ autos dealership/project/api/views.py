@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from .models import Profile, ChatbotSettings, KnowledgeBase, VehicleInquiry, NewsletterSubscription
-from .serializers import UserSerializer, ProfileSerializer, ChatbotSettingsSerializer, KnowledgeBaseSerializer
+from .models import Profile, VehicleInquiry, NewsletterSubscription
+from .serializers import UserSerializer, ProfileSerializer
 from .mongodb_models import (
     create_vehicle, get_vehicles, get_vehicle_by_id, update_vehicle, delete_vehicle,
     create_test_drive, get_test_drives, update_test_drive_status,
@@ -219,20 +219,79 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdminUser]
+    
+    def create(self, request, *args, **kwargs):
+        try:
+            email = request.data.get('email')
+            password = request.data.get('password')
+            first_name = request.data.get('first_name', '')
+            last_name = request.data.get('last_name', '')
+            role = request.data.get('role', 'user')
+            phone = request.data.get('phone', '')
+            address = request.data.get('address', '')
+            is_active = request.data.get('is_active', True)
+            
+            if User.objects.filter(username=email).exists():
+                return Response({
+                    'error': 'User with this email already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+                is_active=is_active
+            )
+            
+            Profile.objects.create(
+                user=user,
+                role=role,
+                phone=phone,
+                address=address
+            )
+            
+            serializer = self.get_serializer(user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def update(self, request, *args, **kwargs):
+        try:
+            user = self.get_object()
+            profile = Profile.objects.get(user=user)
+            
+            # Update User fields
+            user.first_name = request.data.get('first_name', user.first_name)
+            user.last_name = request.data.get('last_name', user.last_name)
+            user.is_active = request.data.get('is_active', user.is_active)
+            user.save()
+            
+            # Update Profile fields
+            profile.role = request.data.get('role', profile.role)
+            profile.phone = request.data.get('phone', profile.phone)
+            profile.address = request.data.get('address', profile.address)
+            profile.save()
+            
+            serializer = self.get_serializer(user)
+            return Response(serializer.data)
+            
+        except Profile.DoesNotExist:
+            return Response({
+                'error': 'User profile not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
-    permission_classes = [IsAdminUser]
-
-class ChatbotSettingsViewSet(viewsets.ModelViewSet):
-    queryset = ChatbotSettings.objects.all()
-    serializer_class = ChatbotSettingsSerializer
-    permission_classes = [IsAdminUser]
-
-class KnowledgeBaseViewSet(viewsets.ModelViewSet):
-    queryset = KnowledgeBase.objects.all()
-    serializer_class = KnowledgeBaseSerializer
     permission_classes = [IsAdminUser]
 
 # Analytics endpoint

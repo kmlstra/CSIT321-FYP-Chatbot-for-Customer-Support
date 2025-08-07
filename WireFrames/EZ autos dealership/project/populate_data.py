@@ -89,43 +89,6 @@ def populate_django_data():
             print(f"Created KB article: {article_data['title']}")
     
     # Create chatbot settings
-    chatbot_settings = [
-        {
-            'setting_key': 'welcome_message',
-            'setting_value': {'message': 'Hello! Welcome to EZ Autos. How can I help you find your perfect vehicle today?'},
-            'description': 'Initial greeting message for new chat sessions',
-            'is_active': True
-        },
-        {
-            'setting_key': 'business_hours',
-            'setting_value': {
-                'monday_friday': '9:00 AM - 8:00 PM',
-                'saturday': '10:00 AM - 6:00 PM',
-                'sunday': '11:00 AM - 5:00 PM'
-            },
-            'description': 'Business hours information for customer inquiries',
-            'is_active': True
-        },
-        {
-            'setting_key': 'contact_info',
-            'setting_value': {
-                'phone': '(555) 123-4567',
-                'email': 'info@ezautos.com',
-                'address': '123 Auto Boulevard, Car City, CC 12345'
-            },
-            'description': 'Contact information for customer support',
-            'is_active': True
-        }
-    ]
-    
-    for setting_data in chatbot_settings:
-        if not ChatbotSettings.objects.filter(setting_key=setting_data['setting_key']).exists():
-            ChatbotSettings.objects.create(
-                **setting_data,
-                updated_by=admin_user
-            )
-            print(f"Created chatbot setting: {setting_data['setting_key']}")
-    
     # Create vehicle inquiries
     inquiry_types = ['general', 'test_drive', 'financing', 'trade_in']
     for i in range(10):

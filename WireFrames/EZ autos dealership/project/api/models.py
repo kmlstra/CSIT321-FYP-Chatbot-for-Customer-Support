@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Profile(models.Model):
     ROLE_CHOICES = [
@@ -20,40 +22,16 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.role}"
 
-class ChatbotSettings(models.Model):
-    setting_key = models.CharField(max_length=100, unique=True)
-    setting_value = models.JSONField()
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+# Create profile automatically when user is created
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
 
-    def __str__(self):
-        return self.setting_key
-
-class KnowledgeBase(models.Model):
-    STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('inactive', 'Inactive'),
-        ('draft', 'Draft'),
-    ]
-    
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    category = models.CharField(max_length=100)
-    tags = models.JSONField(default=list)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='active')
-    is_featured = models.BooleanField(default=False)
-    view_count = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-
-    def __str__(self):
-        return self.title
-
-    class Meta:
-        ordering = ['-created_at']
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    if hasattr(instance, 'profile'):
+        instance.profile.save()
 
 # Additional Django models for data that doesn't need MongoDB
 class VehicleInquiry(models.Model):

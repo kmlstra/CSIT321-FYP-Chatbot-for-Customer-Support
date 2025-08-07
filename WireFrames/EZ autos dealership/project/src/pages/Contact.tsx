@@ -1,7 +1,91 @@
 import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
+import { getContactInfo } from '../lib/api';
+
+interface ContactInfo {
+  id: string;
+  type: string;
+  label: string;
+  value: string;
+  icon: string;
+  is_active: boolean;
+}
 
 const Contact: React.FC = () => {
+  const [contactInfo, setContactInfo] = useState<ContactInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getContactInfo();
+      setContactInfo(data);
+    } catch (err: any) {
+      console.error('Error fetching contact info:', err);
+      setError('Failed to load contact information');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'MapPin':
+        return <MapPin size={24} className="text-blue-600 flex-shrink-0" />;
+      case 'Phone':
+        return <Phone size={24} className="text-blue-600 flex-shrink-0" />;
+      case 'Mail':
+        return <Mail size={24} className="text-blue-600 flex-shrink-0" />;
+      case 'Clock':
+        return <Clock size={24} className="text-blue-600 flex-shrink-0" />;
+      default:
+        return <MapPin size={24} className="text-blue-600 flex-shrink-0" />;
+    }
+  };
+
+  const formatValue = (value: string) => {
+    return value.split('\n').map((line, index) => (
+      <React.Fragment key={index}>
+        {line}
+        {index < value.split('\n').length - 1 && <br />}
+      </React.Fragment>
+    ));
+  };
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading contact information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <button 
+            onClick={fetchContactInfo}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pt-20 min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -98,39 +182,15 @@ const Contact: React.FC = () => {
               <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Information</h2>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin size={24} className="text-blue-600 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium text-gray-800">Address</h3>
-                      <p className="text-gray-600">123 Auto Boulevard, Car City, CC 12345</p>
+                  {contactInfo.map((info) => (
+                    <div key={info.id} className="flex items-start gap-3">
+                      {getIcon(info.icon)}
+                      <div>
+                        <h3 className="font-medium text-gray-800">{info.label}</h3>
+                        <p className="text-gray-600">{formatValue(info.value)}</p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Phone size={24} className="text-blue-600 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium text-gray-800">Phone</h3>
-                      <p className="text-gray-600">(555) 123-4567</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Mail size={24} className="text-blue-600 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium text-gray-800">Email</h3>
-                      <p className="text-gray-600">info@ezautos.com</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Clock size={24} className="text-blue-600 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium text-gray-800">Business Hours</h3>
-                      <p className="text-gray-600">Monday - Friday: 9AM - 8PM</p>
-                      <p className="text-gray-600">Saturday: 10AM - 6PM</p>
-                      <p className="text-gray-600">Sunday: 11AM - 5PM</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
               

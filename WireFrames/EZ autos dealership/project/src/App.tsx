@@ -11,6 +11,7 @@ import FinancialPlanner from './pages/FinancialPlanner';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Profile from './pages/Profile';
+import UserDashboard from './pages/UserDashboard';
 import Login from './components/Login';
 import Register from './components/Register';
 import AdminDashboard from './components/AdminDashboard';
@@ -33,6 +34,7 @@ function App() {
             <Route path="/faq" element={<FAQ />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin" element={<AdminDashboard />} />

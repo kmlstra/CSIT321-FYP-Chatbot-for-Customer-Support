@@ -5,13 +5,23 @@ import {
   Fuel, Gauge, Palette, Settings, Car, MapPin,
   Phone, Mail, Star, CheckCircle, Info
 } from 'lucide-react';
-import { getVehicleById, createTestDrive, getProfile } from '../lib/api';
+import { getVehicleById, createTestDrive, getProfile, getContactInfo } from '../lib/api';
 import { Vehicle } from '../types';
+
+interface ContactInfo {
+  id: string;
+  type: string;
+  label: string;
+  value: string;
+  icon: string;
+  is_active: boolean;
+}
 
 const VehicleDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [contactInfo, setContactInfo] = useState<ContactInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -29,7 +39,22 @@ const VehicleDetails: React.FC = () => {
       fetchVehicleDetails();
     }
     checkUserAuth();
+    fetchContactInfo();
   }, [id]);
+
+  const fetchContactInfo = async () => {
+    try {
+      const data = await getContactInfo();
+      setContactInfo(data);
+    } catch (error) {
+      console.error('Error fetching contact info:', error);
+    }
+  };
+
+  const getContactValue = (type: string) => {
+    const info = contactInfo.find(item => item.type === type);
+    return info ? info.value : '';
+  };
 
   const checkUserAuth = async () => {
     try {
@@ -426,15 +451,15 @@ const VehicleDetails: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Phone size={16} className="text-gray-600" />
-                      <span className="text-sm text-gray-700">(555) 123-4567</span>
+                      <span className="text-sm text-gray-700">{getContactValue('phone') || '(555) 123-4567'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Mail size={16} className="text-gray-600" />
-                      <span className="text-sm text-gray-700">sales@ezautos.com</span>
+                      <span className="text-sm text-gray-700">{getContactValue('email') || 'sales@ezautos.com'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-gray-600" />
-                      <span className="text-sm text-gray-700">123 Auto Boulevard</span>
+                      <span className="text-sm text-gray-700">{getContactValue('address')?.split(',')[0] || '123 Auto Boulevard'}</span>
                     </div>
                   </div>
                 </div>

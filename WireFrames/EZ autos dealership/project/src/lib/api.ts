@@ -210,9 +210,78 @@ export const deleteTeamMember = async (id: string) => {
   return response.data;
 };
 
+// User Management
+export const getUsers = async () => {
+  const response = await api.get('/users/');
+  return response.data;
+};
+
+export const createUser = async (userData: any) => {
+  const response = await api.post('/users/', userData);
+  return response.data;
+};
+
+export const updateUser = async (id: string, userData: any) => {
+  const response = await api.put(`/users/${id}/`, userData);
+  return response.data;
+};
+
+export const deleteUser = async (id: string) => {
+  const response = await api.delete(`/users/${id}/`);
+  return response.data;
+};
+
 // Analytics
-export const getAnalytics = async (days: number = 30) => {
-  const response = await api.get(`/analytics/?days=${days}`);
+export const getAnalytics = async (days?: number) => {
+  const params = new URLSearchParams();
+  if (days !== undefined) {
+    params.append('days', String(days));
+  }
+  
+  const url = params.toString() ? `/analytics/?${params.toString()}` : '/analytics/';
+  const response = await api.get(url);
+  return response.data;
+};
+
+// FAQ endpoints
+export const getFAQs = async () => {
+  const response = await api.get('/faq/');
+  return response.data;
+};
+
+export const createFAQ = async (faqData: any) => {
+  const response = await api.post('/faq/', faqData);
+  return response.data;
+};
+
+export const updateFAQ = async (id: string, faqData: any) => {
+  const response = await api.put(`/faq/${id}/`, faqData);
+  return response.data;
+};
+
+export const deleteFAQ = async (id: string) => {
+  const response = await api.delete(`/faq/${id}/`);
+  return response.data;
+};
+
+// Contact info endpoints
+export const getContactInfo = async () => {
+  const response = await api.get('/contact-info/');
+  return response.data;
+};
+
+export const createContactInfo = async (contactData: any) => {
+  const response = await api.post('/contact-info/', contactData);
+  return response.data;
+};
+
+export const updateContactInfo = async (id: string, contactData: any) => {
+  const response = await api.put(`/contact-info/${id}/`, contactData);
+  return response.data;
+};
+
+export const deleteContactInfo = async (id: string) => {
+  const response = await api.delete(`/contact-info/${id}/`);
   return response.data;
 };
 

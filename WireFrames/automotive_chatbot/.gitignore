@@ -152,3 +152,4 @@ data/db/
 .cursor-settings/
 cursor.db
 .cursor-session
+.env

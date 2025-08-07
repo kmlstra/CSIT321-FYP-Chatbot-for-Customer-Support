@@ -134,12 +134,6 @@ const Login: React.FC = () => {
                   Remember me
                 </label>
               </div>
-              <a
-                  href="/forgot-password"
-                  className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Forgot password?
-              </a>
             </div>
 
             <div className="flex items-center justify-between">
@@ -153,7 +147,7 @@ const Login: React.FC = () => {
             </div>
 
             <div className="mt-6 text-center">
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
                 <a href="/register" className="text-blue-600 hover:text-blue-800 font-medium">
                   Create one

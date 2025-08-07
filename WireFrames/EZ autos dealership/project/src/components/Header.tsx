@@ -202,6 +202,15 @@ const Header: React.FC = () => {
                               Admin Dashboard
                             </Link>
                         ) : (
+                           <>
+                             <Link
+                                 to="/dashboard"
+                                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                 onClick={() => setDropdownOpen(false)}
+                             >
+                               <UserCircle size={16} className="mr-2" />
+                               My Dashboard
+                             </Link>
                             <Link
                                 to="/profile"
                                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -210,6 +219,7 @@ const Header: React.FC = () => {
                               <UserCircle size={16} className="mr-2" />
                               My Profile
                             </Link>
+                           </>
                         )}
                         <button
                             onClick={handleLogout}
@@ -304,6 +314,14 @@ const Header: React.FC = () => {
                     </>
                 ) : (
                     <>
+                      <Link
+                          to="/dashboard"
+                          className="flex items-center space-x-2 py-3 border-b border-gray-200 text-gray-700"
+                          onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <UserCircle size={18} />
+                        <span>My Dashboard</span>
+                      </Link>
                       <Link
                           to="/login"
                           className="flex items-center space-x-2 py-3 border-b border-gray-200 text-gray-700"

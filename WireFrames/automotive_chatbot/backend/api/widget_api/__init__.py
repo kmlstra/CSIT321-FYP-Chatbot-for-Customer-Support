@@ -1,0 +1,1 @@
+# Widget API package for multi-tenant chat handling

@@ -11,8 +11,8 @@ import Feedback from './admin/Feedback';
 import ChatHistory from './admin/ChatHistory';
 import Analytics from './admin/Analytics';
 import TeamMembers from './admin/TeamMembers';
-import ChatbotSettings from './admin/ChatbotSettings';
-import SessionStatus from './SessionStatus';
+import UserManagement from './admin/UserManagement';
+import VehicleInventory from './admin/VehicleInventory';
 
 interface User {
   id: string;
@@ -53,22 +53,24 @@ const AdminDashboard: React.FC = () => {
 
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: Users },
+    { id: 'users', label: 'User Management', icon: UserPlus },
     { id: 'team', label: 'Team Management', icon: UserPlus },
-    { id: 'chatbot', label: 'Chatbot Settings', icon: Settings },
+    { id: 'inventory', label: 'Vehicle Inventory', icon: Car },
     { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen },
     { id: 'bookings', label: 'Test Drive Bookings', icon: Calendar },
     { id: 'feedback', label: 'Feedback & Reviews', icon: Star },
     { id: 'chat-history', label: 'Chat History', icon: History },
     { id: 'analytics', label: 'Analytics', icon: DollarSign },
-    { id: 'session', label: 'Session Status', icon: AlertCircle },
   ];
 
   const renderContent = () => {
     switch (activeSection) {
+      case 'users':
+        return <UserManagement />;
       case 'team':
         return <TeamMembers />;
-      case 'chatbot':
-        return <ChatbotSettings />;
+      case 'inventory':
+        return <VehicleInventory />;
       case 'knowledge':
         return <KnowledgeBase />;
       case 'bookings':
@@ -77,8 +79,6 @@ const AdminDashboard: React.FC = () => {
         return <Feedback />;
       case 'chat-history':
         return <ChatHistory />;
-      case 'session':
-        return <SessionStatus />;
       case 'analytics':
       case 'overview':
       default:

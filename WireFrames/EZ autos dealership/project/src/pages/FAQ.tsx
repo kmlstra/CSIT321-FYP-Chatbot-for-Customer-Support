@@ -1,49 +1,40 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { getFAQs } from '../lib/api';
 
 interface FAQItem {
+  id: string;
   question: string;
   answer: string;
   category: string;
+  status: string;
 }
 
-const faqs: FAQItem[] = [
-  {
-    question: "What documentation do I need to purchase a vehicle?",
-    answer: "To purchase a vehicle, you'll need a valid government-issued ID, proof of insurance, and proof of income if financing. Additional documents may be required depending on your payment method.",
-    category: "Purchasing"
-  },
-  {
-    question: "Do you offer vehicle financing?",
-    answer: "Yes, we offer competitive financing options through our trusted lending partners. You can use our Financial Planner tool to estimate payments and apply for pre-approval.",
-    category: "Financing"
-  },
-  {
-    question: "What is your return policy?",
-    answer: "We offer a 7-day/500-mile money-back guarantee on all vehicle purchases, allowing you to return the vehicle for a full refund if you're not completely satisfied.",
-    category: "Policies"
-  },
-  {
-    question: "Do you accept trade-ins?",
-    answer: "Yes, we accept trade-ins and offer fair market value for your vehicle. You can get an instant estimate using our online trade-in calculator.",
-    category: "Trade-ins"
-  },
-  {
-    question: "What warranty options are available?",
-    answer: "We offer various warranty packages including basic, extended, and comprehensive coverage. All pre-owned vehicles come with a minimum 90-day warranty.",
-    category: "Warranty"
-  },
-  {
-    question: "Can I test drive a vehicle before purchasing?",
-    answer: "Absolutely! We encourage test drives of any vehicle you're interested in. You can schedule a test drive online or visit our dealership during business hours.",
-    category: "Test Drive"
-  }
-];
-
 const FAQ: React.FC = () => {
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openItems, setOpenItems] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  useEffect(() => {
+    fetchFAQs();
+  }, []);
+
+  const fetchFAQs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getFAQs();
+      setFaqs(data);
+    } catch (err: any) {
+      console.error('Error fetching FAQs:', err);
+      setError('Failed to load FAQ data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = ['All', ...Array.from(new Set(faqs.map(faq => faq.category)))];
 
@@ -69,8 +60,36 @@ const FAQ: React.FC = () => {
     const matchesSearch = faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || faq.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const isActive = faq.status === 'active';
+    return matchesSearch && matchesCategory && isActive;
   });
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading FAQ...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <button 
+            onClick={fetchFAQs}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
       <div className="pt-20 min-h-screen bg-gray-50">
@@ -111,7 +130,7 @@ const FAQ: React.FC = () => {
             <div className="space-y-4">
               {filteredFaqs.map((faq, index) => (
                   <div
-                      key={index}
+                      key={faq.id}
                       className="bg-white rounded-lg shadow-md overflow-hidden"
                   >
                     <button

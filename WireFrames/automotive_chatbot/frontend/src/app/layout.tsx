@@ -1,6 +1,4 @@
 import '../styles/globals.css'
-import { StagewiseToolbar } from '@stagewise/toolbar-next'
-import { ReactPlugin } from '@stagewise-plugins/react'
 
 export const metadata = {
   title: 'Automotive Chatbot Platform',
@@ -27,7 +25,6 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased bg-gray-50 text-gray-900">
-        <StagewiseToolbar config={{ plugins: [ReactPlugin] }} />
         <div className="min-h-screen">
           {children}
         </div>

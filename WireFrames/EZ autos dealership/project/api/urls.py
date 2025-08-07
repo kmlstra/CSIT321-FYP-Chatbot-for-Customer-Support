@@ -1,8 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    UserViewSet, ProfileViewSet, ChatbotSettingsViewSet,
-    KnowledgeBaseViewSet, register_user, login_user, logout_user,
+    UserViewSet, ProfileViewSet,
+    register_user, login_user, logout_user,
     get_profile, vehicles_view, vehicle_detail_view,
     test_drive_view, update_test_drive_view, chat_history_view,
     feedback_view, team_members_view, team_member_detail_view,
@@ -12,8 +12,6 @@ from .views import (
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'profiles', ProfileViewSet)
-router.register(r'chatbot-settings', ChatbotSettingsViewSet)
-router.register(r'knowledge-base', KnowledgeBaseViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

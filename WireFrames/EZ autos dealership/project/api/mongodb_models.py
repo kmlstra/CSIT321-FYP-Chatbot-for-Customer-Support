@@ -27,6 +27,8 @@ try:
     team_members_collection = db.team_members
     vehicle_images_collection = db.vehicle_images
     financing_applications_collection = db.financing_applications
+    faq_collection = db.faq
+    contact_info_collection = db.contact_info
 
     # Create indexes in the background
     def ensure_indexes():
@@ -76,6 +78,15 @@ try:
             financing_applications_collection.create_index([("vehicle_id", ASCENDING)], background=True)
             financing_applications_collection.create_index([("status", ASCENDING)], background=True)
             financing_applications_collection.create_index([("created_at", DESCENDING)], background=True)
+
+            # FAQ indexes
+            faq_collection.create_index([("category", ASCENDING)], background=True)
+            faq_collection.create_index([("status", ASCENDING)], background=True)
+            faq_collection.create_index([("created_at", DESCENDING)], background=True)
+
+            # Contact info indexes
+            contact_info_collection.create_index([("type", ASCENDING)], background=True)
+            contact_info_collection.create_index([("is_active", DESCENDING)], background=True)
 
             print("Successfully created/verified all indexes")
         except Exception as e:
@@ -391,6 +402,90 @@ def get_vehicle_images(vehicle_id):
     except Exception as e:
         raise Exception(f"Error fetching vehicle images: {str(e)}")
 
+# FAQ operations
+def create_faq(faq_data):
+    if faq_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        faq_data.setdefault('status', 'active')
+        faq_data['created_at'] = datetime.utcnow()
+        faq_data['updated_at'] = datetime.utcnow()
+        
+        return faq_collection.insert_one(faq_data)
+    except Exception as e:
+        raise Exception(f"Error creating FAQ: {str(e)}")
+
+def get_faqs(filters=None):
+    if faq_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        query = filters or {'status': 'active'}
+        return list(faq_collection.find(query).sort("created_at", DESCENDING))
+    except Exception as e:
+        raise Exception(f"Error fetching FAQs: {str(e)}")
+
+def update_faq(faq_id, update_data):
+    if faq_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        update_data['updated_at'] = datetime.utcnow()
+        return faq_collection.update_one(
+            {"_id": ObjectId(faq_id)},
+            {"$set": update_data}
+        )
+    except Exception as e:
+        raise Exception(f"Error updating FAQ: {str(e)}")
+
+def delete_faq(faq_id):
+    if faq_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        return faq_collection.delete_one({"_id": ObjectId(faq_id)})
+    except Exception as e:
+        raise Exception(f"Error deleting FAQ: {str(e)}")
+
+# Contact info operations
+def create_contact_info(contact_data):
+    if contact_info_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        contact_data.setdefault('is_active', True)
+        contact_data['created_at'] = datetime.utcnow()
+        contact_data['updated_at'] = datetime.utcnow()
+        
+        return contact_info_collection.insert_one(contact_data)
+    except Exception as e:
+        raise Exception(f"Error creating contact info: {str(e)}")
+
+def get_contact_info(filters=None):
+    if contact_info_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        query = filters or {'is_active': True}
+        return list(contact_info_collection.find(query).sort("type", ASCENDING))
+    except Exception as e:
+        raise Exception(f"Error fetching contact info: {str(e)}")
+
+def update_contact_info(contact_id, update_data):
+    if contact_info_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        update_data['updated_at'] = datetime.utcnow()
+        return contact_info_collection.update_one(
+            {"_id": ObjectId(contact_id)},
+            {"$set": update_data}
+        )
+    except Exception as e:
+        raise Exception(f"Error updating contact info: {str(e)}")
+
+def delete_contact_info(contact_id):
+    if contact_info_collection is None:
+        raise Exception("MongoDB connection not available")
+    try:
+        return contact_info_collection.delete_one({"_id": ObjectId(contact_id)})
+    except Exception as e:
+        raise Exception(f"Error deleting contact info: {str(e)}")
+
 # Initialize sample data with comprehensive vehicle information
 def initialize_sample_data():
     try:
@@ -573,6 +668,88 @@ def initialize_sample_data():
             for member in sample_members:
                 create_team_member(member)
             print("Sample team members added to database")
+
+        # Add sample FAQ data if none exist
+        if faq_collection is not None and faq_collection.count_documents({}) == 0:
+            sample_faqs = [
+                {
+                    "question": "What documentation do I need to purchase a vehicle?",
+                    "answer": "To purchase a vehicle, you'll need a valid government-issued ID, proof of insurance, and proof of income if financing. Additional documents may be required depending on your payment method.",
+                    "category": "Purchasing",
+                    "status": "active"
+                },
+                {
+                    "question": "Do you offer vehicle financing?",
+                    "answer": "Yes, we offer competitive financing options through our trusted lending partners. You can use our Financial Planner tool to estimate payments and apply for pre-approval.",
+                    "category": "Financing",
+                    "status": "active"
+                },
+                {
+                    "question": "What is your return policy?",
+                    "answer": "We offer a 7-day/500-mile money-back guarantee on all vehicle purchases, allowing you to return the vehicle for a full refund if you're not completely satisfied.",
+                    "category": "Policies",
+                    "status": "active"
+                },
+                {
+                    "question": "Do you accept trade-ins?",
+                    "answer": "Yes, we accept trade-ins and offer fair market value for your vehicle. You can get an instant estimate using our online trade-in calculator.",
+                    "category": "Trade-ins",
+                    "status": "active"
+                },
+                {
+                    "question": "What warranty options are available?",
+                    "answer": "We offer various warranty packages including basic, extended, and comprehensive coverage. All pre-owned vehicles come with a minimum 90-day warranty.",
+                    "category": "Warranty",
+                    "status": "active"
+                },
+                {
+                    "question": "Can I test drive a vehicle before purchasing?",
+                    "answer": "Absolutely! We encourage test drives of any vehicle you're interested in. You can schedule a test drive online or visit our dealership during business hours.",
+                    "category": "Test Drive",
+                    "status": "active"
+                }
+            ]
+            
+            for faq in sample_faqs:
+                create_faq(faq)
+            print("Sample FAQ data added to database")
+
+        # Add sample contact info if none exist
+        if contact_info_collection is not None and contact_info_collection.count_documents({}) == 0:
+            sample_contact_info = [
+                {
+                    "type": "address",
+                    "label": "Address",
+                    "value": "123 Auto Boulevard, Car City, CC 12345",
+                    "icon": "MapPin",
+                    "is_active": True
+                },
+                {
+                    "type": "phone",
+                    "label": "Phone",
+                    "value": "(555) 123-4567",
+                    "icon": "Phone",
+                    "is_active": True
+                },
+                {
+                    "type": "email",
+                    "label": "Email",
+                    "value": "info@ezautos.com",
+                    "icon": "Mail",
+                    "is_active": True
+                },
+                {
+                    "type": "hours",
+                    "label": "Business Hours",
+                    "value": "Monday - Friday: 9AM - 8PM\nSaturday: 10AM - 6PM\nSunday: 11AM - 5PM",
+                    "icon": "Clock",
+                    "is_active": True
+                }
+            ]
+            
+            for contact in sample_contact_info:
+                create_contact_info(contact)
+            print("Sample contact info added to database")
 
     except Exception as e:
         print(f"Error initializing sample data: {str(e)}")

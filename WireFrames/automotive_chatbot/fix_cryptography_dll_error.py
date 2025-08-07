@@ -19,7 +19,7 @@ import platform
 import time
 
 def print_colored(message, color='white'):
-    """Print colored messages"""
+    """Print colored messages - Windows safe"""
     colors = {
         'red': '\033[91m',
         'green': '\033[92m',
@@ -36,24 +36,24 @@ def print_colored(message, color='white'):
 def run_command(command, description):
     """Run command and return success status"""
     try:
-        print_colored(f"🔧 {description}...", 'cyan')
+        print_colored(f"[FIX] {description}...", 'cyan')
         result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)
         
         if result.returncode == 0:
-            print_colored(f"✅ {description} - SUCCESS", 'green')
+            print_colored(f"[OK] {description} - SUCCESS", 'green')
             return True
         else:
-            print_colored(f"❌ {description} - FAILED", 'red')
+            print_colored(f"[ERROR] {description} - FAILED", 'red')
             if result.stderr:
                 print_colored(f"Error: {result.stderr}", 'red')
             return False
     except Exception as e:
-        print_colored(f"❌ {description} - ERROR: {str(e)}", 'red')
+        print_colored(f"[ERROR] {description} - ERROR: {str(e)}", 'red')
         return False
 
 def check_system_info():
     """Display system information for debugging"""
-    print_colored("🖥️ SYSTEM INFORMATION:", 'blue')
+    print_colored("[SYSTEM] SYSTEM INFORMATION:", 'blue')
     print_colored(f"   OS: {platform.system()} {platform.release()}", 'cyan')
     print_colored(f"   Architecture: {platform.architecture()[0]}", 'cyan')
     print_colored(f"   Python: {sys.version}", 'cyan')
@@ -63,20 +63,20 @@ def check_system_info():
 def fix_cryptography_dll():
     """Main fix function for cryptography DLL issues"""
     print_colored("=" * 70, 'cyan')
-    print_colored("🔧 CRYPTOGRAPHY DLL FIX FOR WINDOWS - RASA COMPATIBILITY", 'cyan')
+    print_colored("[FIX] CRYPTOGRAPHY DLL FIX FOR WINDOWS - RASA COMPATIBILITY", 'cyan')
     print_colored("=" * 70, 'cyan')
     
     check_system_info()
     
     # Check if we're in virtual environment
     if not os.path.exists('.venv'):
-        print_colored("❌ Virtual environment not found! Please create .venv first", 'red')
+        print_colored("[ERROR] Virtual environment not found! Please create .venv first", 'red')
         return False
     
     python_exe = ".venv\\Scripts\\python.exe" if os.name == 'nt' else ".venv/bin/python"
     pip_exe = ".venv\\Scripts\\pip.exe" if os.name == 'nt' else ".venv/bin/pip"
     
-    print_colored("🔍 DIAGNOSING CRYPTOGRAPHY ISSUE...", 'blue')
+    print_colored("[DIAG] DIAGNOSING CRYPTOGRAPHY ISSUE...", 'blue')
     
     # Step 1: Test current cryptography installation
     print_colored("Step 1: Testing current cryptography installation...", 'yellow')
@@ -84,15 +84,15 @@ def fix_cryptography_dll():
                             "Testing cryptography import")
     
     if test_result:
-        print_colored("✨ Cryptography is working! The issue might be elsewhere.", 'green')
+        print_colored("[OK] Cryptography is working! The issue might be elsewhere.", 'green')
         # Test python-jose specifically
         jose_test = run_command(f'{python_exe} -c "from jose import jwt; print(\'python-jose working\')"', 
                               "Testing python-jose import")
         if jose_test:
-            print_colored("✨ python-jose is also working! Issue might be resolved.", 'green')
+            print_colored("[OK] python-jose is also working! Issue might be resolved.", 'green')
             return True
     
-    print_colored("🔧 APPLYING CRYPTOGRAPHY FIXES...", 'blue')
+    print_colored("[FIX] APPLYING CRYPTOGRAPHY FIXES...", 'blue')
     
     # Step 2: Uninstall conflicting packages
     print_colored("Step 2: Removing conflicting cryptography packages...", 'yellow')

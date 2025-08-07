@@ -1,8 +1,45 @@
 import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail, Car } from 'lucide-react';
+import { getContactInfo } from '../lib/api';
+
+interface ContactInfo {
+  id: string;
+  type: string;
+  label: string;
+  value: string;
+  icon: string;
+  is_active: boolean;
+}
 
 const Footer: React.FC = () => {
+  const [contactInfo, setContactInfo] = useState<ContactInfo[]>([]);
+
+  useEffect(() => {
+    fetchContactInfo();
+  }, []);
+
+  const fetchContactInfo = async () => {
+    try {
+      const data = await getContactInfo();
+      setContactInfo(data);
+    } catch (error) {
+      console.error('Error fetching contact info for footer:', error);
+    }
+  };
+
+  const getContactValue = (type: string) => {
+    const info = contactInfo.find(item => item.type === type);
+    return info ? info.value : '';
+  };
+
+  const formatBusinessHours = (hours: string) => {
+    return hours.split('\n').map((line, index) => (
+      <p key={index} className="text-sm">{line}</p>
+    ));
+  };
+
   return (
     <footer className="bg-gray-900 text-gray-300">
       {/* Main footer content */}
@@ -61,22 +98,27 @@ const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li className="flex items-start">
                 <MapPin size={18} className="text-blue-400 mr-2 mt-1 flex-shrink-0" />
-                <span>123 Auto Boulevard, Car City, CC 12345</span>
+                <span>{getContactValue('address') || '123 Auto Boulevard, Car City, CC 12345'}</span>
               </li>
               <li className="flex items-center">
                 <Phone size={18} className="text-blue-400 mr-2 flex-shrink-0" />
-                <span>(555) 123-4567</span>
+                <span>{getContactValue('phone') || '(555) 123-4567'}</span>
               </li>
               <li className="flex items-center">
                 <Mail size={18} className="text-blue-400 mr-2 flex-shrink-0" />
-                <span>info@ezautos.com</span>
+                <span>{getContactValue('email') || 'info@ezautos.com'}</span>
               </li>
             </ul>
             <div className="mt-4">
               <h4 className="font-medium text-white mb-2">Business Hours</h4>
-              <p className="text-sm">Monday - Friday: 9AM - 8PM</p>
-              <p className="text-sm">Saturday: 10AM - 6PM</p>
-              <p className="text-sm">Sunday: 11AM - 5PM</p>
+              {getContactValue('hours') ? 
+                formatBusinessHours(getContactValue('hours')) :
+                <>
+                  <p className="text-sm">Monday - Friday: 9AM - 8PM</p>
+                  <p className="text-sm">Saturday: 10AM - 6PM</p>
+                  <p className="text-sm">Sunday: 11AM - 5PM</p>
+                </>
+              }
             </div>
           </div>
           

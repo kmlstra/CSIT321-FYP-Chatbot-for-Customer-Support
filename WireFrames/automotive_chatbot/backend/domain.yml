@@ -187,6 +187,12 @@ actions:
   # PROBLEM FIX: Additional new actions
   - action_loan_calculation_result
   - action_show_car_reviews
+  # Multi-tenant SaaS actions
+  - action_multi_tenant_coe_prices
+  - action_multi_tenant_contact_us
+  - action_multi_tenant_vehicle_search
+  - action_multi_tenant_loan_calculator
+  - action_multi_tenant_test_drive
 
 session_config:
   session_expiration_time: 60
