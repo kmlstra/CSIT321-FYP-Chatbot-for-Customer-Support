@@ -1,0 +1,141 @@
+version: "3.1"
+
+stories:
+
+- story: ask coe prices
+  steps:
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- story: ask coe prices after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- story: coe price conversation
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_coe_category
+  - action: action_explain_coe_categories
+
+- story: coe category inquiry
+  steps:
+  - intent: ask_coe_category
+  - action: action_explain_coe_categories
+
+- story: coe category a inquiry
+  steps:
+  - intent: ask_coe_category_a
+  - action: action_coe_category_details
+
+- story: coe category b inquiry
+  steps:
+  - intent: ask_coe_category_b
+  - action: action_coe_category_details
+
+- story: coe category c inquiry
+  steps:
+  - intent: ask_coe_category_c
+  - action: action_coe_category_details
+
+- story: coe category d inquiry
+  steps:
+  - intent: ask_coe_category_d
+  - action: action_coe_category_details
+
+- story: coe category e inquiry
+  steps:
+  - intent: ask_coe_category_e
+  - action: action_coe_category_details
+
+- story: coe bidding process
+  steps:
+  - intent: ask_coe_bidding_process
+  - action: action_explain_coe_bidding_process
+
+- story: coe renewal inquiry
+  steps:
+  - intent: ask_coe_renewal
+  - action: action_explain_coe_renewal
+
+- story: coe renewal assistance inquiry
+  steps:
+  - intent: ask_coe_renewal_assistance
+  - action: action_coe_renewal_assistance
+
+- story: coe bidding assistance inquiry
+  steps:
+  - intent: ask_coe_bidding_assistance
+  - action: action_coe_bidding_assistance
+
+- story: coe bidding assistance after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_bidding_assistance
+  - action: action_coe_bidding_assistance
+
+- story: coe bidding assistance with follow-up
+  steps:
+  - intent: ask_coe_bidding_assistance
+  - action: action_coe_bidding_assistance
+  - intent: ask_coe_bidding_process
+  - action: action_explain_coe_bidding_process
+
+- story: ask clarification
+  steps:
+  - intent: ask_clarification
+  - action: action_provide_clarification
+
+- story: ask help
+  steps:
+  - intent: ask_help
+  - action: action_provide_help
+
+- story: capability confirm
+  steps:
+  - intent: ask_capability_confirm
+  - action: action_capability_confirm
+
+- story: coe trends inquiry
+  steps:
+  - intent: ask_coe_trends
+  - action: action_coe_trends
+
+- story: pqp checker inquiry
+  steps:
+  - intent: ask_pqp_checker
+  - action: action_pqp_checker
+
+- story: coe prediction inquiry
+  steps:
+  - intent: ask_coe_prediction
+  - action: action_coe_prediction
+
+- story: coe timing recommendation inquiry
+  steps:
+  - intent: ask_coe_timing_recommendation
+  - action: action_coe_timing_recommendation
+
+- story: coe price with category follow-up
+  steps:
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_coe_renewal
+  - action: action_explain_coe_renewal
+
+- story: comprehensive coe inquiry
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_category
+  - action: action_explain_coe_categories
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: goodbye
+  - action: utter_goodbye

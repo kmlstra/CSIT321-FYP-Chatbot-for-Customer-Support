@@ -12,3 +12,10 @@
 .cursor-settings/
 cursor.db
 .cursor-session
+.trae/
+.vercel/
+WireFrames/automotive_chatbot/deploy/temp-images/backend.tar
+WireFrames/automotive_chatbot/deploy/temp-images/frontend.tar
+WireFrames/automotive_chatbot.zip
+WireFrames/deploy
+WireFrames/deploy/*

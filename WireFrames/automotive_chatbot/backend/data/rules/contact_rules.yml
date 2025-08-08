@@ -1,0 +1,48 @@
+version: "3.1"
+
+rules:
+
+- rule: Handle contact information requests
+  steps:
+  - intent: ask_contact
+  - action: action_smart_contact
+
+- rule: Handle email only requests
+  steps:
+  - intent: ask_email_only
+  - action: action_smart_contact
+
+- rule: Handle phone only requests
+  steps:
+  - intent: ask_phone_only
+  - action: action_smart_contact
+
+- rule: Handle WhatsApp only requests
+  steps:
+  - intent: ask_whatsapp_only
+  - action: action_smart_contact
+
+- rule: Handle store location requests
+  steps:
+  - intent: ask_store_location
+  - action: action_smart_contact
+
+- rule: Handle operating hours requests
+  steps:
+  - intent: ask_operating_hours
+  - action: action_smart_contact
+
+- rule: Handle business hours requests
+  steps:
+  - intent: ask_business_hours
+  - action: action_smart_contact
+
+- rule: Handle public holiday hours requests
+  steps:
+  - intent: ask_public_holiday_hours
+  - action: action_smart_contact
+
+- rule: Handle schedule visit requests
+  steps:
+  - intent: confirm_schedule_visit
+  - action: action_smart_contact

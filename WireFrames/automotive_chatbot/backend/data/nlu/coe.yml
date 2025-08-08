@@ -1,0 +1,463 @@
+version: "3.1"
+
+nlu:
+- intent: ask_coe_prices
+  examples: |
+    - current coe price
+    - current coe prices
+    - latest coe price
+    - latest coe prices
+    - what is the current coe price
+    - what are the current coe prices
+    - how much is coe right now
+    - coe bidding results today
+    - today's coe premium
+    - current certificate of entitlement price
+    - current certificate of entitlement prices
+    - latest coe bidding results
+    - current coe rates
+    - coe pricing today
+    - coe cost right now
+    - present coe prices
+    - existing coe rates
+    - actual coe prices
+    - real-time coe prices
+    - live coe rates
+    - immediate coe pricing
+    - this month's coe price
+    - this week's coe results
+    - recent coe bidding outcomes
+    - COE category A price
+    - COE category B price
+    - can i check the coe price on june
+    - coe price on june
+    - coe prices in june
+    - june coe prices
+    - coe price on mar 2023
+    - coe prices on march 2023
+    - march 2023 coe prices
+    - coe price on last year dec
+    - coe prices last year december
+    - december last year coe
+    - coe price on jan 2022
+    - january 2022 coe prices
+    - coe prices 2022 january
+    - coe price april 2023
+    - april 2023 coe bidding results
+    - what were coe prices in may 2023
+    - may 2023 coe rates
+    - coe price july 2024
+    - july 2024 coe premium
+    - coe prices august 2023
+    - august 2023 certificate prices
+    - coe price september 2022
+    - september 2022 coe cost
+    - coe prices october 2023
+    - october 2023 coe bidding
+    - coe price november 2022
+    - november 2022 coe rates
+    - coe prices december 2023
+    - december 2023 coe results
+    - coe price feb 2023
+    - february 2023 coe prices
+    - coe prices jun 2024
+    - jun 2024 coe rates
+    - coe price jul 2023
+    - july 2023 coe premium
+    - coe prices aug 2022
+    - august 2022 coe cost
+    - coe price sep 2023
+    - september 2023 coe bidding
+    - coe prices oct 2024
+    - october 2024 coe results
+    - coe price nov 2022
+    - november 2022 coe rates
+    - coe prices dec 2023
+    - december 2023 coe premium
+    - coe price last month
+    - last month coe prices
+    - coe prices previous month
+    - previous month coe rates
+    - coe price last year
+    - last year coe prices
+    - coe prices previous year
+    - previous year coe rates
+    - coe price two months ago
+    - two months ago coe prices
+    - coe price three months ago
+    - three months ago coe rates
+    - historical coe prices
+    - past coe prices
+    - old coe prices
+    - coe price history
+    - coe prices timeline
+    - what were the coe prices
+    - how much was coe
+    - coe price back then
+    - coe prices before
+
+- intent: ask_coe_category
+  examples: |
+    - coe categories
+    - COE categories
+    - what are the coe categories
+    - different coe categories
+    - types of coe
+    - coe classification
+    - explain coe categories
+    - tell me about coe categories
+    - which coe category
+    - how many coe categories
+
+- intent: ask_coe_category_a
+  examples: |
+    - coe category a
+    - COE Category A
+    - category a coe
+    - what is category a
+    - tell me about category a
+    - category a price
+    - category a cars
+    - category a vehicle
+    - category a automobiles
+    - small car category
+    - cars under 1600cc
+    - engine capacity below 1600cc
+    - compact car coe
+    - sedan category a
+    - hatchback coe category
+    - small engine car coe
+    - category a eligibility
+    - which cars qualify for category a
+    - category a vehicle list
+    - category a requirements
+    - 1600cc and below coe
+    - economy car category
+    - standard car category
+    - regular passenger car coe
+    - normal car coe category
+    - typical car coe
+    - basic car category
+    - standard vehicle coe
+    - ordinary car coe
+    - common car category
+
+- intent: ask_coe_category_b
+  examples: |
+    - coe category b
+    - COE Category B
+    - category b coe
+    - what is category b
+    - tell me about category b
+    - category b price
+    - category b cars
+    - category b vehicle
+    - category b automobiles
+    - large car category
+    - cars above 1600cc
+    - engine capacity above 1600cc
+    - big car coe
+    - luxury car category
+    - premium car coe category
+    - large engine car coe
+    - category b eligibility
+    - which cars qualify for category b
+    - category b vehicle list
+    - category b requirements
+    - above 1600cc coe
+    - luxury vehicle category
+    - premium vehicle coe
+    - high-end car coe
+    - expensive car category
+    - large displacement coe
+    - bigger car category
+    - powerful car coe
+    - performance car category
+    - upscale car coe
+
+- intent: ask_coe_category_c
+  examples: |
+    - coe category c
+    - COE Category C
+    - category c coe
+    - what is category c
+    - tell me about category c
+    - category c price
+    - category c cars
+    - category c vehicle
+    - category c automobiles
+    - goods vehicles category
+    - commercial vehicles coe
+    - truck category coe
+    - van category coe
+    - lorry category coe
+    - category c eligibility
+    - which vehicles qualify for category c
+    - category c vehicle list
+    - category c requirements
+    - commercial vehicle coe
+    - goods vehicle category
+    - delivery vehicle coe
+    - cargo vehicle category
+    - freight vehicle coe
+    - goods vehicle coe
+
+- intent: ask_coe_category_d
+  examples: |
+    - coe category d
+    - COE Category D
+    - category d coe
+    - what is category d
+    - tell me about category d
+    - category d price
+    - category d cars
+    - category d vehicle
+    - category d automobiles
+    - motorcycle category
+    - motorbike coe
+    - bike category coe
+    - two wheeler coe
+    - scooter category coe
+    - category d eligibility
+    - which vehicles qualify for category d
+    - category d vehicle list
+    - category d requirements
+    - motorcycle coe
+    - motorbike category
+    - two wheeler category
+    - bike coe category
+    - scooter coe category
+    - motorcycle coe
+    - motorbike coe
+    - scooter coe
+
+- intent: ask_coe_category_e
+  examples: |
+    - coe category e
+    - COE Category E
+    - category e coe
+    - what is category e
+    - tell me about category e
+    - category e price
+    - category e cars
+    - category e vehicle
+    - category e automobiles
+    - open category
+    - flexible category coe
+    - all vehicles category
+    - universal category coe
+    - category e eligibility
+    - which vehicles qualify for category e
+    - category e vehicle list
+    - category e requirements
+    - open category coe
+    - flexible vehicle category
+    - all vehicle types coe
+    - universal vehicle category
+    - unrestricted category coe
+    - open category coe
+    - flexible coe option
+    - any vehicle coe
+
+- intent: ask_coe_bidding_process
+  examples: |
+    - coe bidding process
+    - how does coe bidding work
+    - coe bidding system
+    - explain coe bidding
+    - explain coe
+    - what is coe
+    - tell me about coe
+    - coe explanation
+    - coe tender process
+    - coe auction
+    - how to bid for coe
+    - coe bidding procedure
+    - when is coe bidding
+    - coe bidding schedule
+
+- intent: ask_coe_renewal
+  examples: |
+    - coe renewal
+    - renew coe
+    - coe expiry
+    - what happens when coe expires
+    - extend coe
+    - coe extension
+    - 10 year coe
+    - renewing certificate
+    - parf rebate
+
+- intent: ask_coe_renewal_assistance
+  examples: |
+    - can you help me renew my coe
+    - help me renew coe
+    - can you renew my coe for me
+    - help with coe renewal application
+    - can you fill out coe renewal form
+    - help me apply for coe renewal
+    - can you submit coe renewal
+    - help me with coe renewal process
+    - can you do coe renewal for me
+    - help me renew my certificate
+    - can you help with coe application
+    - can you assist with coe renewal
+    - help with lta renewal
+    - can you process my coe renewal
+    - help me complete coe renewal
+    - can you handle coe renewal
+    - help me with renewal paperwork
+    - can you do the coe renewal
+    - help filling coe renewal form
+    - can you help apply for renewal
+
+- intent: ask_coe_bidding_assistance
+  examples: |
+    - can you help me bid for coe
+    - help me bid coe
+    - can you bid coe for me
+    - help with coe bidding
+    - can you help me to bid coe
+    - help me place coe bid
+    - can you submit coe bid
+    - help me with coe bidding process
+    - can you do coe bidding for me
+    - help me bid for certificate
+    - can you help with coe bid
+    - can you assist with coe bidding
+    - help with lta bidding
+    - can you process my coe bid
+    - help me complete coe bidding
+    - can you handle coe bidding
+    - help me with bidding paperwork
+    - can you do the coe bidding
+    - help placing coe bid
+    - can you help bid for coe
+    - help me renew coe bidding
+    - can i help me to bid coe
+    - help me to bid for coe
+    - can you help me place a bid
+    - help me submit bid
+    - can you bid for me
+    - help with bidding
+    - assist with coe bid
+    - help me win coe bid
+
+
+
+- intent: ask_coe_trends
+  examples: |
+    - coe trends
+    - coe price trends
+    - coe market analysis
+    - coe price direction
+    - coe market trends
+    - coe price movement
+    - coe market conditions
+    - coe analysis
+    - coe market outlook
+    - coe price patterns
+    - coe trend analysis
+    - coe price trajectory
+    - coe market trajectory
+    - coe price evolution
+    - coe market evolution
+    - coe price development
+    - coe market development
+    - coe price progression
+    - coe market progression
+    - coe price changes
+    - coe market changes
+    - coe price shifts
+    - coe market shifts
+    - coe price tracking
+    - coe market tracking
+
+- intent: ask_pqp_checker
+  examples: |
+    - pqp checker
+    - prevailing quota premium
+    - pqp price
+    - pqp vs coe
+    - check pqp
+    - pqp comparison
+    - pqp renewal cost
+    - prevailing quota premium checker
+    - pqp vs current coe price
+    - coe renewal pqp
+    - what is pqp
+    - pqp calculation
+    - pqp savings
+    - renewal pqp price
+
+- intent: ask_coe_prediction
+  examples: |
+    - predict future coe prices
+    - forecast next month coe prices
+    - what will coe prices be next month
+    - coe price prediction for next bidding
+    - forecast coe trends for future
+    - predict coe market direction
+    - future coe price estimates
+    - coe price forecast model
+    - anticipated future coe costs
+    - expected coe prices next quarter
+    - predict upcoming coe rates
+    - future bidding price predictions
+    - coe market outlook prediction
+    - forecast coe price movement
+    - predict next period coe prices
+    - future coe cost projections
+    - upcoming coe price estimates
+    - predict coe price changes
+    - forecast future coe trends
+    - what will future coe cost
+    - predict coe price direction
+    - forecast next coe bidding results
+    - anticipated future coe rates
+    - expected future coe premiums
+    - can u predict
+    - can you predict
+    - can u predict coe
+    - can you predict coe
+    - can u predict the coe price
+    - can you predict the coe price
+    - can u predict coe prices
+    - can you predict coe prices
+    - predict
+    - predict coe
+    - predict prices
+    - prediction
+    - coe prediction
+    - price prediction
+    - make prediction
+    - give prediction
+    - show prediction
+    - coe forecast
+    - price forecast
+    - future prices
+    - what will happen to coe
+    - where are coe prices going
+    - coe price outlook
+    - market prediction
+    - price analysis
+    - future analysis
+
+- intent: ask_coe_timing_recommendation
+  examples: |
+    - best time to buy coe
+    - when to buy coe
+    - coe timing advice
+    - should i buy coe now
+    - when to renew coe
+    - best time to renew coe
+    - coe market timing
+    - optimal coe buying time
+    - coe purchase timing
+    - when is good time to buy car
+    - should i wait for coe prices
+    - coe timing recommendation
+    - best month to buy coe
+    - coe seasonal timing
+
+# Removed ask_coe_predictions_confirm intent - functionality not needed

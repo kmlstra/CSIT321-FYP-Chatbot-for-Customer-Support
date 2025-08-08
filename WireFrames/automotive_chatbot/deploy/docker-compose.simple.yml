@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Backend Service (Rasa + FastAPI)
+  backend:
+    image: automotive-chatbot-backend:latest
+    container_name: chatbot-backend
+    ports:
+      - "8001:8001"  # FastAPI
+      - "5005:5005"  # Rasa API
+      - "5055:5055"  # Rasa Actions
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - RASA_URL=http://localhost:5005
+    volumes:
+      - backend_data:/app/data
+      - backend_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - chatbot-network
+
+  # Frontend Service (Next.js + Nginx)
+  frontend:
+    image: automotive-chatbot-frontend:latest
+    container_name: chatbot-frontend
+    ports:
+      - "3000:3000"  # Main frontend port
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - NEXT_PUBLIC_RASA_URL=http://localhost:5005
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - chatbot-network
+
+volumes:
+  backend_data:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  chatbot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

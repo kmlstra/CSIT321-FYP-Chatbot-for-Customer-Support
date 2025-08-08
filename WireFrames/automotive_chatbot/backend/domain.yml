@@ -1,192 +1,193 @@
 version: "3.1"
 
+entities:
+  - appointment_date
+  - appointment_time
+  - service_type
+  - customer_name
+  - customer_phone
+  - customer_email
+  - appointment_id
+
+
+slots:
+  appointment_date:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: appointment_date
+  appointment_time:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: appointment_time
+  service_type:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: service_type
+  customer_name:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: customer_name
+  customer_phone:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: customer_phone
+  customer_email:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: customer_email
+  appointment_id:
+    type: text
+    influence_conversation: true
+    mappings:
+    - type: from_entity
+      entity: appointment_id
+  appointment_active:
+    type: bool
+    initial_value: false
+    influence_conversation: true
+    mappings:
+    - type: custom
+
+
 intents:
   - greet
   - goodbye
   - affirm
   - deny
-  - ask_coe_prices
-  - ask_vehicle_info
-  - ask_pricing
-  - book_test_drive
-  - ask_maintenance
-  - ask_registration
-  - ask_features
   - out_of_scope
-  - confirm_schedule_visit
-  # Enhanced Singapore automotive intents
+  - ask_coe_prices
   - ask_coe_category
   - ask_coe_category_a
   - ask_coe_category_b
   - ask_coe_category_c
+  - ask_coe_category_d
   - ask_coe_category_e
   - ask_coe_bidding_process
-  - ask_loan_financing
-  - calculate_loan
-  - ask_insurance
-  - ask_road_tax
-  - ask_parking
-  - ask_fuel_prices
-  - ask_electric_vehicles
-  - ask_depreciation
-  - first_time_buyer
-  - budget_planning
-  - ask_second_hand_cars
-  - compare_cars
-  - ask_maintenance_cost
+  - ask_coe_trends
+  - ask_pqp_checker
+  - ask_coe_prediction
+  - ask_coe_timing_recommendation
   - ask_coe_renewal
-  - ask_scrap_car
-  - ask_popular_models
-  - ask_climate_considerations
-  - ask_brand_recommendations
-  - luxury_vs_economy
-  - ask_family_cars
-  - ask_sports_cars
-  - ask_economic_cars
+  - ask_coe_renewal_assistance
+  - ask_coe_bidding_assistance
   - ask_clarification
   - ask_help
+  - ask_capability_confirm
+  - ask_live_support
+  # Contact-related intents
   - ask_contact
-  - ask_business_hours
-  - ask_operating_hours
-  - ask_store_location
-  # PROBLEM 5 FIX: Specific contact intents
   - ask_email_only
   - ask_phone_only
   - ask_whatsapp_only
-  - ask_coe_predictions_confirm
-  - ask_capability_confirm
-  - search_vehicles
-  - search_budget_cars
-  - search_family_cars
-  - search_luxury_cars
-  - search_eco_cars
-  - ask_persona_recommendations
-  # PROBLEM 6 & 7: New intents for feedback and reviews
-  - ask_feedback
-  - give_feedback
-  - ask_car_reviews
-  # PROBLEM FIX: Additional new intents for loan and car reviews
-  - provide_loan_details
-  - request_specific_car_reviews
+  - ask_store_location
+  - ask_operating_hours
+  - ask_business_hours
+  - ask_public_holiday_hours
+  - confirm_schedule_visit
+  # Appointment booking intents
+  - book_appointment
+  - ask_appointment_availability
+  - view_appointments
+  - cancel_appointment
+  - reschedule_appointment
+  - confirm_appointment
+  - provide_appointment_details
+  - ask_appointment_status
+  # Loan calculator intents
+  - calculate_loan
+  - ask_loan_help
 
-entities:
-  - car_brand
-  - car_model
-
-slots:
-  car_brand:
-    type: text
-    influence_conversation: true
-    mappings:
-    - type: from_entity
-      entity: car_brand
-  car_model:
-    type: text
-    influence_conversation: true
-    mappings:
-    - type: from_entity
-      entity: car_model
 
 responses:
   utter_greet:
-  - text: "👋 Hi there! I'm CleverCompanion, your Singapore automotive assistant. I can help you with COE prices, vehicle information, test drives, maintenance, and financing. What would you like to know?"
+  - text: "👋 Hi there! I'm CleverCompanion, your intelligent automotive assistant for Singapore. I can help you with vehicle information, COE prices, loan calculations, maintenance advice, and more. How can I assist you today?"
 
   utter_goodbye:
-  - text: "Thank you for using CleverCompanion! Have a great day! 🚗"
+  - text: "Thank you for using CleverCompanion! Have a great day and safe driving! 🚗"
 
   utter_default:
-  - text: "I'm sorry, I didn't understand that. I specialize in Singapore automotive services like COE prices, vehicle information, test drives, and maintenance. How can I help you with your automotive needs?"
+  - text: "I'm sorry, I didn't understand that. I'm your automotive assistant and can help with vehicle information, COE matters, financing, maintenance, and car-related queries. What would you like to know?"
 
   utter_out_of_scope:
-  - text: "I focus on automotive services in Singapore. Please ask about vehicles, COE prices, test drives, financing, or maintenance. What can I help you with?"
-
-  utter_pricing:
-  - text: "I can help you with vehicle pricing information. Let me get the latest pricing details for you."
-
-  utter_maintenance:
-  - text: "🔧 **Comprehensive Car Maintenance Guide**\n\n**📅 Regular Service Schedule:**\n• **Every 5,000km**: Oil & filter change\n• **Every 10,000km**: Full service inspection\n• **Every 20,000km**: Major service (spark plugs, air filter)\n• **Every 40,000km**: Transmission fluid, brake fluid\n\n**🛞 Essential Checks:**\n• **Tire pressure**: Monthly check\n• **Tire rotation**: Every 10,000km\n• **Brake pads**: Inspect every 20,000km\n• **Battery**: Check terminals every 6 months\n\n**💰 Cost Estimates:**\n• Basic service: $150-300\n• Major service: $400-800\n• Tire replacement: $400-1200 (set of 4)\n\n**⚠️ Warning Signs:**\n• Strange noises or vibrations\n• Dashboard warning lights\n• Unusual smells or smoke\n• Poor fuel efficiency\n\n**💡 Money-Saving Tips:**\n• Use authorized workshops for warranty\n• Keep maintenance records for resale value\n• Address issues early to prevent costly repairs\n• Consider workshop packages for regular servicing\n\nWhat specific maintenance help do you need?"
-
-  utter_registration:
-  - text: "👋 Hi there! I'm CleverCompanion, your Singapore automotive assistant.\n\n📋 **Vehicle Registration Process (LTA)**\n\n**📑 Required Documents:**\n• NRIC/Passport (Original + Copy)\n• Valid Driving License\n• Motor Insurance Certificate\n• Vehicle Inspection Certificate\n• COE Certificate\n• Purchase Invoice/Agreement\n\n**💰 Registration Fees (2024):**\n• Registration Fee: $140\n• Number Plate Fee: $50\n• Road Tax: Varies by engine capacity\n• Additional Registration Fee (ARF): 100% of OMV\n\n**🏢 Where to Register:**\n• LTA Customer Service Centres\n• Authorized dealers (recommended)\n• SingPost branches (limited services)\n\n**⏰ Process Timeline:**\n• Same day registration (if documents complete)\n• Temporary number plates issued immediately\n• Permanent plates ready in 5-7 working days\n\n**🌐 Online Services:**\n• Check registration status: lta.gov.sg\n• Pay road tax online\n• Update particulars\n\n**📞 LTA Hotline:** 6898 0000\n\nNeed help with any specific step?"
+  - text: "I focus on automotive-related topics including vehicles, COE information, financing, maintenance, and car buying advice. How can I help you with your automotive needs?"
 
   utter_features:
-  - text: "I can assist you with vehicle information, pricing, test drives, and maintenance guidance. Use the buttons below for quick access to these services."
+  - text: "I can assist you with vehicle information, COE prices and categories, loan calculations, maintenance schedules, test drive bookings, and general automotive guidance. What interests you most?"
+
+  utter_appointment_cancelled:
+  - text: "✅ **No worries at all!** Your appointment request has been cancelled successfully. 😊\n\n🚗 **Ready to book again?** I'm here whenever you need to schedule a service!\n\n💬 **How else can I assist you today?** Whether it's vehicle information, COE details, or any other automotive questions - I'm here to help!"
+  - text: "🎯 **All sorted!** Your appointment has been cancelled as requested.\n\n⭐ **Planning ahead?** Feel free to reach out when you're ready to book again - I'll be happy to help you find the perfect time slot!\n\n🤝 **What can I help you with next?** I'm here for all your automotive needs!"
+  - text: "✨ **Done!** Your appointment cancellation is complete.\n\n🔄 **Change of plans happens!** When you're ready to reschedule or book a new service, just let me know and I'll take care of everything.\n\n💡 **Anything else on your mind?** I'm here to help with vehicles, financing, COE information, and more!"
+
+  utter_appointment_booking_started:
+  - text: "📅 **Great! Let's get your appointment scheduled.**\n\n🔧 **I'll help you book the perfect time slot for your automotive service.**\n\n💬 **What type of service would you like to schedule today?**"
+
+  # utter_appointment_booking_started:
+  # Removed static responses - now handled by action_book_appointment with clickable buttons
+
+  # utter_appointment_help:
+  # - text: "📅 **I'm here to help with all your appointment needs!**\n\n🔧 **Available Services:**\n• Test drives - Experience our vehicles\n• Sales consultations - Explore options\n• Financing discussions - Payment plans\n• Trade-in evaluations - Vehicle appraisals\n• Documentation assistance - Paperwork help\n\n💬 **What would you like to schedule today?**"
+  # - text: "🌟 **Let me guide you through our appointment options!**\n\n🚗 **Popular Services:**\n• Vehicle inspections - Quality checks\n• Custom orders - Personalized vehicles\n• Insurance consultations - Coverage plans\n• General consultations - Expert advice\n\n🎯 **Which service interests you most?**"
+
+  # utter_appointment_confirmation_reminder:
+  # - text: "📱 **Appointment Confirmed!** You'll receive a confirmation message shortly.\n\n⏰ **Reminder:** We'll send you a notification 24 hours before your appointment.\n\n🤝 **Need changes?** Just message me anytime to reschedule or modify your booking!"
+
+  # utter_appointment_rescheduling_help:
+  # - text: "🔄 **Happy to help you reschedule!**\n\n📋 **I'll need:**\n• Your current appointment ID\n• New preferred date and time\n• Confirmation of your phone number\n\n💬 **What's your appointment ID and when would you like to reschedule?**"
 
 
 
 actions:
-  - action_get_vehicle_info
-  - action_book_test_drive
-  - action_get_maintenance_info
-  - action_recommend_economic_cars
-  - action_recommend_family_cars
-  - action_search_vehicles
+  # Currently used actions (COE-focused)
   - action_coe_prices
   - action_explain_coe_categories
   - action_explain_coe_renewal
-  - action_coe_predictions_confirm
-  - action_coe_category_a
-  - action_coe_category_b
-  - action_coe_category_c
-  - action_coe_category_e
-  - action_calculate_loan
-  - action_budget_calculator
-  - action_email_only
-  - action_phone_only
-  - action_whatsapp_only
-  - action_contact_us
-  - action_store_location
-  - action_operating_hours
-  - action_provide_business_hours
-  - action_default_fallback
-  - action_capability_confirm
-  - action_maintenance_guide
-  - action_tire_maintenance
-  - action_engine_maintenance
-  - action_brake_maintenance
-  - action_electrical_maintenance
-  - action_fluid_maintenance
-  - action_filter_maintenance
-  - action_test_drive_booking
-  - action_process_test_drive_booking
-  - action_confirm_test_drive_booking
-  - action_fuel_prices
-  - action_cheapest_fuel
-  - action_vehicle_pricing
-  - action_explain_coe_bidding
-  - action_get_insurance_info
-  - action_get_road_tax_info
-  - action_get_parking_info
-  - action_get_fuel_prices
-  - action_get_ev_info
-  - action_get_depreciation_info
-  - action_first_time_buyer_guide
-  - action_get_second_hand_info
-  - action_compare_vehicles
-  - action_get_maintenance_costs
-  - action_get_scrap_info
-  - action_get_popular_models
-  - action_climate_advice
-  - action_recommend_brands
-  - action_luxury_economy_comparison
-  - action_recommend_sports_cars
-  - action_persona_based_recommendations
+  - action_coe_renewal_assistance
+  - action_coe_bidding_assistance
+  - action_coe_category_details
+  - action_explain_coe_bidding_process
+  - action_coe_trends
+  - action_pqp_checker
+  - action_coe_prediction
+  - action_coe_timing_recommendation
   - action_provide_clarification
   - action_provide_help
+  - action_capability_confirm
+  - action_live_support
+  # Contact-related actions
+  - action_smart_contact
+  # Appointment booking actions
+  - action_validate_intent
+  - action_book_appointment
+  - action_view_appointments
+  - action_cancel_appointment
+  # Loan calculator actions
+  - action_loan_calculation_result
+  # Default and fallback actions
+  - action_default_fallback
   - utter_greet
   - utter_goodbye
-  - utter_maintenance
-  - utter_registration
   - utter_features
   - utter_out_of_scope
   - utter_default
-  # PROBLEM 4: New actions for feedback and reviews  
-  - action_feedback_request
-  - action_process_feedback
-  - action_get_car_reviews
-  # PROBLEM FIX: Additional new actions
-  - action_loan_calculation_result
-  - action_show_car_reviews
+  - utter_appointment_cancelled
+  - utter_appointment_booking_started
+  # - utter_appointment_help
+  # - utter_appointment_confirmation_reminder
+  # - utter_appointment_rescheduling_help
+  
 
 session_config:
   session_expiration_time: 60

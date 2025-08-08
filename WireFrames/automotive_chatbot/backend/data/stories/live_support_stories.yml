@@ -1,0 +1,38 @@
+version: "3.1"
+
+stories:
+
+- story: ask live support directly
+  steps:
+  - intent: ask_live_support
+  - action: action_live_support
+
+- story: ask live support after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_live_support
+  - action: action_live_support
+
+- story: escalate to live support
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+  - intent: ask_live_support
+  - action: action_live_support
+
+- story: live support after failed help
+  steps:
+  - intent: ask_help
+  - action: action_provide_help
+  - intent: ask_live_support
+  - action: action_live_support
+
+- story: live support conversation flow
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_live_support
+  - action: action_live_support

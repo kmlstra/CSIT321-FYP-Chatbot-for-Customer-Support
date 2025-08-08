@@ -1,0 +1,8 @@
+version: "3.1"
+
+rules:
+
+- rule: Respond to loan calculation request
+  steps:
+  - intent: calculate_loan
+  - action: action_loan_calculation_result

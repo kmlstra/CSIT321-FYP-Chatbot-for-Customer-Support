@@ -1,0 +1,27 @@
+version: "3.1"
+
+stories:
+
+- story: loan calculation request
+  steps:
+  - intent: calculate_loan
+  - action: action_loan_calculation_result
+
+- story: loan calculator help request
+  steps:
+  - intent: ask_loan_help
+  - action: action_loan_calculation_result
+
+- story: loan calculation after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: calculate_loan
+  - action: action_loan_calculation_result
+
+- story: loan help with goodbye
+  steps:
+  - intent: ask_loan_help
+  - action: action_loan_calculation_result
+  - intent: goodbye
+  - action: utter_goodbye

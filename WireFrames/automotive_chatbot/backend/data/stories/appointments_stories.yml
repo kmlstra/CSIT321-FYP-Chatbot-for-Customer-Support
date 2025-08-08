@@ -1,0 +1,200 @@
+version: "3.1"
+
+stories:
+
+- story: book appointment happy path
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: book_appointment
+    entities:
+    - service_type: "test drive"
+    - appointment_date: "Monday"
+    - appointment_time: "2pm"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "John Smith"
+    - customer_phone: "91234567"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: book appointment with missing details
+  steps:
+  - intent: book_appointment
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - service_type: "maintenance"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - appointment_date: "tomorrow"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - appointment_time: "10:30 AM"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "Sarah Johnson"
+    - customer_phone: "+65 8765 4321"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: check appointment availability
+  steps:
+  - intent: ask_appointment_availability
+    entities:
+    - appointment_date: "Friday"
+  - action: action_book_appointment
+  - intent: book_appointment
+    entities:
+    - appointment_time: "3pm"
+    - service_type: "car inspection"
+  - action: action_book_appointment
+
+- story: view existing appointments
+  steps:
+  - intent: view_appointments
+  - action: action_view_appointments
+  - intent: view_appointments
+    entities:
+    - customer_phone: "91234567"
+  - action: action_view_appointments
+
+- story: cancel appointment by ID
+  steps:
+  - intent: cancel_appointment
+    entities:
+    - appointment_id: "APT-12345"
+  - action: action_cancel_appointment
+
+- story: cancel appointment by details
+  steps:
+  - intent: cancel_appointment
+    entities:
+    - appointment_date: "Monday"
+    - appointment_time: "2pm"
+  - action: action_cancel_appointment
+
+- story: cancel appointment with phone lookup
+  steps:
+  - intent: cancel_appointment
+  - action: action_cancel_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_phone: "91234567"
+  - action: action_view_appointments
+  - intent: cancel_appointment
+    entities:
+    - appointment_id: "APT-12345"
+  - action: action_cancel_appointment
+
+- story: reschedule appointment
+  steps:
+  - intent: reschedule_appointment
+    entities:
+    - appointment_id: "APT-12345"
+  - action: action_view_appointments
+  - intent: provide_appointment_details
+    entities:
+    - appointment_date: "Friday"
+    - appointment_time: "3pm"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: check appointment status
+  steps:
+  - intent: ask_appointment_status
+    entities:
+    - appointment_id: "APT-12345"
+  - action: action_view_appointments
+  - intent: ask_appointment_status
+    entities:
+    - customer_phone: "91234567"
+  - action: action_view_appointments
+
+- story: book appointment after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: book_appointment
+    entities:
+    - service_type: "oil change"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "Michael Chen"
+    - customer_phone: "9876-5432"
+    - appointment_date: "next week"
+    - appointment_time: "morning"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: appointment booking with availability check
+  steps:
+  - intent: ask_appointment_availability
+    entities:
+    - service_type: "brake service"
+    - appointment_date: "December 20th"
+  - action: action_book_appointment
+  - intent: book_appointment
+    entities:
+    - appointment_time: "2pm"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "Lisa Wong"
+    - customer_phone: "8123-4567"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: multiple appointment operations
+  steps:
+  - intent: view_appointments
+    entities:
+    - customer_phone: "91234567"
+  - action: action_view_appointments
+  - intent: book_appointment
+    entities:
+    - service_type: "tire replacement"
+    - appointment_date: "Friday"
+    - appointment_time: "11:45"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "John Smith"
+    - customer_phone: "91234567"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment
+
+- story: appointment rebooking
+  steps:
+  - intent: book_appointment
+    entities:
+    - appointment_date: "Monday"
+    - appointment_time: "2pm"
+  - action: action_book_appointment
+  - intent: ask_appointment_availability
+    entities:
+    - appointment_date: "Tuesday"
+  - action: action_book_appointment
+  - intent: book_appointment
+    entities:
+    - appointment_time: "3pm"
+    - service_type: "maintenance"
+  - action: action_book_appointment
+  - intent: provide_appointment_details
+    entities:
+    - customer_name: "Sarah Johnson"
+    - customer_phone: "+65 8765 4321"
+  - action: action_book_appointment
+  - intent: confirm_appointment
+  - action: action_book_appointment

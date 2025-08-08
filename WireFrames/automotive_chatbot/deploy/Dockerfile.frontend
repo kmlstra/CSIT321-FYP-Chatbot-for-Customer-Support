@@ -1,0 +1,135 @@
+# Multi-stage build for Next.js Frontend with Static Files
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install dependencies based on package manager
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci --only=production
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ .
+
+# Environment variables for build
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Build the application
+RUN npm run build
+
+# Production image with nginx for static files
+FROM nginx:alpine AS runner
+WORKDIR /app
+
+# Install Node.js for Next.js server
+RUN apk add --no-cache nodejs npm
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application (standalone build)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+# Note: Using Next.js standalone server (server.js is included in standalone build)
+
+# Create nginx configuration for serving static files and proxying Next.js
+RUN cat > /etc/nginx/nginx.conf << 'EOF'
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+    
+    access_log /var/log/nginx/access.log main;
+    sendfile on;
+    keepalive_timeout 65;
+    
+    server {
+        listen 3000;
+        server_name localhost;
+        
+        # Serve static HTML files directly
+        location ~ \.(html)$ {
+            root /app/public;
+            try_files $uri $uri/ =404;
+        }
+        
+        # Serve static assets
+        location /static/ {
+            root /app/public;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+        
+        location /media/ {
+            root /app/public;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+        
+        # Serve JavaScript files
+        location ~ \.(js)$ {
+            root /app/public;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+        
+        # Proxy Next.js pages to Node.js server
+        location / {
+            proxy_pass http://localhost:3001;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+}
+EOF
+
+# Set proper permissions
+RUN chown -R nextjs:nodejs /app
+
+# Create startup script
+RUN cat > /app/start.sh << 'EOF'
+#!/bin/sh
+# Start Next.js standalone server on port 3001
+su nextjs -c "cd /app && node server.js" &
+# Start nginx on port 3000
+nginx -g 'daemon off;'
+EOF
+
+RUN chmod +x /app/start.sh
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+# Start both nginx and Node.js
+CMD ["/app/start.sh"]

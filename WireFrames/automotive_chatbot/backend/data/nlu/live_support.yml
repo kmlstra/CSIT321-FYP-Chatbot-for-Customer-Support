@@ -1,0 +1,34 @@
+version: "3.1"
+
+nlu:
+- intent: ask_live_support
+  examples: |
+    - I need live support
+    - I want to talk to a human
+    - connect me to live support
+    - I need human assistance
+    - can I speak to someone
+    - live chat support
+    - talk to agent
+    - human support
+    - I need help from a person
+    - connect me to customer service
+    - I want to chat with support
+    - live support assistance
+    - speak to representative
+    - I need live help
+    - contact live agent
+    - human chat support
+    - I want live assistance
+    - connect to live chat
+    - talk to support team
+    - I need real person help
+    - live customer support
+    - speak with advisor
+    - I need immediate assistance
+    - urgent support needed
+    - escalate to human
+    - I want personal assistance
+    - connect me to whatsapp support
+    - whatsapp live chat
+    - I need whatsapp help

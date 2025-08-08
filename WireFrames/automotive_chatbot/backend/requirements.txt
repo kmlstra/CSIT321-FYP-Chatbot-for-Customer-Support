@@ -20,6 +20,7 @@ scipy>=1.7.0,<1.12.0
 # DATABASE SUPPORT
 pymongo>=3.12,<4.0
 motor>=2.5.0,<3.0.0
+certifi>=2023.0.0  # SSL certificate verification for MongoDB Atlas
 
 # SQL DATABASE
 SQLAlchemy==1.4.53
@@ -59,4 +60,21 @@ email-validator>=2.0.0,<3.0.0
 python-multipart>=0.0.20,<1.0.0
 
 # DATA ANALYTICS
-pandas>=1.5.0,<2.0.0 
+pandas>=1.5.0,<2.0.0
+matplotlib>=3.5.0,<3.8.0
+
+# SYSTEM MONITORING
+psutil>=5.8.0,<6.0.0
+
+# ENVIRONMENT VARIABLES
+python-dotenv>=1.0.0,<2.0.0
+
+# TIMEZONE SUPPORT
+pytz>=2019.1,<2023.0
+
+# EMAIL NOTIFICATIONS & SCHEDULING
+schedule>=1.2.0,<2.0.0
+
+# WINDOWS SERVICE SUPPORT (OPTIONAL - only needed for Windows service installation)
+# Install separately if needed: pip install pywin32
+# pywin32>=306

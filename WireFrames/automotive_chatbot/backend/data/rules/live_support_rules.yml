@@ -1,0 +1,8 @@
+version: "3.1"
+
+rules:
+
+- rule: Provide live support
+  steps:
+  - intent: ask_live_support
+  - action: action_live_support

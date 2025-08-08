@@ -1,0 +1,229 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hello
+    - hi
+    - hey
+    - helo
+    - helo there
+    - helo bot
+    - helo chatbot
+    - hi there
+    - hey there
+    - good morning
+    - good afternoon
+    - good evening
+    - helllo
+    - hii
+    - heya
+    - hai
+    - hallo
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you later
+    - talk to you later
+    - have a good day
+    - thanks, bye
+    - see you
+
+- intent: affirm
+  examples: |
+    - yes
+    - yep
+    - yeah
+    - of course
+    - that sounds good
+    - correct
+    - right
+    - sure
+    - absolutely
+    - yes please
+    - that's correct
+    - exactly right
+    - I agree
+    - sounds good
+    - perfect
+    - that's right
+    - confirm
+    - proceed
+    - go ahead
+    - true
+    - indeed
+    - definitely
+    - certainly
+    - positive
+    - affirmative
+    - roger that
+    - you bet
+    - for sure
+    - without a doubt
+    - yes sir
+    - yes ma'am
+    - okay
+    - ok
+    - alright
+    - fine
+    - good
+    - agreed
+    - accepted
+    - approved
+
+- intent: deny
+  examples: |
+    - no
+    - nope  
+    - I don't think so
+    - don't like that
+    - no way
+    - not really
+    - nah
+    - no thanks
+    - not interested
+    - that's wrong
+    - incorrect
+    - false
+    - negative
+    - I disagree
+    - not quite
+    - that's not right
+    - never
+    - not at all
+    - absolutely not
+    - definitely not
+    - I don't agree
+    - not for me
+    - no sir
+    - no ma'am
+    - not today
+    - maybe later
+    - not now
+    - stop
+    - refuse
+    - reject
+    - decline
+    - pass
+    - skip
+    - not applicable
+    - doesn't apply
+
+- intent: ask_clarification
+  examples: |
+    - can you help me
+    - what do you mean
+    - can you clarify
+    - i dont understand
+    - what
+    - huh
+    - excuse me
+    - pardon
+    - sorry what
+    - come again
+    - what are you saying
+    - i didnt get that
+    - could you repeat
+    - can you explain that
+    - please explain
+    - I need clarification
+    - that's confusing
+    - I'm confused
+    - can you elaborate
+    - more details please
+    - what does that mean
+    - I don't follow
+    - can you break that down
+    - simplify please
+    - make it clearer
+    - rephrase that
+    - say that again
+    - I missed that
+    - unclear
+    - confusing
+    - elaborate on that
+    - give me more info
+    - further explanation
+    - what exactly
+    - be more specific
+    - I need more information
+    - can you be clearer
+    - that doesn't make sense
+    - please clarify what you mean
+
+- intent: ask_help
+  examples: |
+    - help
+    - can you help
+    - i need help
+    - help me
+    - what can you do
+    - what are your capabilities
+    - how can you help
+    - what services do you offer
+    - what can you assist with
+    - show me what you can do
+    - list your functions
+    - what features do you have
+    - tell me what you do
+    - I need assistance
+    - can you assist me
+    - help please
+    - I need support
+    - support me
+    - guide me
+    - assist me please
+    - what help can you provide
+    - how do you work
+    - what's your purpose
+    - what were you designed for
+    - show me your menu
+    - what options do I have
+    - what choices are available
+    - help menu
+    - assistance please
+    - I'm lost
+    - I don't know what to do
+    - where do I start
+    - how do I begin
+    - what should I do
+    - guide me through this
+    - walk me through
+    - show me how
+    - instructions please
+    - need directions
+
+- intent: out_of_scope
+  examples: |
+    - weather
+    - tell me a joke
+    - what's the weather like
+    - how old are you
+    - where are you from
+    - tell me about yourself
+    - what's your name
+    - who made you
+    - what time is it
+    - what day is it
+    - play music
+    - call my mom
+    - order pizza
+    - book a flight
+    - sports scores
+    - any
+    - anything
+
+- intent: ask_capability_confirm  
+  examples: |
+    - can you calculate
+    - do you calculate
+    - are you able to calculate
+    - can you help with calculations
+    - do you do calculations
+    - can you compute
+    - are you able to help
+    - do you provide calculations
+    - can you help me calculate
+    - do you offer calculation services

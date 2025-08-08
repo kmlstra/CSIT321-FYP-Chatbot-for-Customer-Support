@@ -1,0 +1,31 @@
+version: "3.1"
+
+rules:
+
+- rule: Greet user
+  steps:
+  - intent: greet
+  - action: utter_greet
+
+- rule: Say goodbye
+  steps:
+  - intent: goodbye
+  - action: utter_goodbye
+
+- rule: Handle general affirmation
+  condition:
+  - active_loop: null
+  - slot_was_set:
+    - appointment_active: false
+  steps:
+  - intent: affirm
+  - action: utter_greet
+
+- rule: Handle general denial
+  condition:
+  - active_loop: null
+  - slot_was_set:
+    - appointment_active: false
+  steps:
+  - intent: deny
+  - action: utter_features

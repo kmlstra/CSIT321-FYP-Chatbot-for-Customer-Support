@@ -1,0 +1,81 @@
+version: "3.1"
+
+nlu:
+- intent: calculate_loan
+  examples: |
+    - calculate loan for 200000, 40000, 7, 3.1
+    - 150000, 30000, 5, 2.8
+    - 100000, 1000, 10, 5
+    - 100000,1000,10,5
+    - 250000,50000,7,3.5
+    - 180000,36000,6,4.0
+    - 300000,60000,5,2.8
+    - Car Price: 180000, Down Payment: 36000, Loan Tenure: 6, Interest Rate: 3.5
+    - calculate loan for price 200000 with 20000 downpayment and 3.1% interest rate for 7 years
+    - I want to calculate my car loan payment
+    - Can you help me calculate monthly loan payment
+    - loan calculation for 250000 car with 50000 down payment
+    - calculate monthly payment for 180000 car, 30000 down, 5 years, 3.2%
+    - budget calculator for car loan
+    - how much will I pay monthly for a 200k car
+    - car loan calculator with price 150000
+    - calculate car financing for 80000 dollars
+    - loan payment calculation for vehicle
+    - monthly car payment calculator
+    - auto loan calculation
+    - vehicle financing calculator
+    - car loan monthly payment
+    - calculate auto financing
+    - loan calculator for car purchase
+    - vehicle loan payment calculator
+    - loan calculator
+    - calculate car financing
+    - monthly payment calculation
+    - car loan calculation
+    - financing calculator
+    - budget planning for car purchase
+    - what's my monthly payment
+    - loan payment calculator
+    - car financing help
+    - calculate auto loan
+    - vehicle financing calculator
+    - monthly car payment
+    - loan amount calculation
+    - car price 300000 down payment 60000 tenure 7 years rate 4.2%
+    - 120000, 24000, 4, 2.9
+    - price: 160000, down: 32000, years: 5, rate: 3.8
+    - calculate for 220000 car with 15% down payment for 6 years at 3.5%
+    - I need to know my monthly payment for a 180000 car
+    - help me calculate loan for new car purchase
+    - what will be my EMI for 200000 car loan
+    - car loan EMI calculator
+    - monthly installment calculation
+    - auto financing calculation
+    - loan calc 100000,1000,10,5
+    - calculate 100000,1000,10,5
+    - compute loan 100000,1000,10,5
+    - 100000 1000 10 5
+    - loan 100000,1000,10,5
+
+- intent: ask_loan_help
+  examples: |
+    - how to use loan calculator
+    - loan calculator help
+    - how do I calculate my loan
+    - what format should I use for loan calculation
+    - help with loan calculator
+    - how to calculate car loan
+    - loan calculation format
+    - what information do you need for loan calculation
+    - how does the loan calculator work
+    - can you help me with loan calculation
+    - I need help calculating my car loan
+    - what details do you need for loan calculation
+    - loan calculator instructions
+    - how to use the budget calculator
+    - explain loan calculation process
+    - what format for loan details
+    - help me understand loan calculator
+    - loan calculation guidance
+    - how to input loan information
+    - what data is needed for loan calculation

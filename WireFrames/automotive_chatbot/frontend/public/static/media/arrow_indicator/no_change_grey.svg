@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .arrow-horizontal { fill: #6b7280; stroke: #4b5563; stroke-width: 1; }
+    </style>
+  </defs>
+  <!-- Grey horizontal arrow -->
+  <polygon class="arrow-horizontal" points="17,10 7,4 7,16" />
+</svg> 

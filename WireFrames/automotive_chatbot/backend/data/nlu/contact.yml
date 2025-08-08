@@ -1,0 +1,154 @@
+version: "3.1"
+
+nlu:
+- intent: ask_contact
+  examples: |
+    - contact information
+    - how to contact you
+    - contact details
+    - your contact
+    - contact
+    - reach you
+    - get in touch
+    - how can I reach you
+    - contact us
+    - reach out
+    - speak to someone
+    - contact methods
+    - ways to contact
+    - communication options
+    - how to get in touch
+
+- intent: ask_email_only
+  examples: |
+    - email address
+    - your email
+    - send email
+    - email only
+    - contact by email
+    - email me
+    - electronic mail
+    - e-mail
+    - email contact
+    - mail address
+    - electronic address
+
+- intent: ask_phone_only
+  examples: |
+    - phone number
+    - phone
+    - call
+    - telephone
+    - mobile number
+    - contact number
+    - phone only
+    - telephone number
+    - mobile phone
+    - landline
+    - phone contact
+    - call number
+
+- intent: ask_whatsapp_only
+  examples: |
+    - whatsapp number
+    - wa
+    - whatsapp me
+    - whatsapp only
+    - message you
+    - text you
+    - whatsapp contact
+    - wa number
+    - whatsapp chat
+    - instant message
+
+- intent: ask_store_location
+  examples: |
+    - store location
+    - where are you located
+    - your location
+    - address
+    - showroom location
+    - where is your showroom
+    - where is your store
+    - where is the store
+    - store address
+    - office location
+    - branch location
+    - find you
+    - directions
+    - where to find you
+    - physical location
+    - map
+    - how to get there
+    - where can I find you
+    - location of your store
+    - your store location
+
+- intent: ask_operating_hours
+  examples: |
+    - operating hours
+    - opening hours
+    - what time do you open
+    - what time do you close
+    - open time
+    - close time
+    - when are you open
+    - hours of operation
+    - shop hours
+    - timings
+    - schedule
+    - when do you operate
+    - operation timings
+    - store hours
+
+- intent: ask_business_hours
+  examples: |
+    - business hours
+    - office hours
+    - working hours
+    - when do you work
+    - work schedule
+    - office timings
+    - business timings
+    - company hours
+    - corporate hours
+    - professional hours
+    - work hours
+
+- intent: ask_public_holiday_hours
+  examples: |
+    - do you open on public holidays
+    - are you open during public holidays
+    - public holiday hours
+    - open on holidays
+    - holiday schedule
+    - public holiday timings
+    - are you closed on public holidays
+    - do you work on public holidays
+    - holiday opening hours
+    - public holiday operations
+    - open during holidays
+    - closed on public holidays
+    - holiday business hours
+    - public holiday availability
+    - new year opening
+    - christmas opening
+    - chinese new year hours
+    - national day opening
+    - deepavali opening
+    - hari raya opening
+
+- intent: confirm_schedule_visit
+  examples: |
+    - schedule visit
+    - I want to visit
+    - book a visit
+    - I want to schedule
+    - please schedule
+    - ok, schedule
+    - yes, please book
+    - book me in
+    - set up a visit
+    - arrange a visit
+    - I'd like to schedule
+    - please book me

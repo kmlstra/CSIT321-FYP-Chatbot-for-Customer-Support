@@ -1,0 +1,73 @@
+version: "3.1"
+
+stories:
+
+- story: ask contact information
+  steps:
+  - intent: ask_contact
+  - action: action_smart_contact
+
+- story: ask email only
+  steps:
+  - intent: ask_email_only
+  - action: action_smart_contact
+
+- story: ask phone only
+  steps:
+  - intent: ask_phone_only
+  - action: action_smart_contact
+
+- story: ask whatsapp only
+  steps:
+  - intent: ask_whatsapp_only
+  - action: action_smart_contact
+
+- story: ask store location
+  steps:
+  - intent: ask_store_location
+  - action: action_smart_contact
+
+- story: ask operating hours
+  steps:
+  - intent: ask_operating_hours
+  - action: action_smart_contact
+
+- story: ask business hours
+  steps:
+  - intent: ask_business_hours
+  - action: action_smart_contact
+
+- story: ask public holiday hours
+  steps:
+  - intent: ask_public_holiday_hours
+  - action: action_smart_contact
+
+- story: schedule visit
+  steps:
+  - intent: confirm_schedule_visit
+  - action: action_smart_contact
+
+- story: contact to location flow
+  steps:
+  - intent: ask_contact
+  - action: action_smart_contact
+  - intent: ask_store_location
+  - action: action_smart_contact
+
+- story: location to hours flow
+  steps:
+  - intent: ask_store_location
+  - action: action_smart_contact
+  - intent: ask_operating_hours
+  - action: action_smart_contact
+
+- story: comprehensive contact inquiry
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_contact
+  - action: action_smart_contact
+  - intent: ask_store_location
+  - action: action_smart_contact
+  - intent: ask_operating_hours
+  - action: action_smart_contact

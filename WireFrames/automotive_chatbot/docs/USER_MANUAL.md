@@ -1,408 +1,168 @@
-# Automotive Chatbot Platform - User Manual
+# 🚗 Automotive Chatbot - User Manual
 
-## Table of Contents
-1. [Project Overview](#project-overview)
-2. [Architecture: BCE Framework](#architecture-bce-framework)
-3. [Project Structure](#project-structure)
-4. [RASA Configuration Explained](#rasa-configuration-explained)
-5. [Quick Start Guide](#quick-start-guide)
-6. [Development Guide](#development-guide)
-7. [Deployment](#deployment)
-8. [Troubleshooting](#troubleshooting)
+## 📖 Overview
 
-## Project Overview
+The Automotive Chatbot is an AI-powered customer service platform designed for car dealerships and automotive businesses. It provides real-time COE pricing, vehicle information, test drive booking, and comprehensive automotive services.
 
-The Automotive Chatbot Platform is a modular, scalable chatbot system built specifically for automotive assistance. It provides expert advice on car maintenance, repairs, and troubleshooting through an intelligent conversational interface.
-
-### Key Features
-- **Intelligent Automotive Assistant**: Powered by RASA NLU/Core
-- **Modern React Frontend**: Built with Next.js and TypeScript
-- **Robust Backend**: FastAPI with MongoDB integration
-- **BCE Architecture**: Clean separation of concerns
-- **Real-time Communication**: WebSocket support for instant responses
-
-## Architecture: BCE Framework
-
-This project strictly follows the **BCE (Business-Controller-Entity)** framework for clean architecture:
-
-### 🏢 **Business Layer** (`frontend/src/business/`)
-Contains all business logic and rules:
-- **ChatService.ts**: Handles chat operations, message validation, API communication
-- **UserService.ts**: User management and preferences
-- **AnalyticsService.ts**: Usage tracking and analytics
-
-### 🎮 **Controller Layer** (`frontend/src/controllers/`)
-Manages UI interactions and coordinates between Business and Entity layers:
-- **ChatController.ts**: Manages chat state, user interactions
-- **UserController.ts**: Handles user authentication and profile management
-- **NavigationController.ts**: Manages app navigation and routing
-
-### 📊 **Entity Layer** (`frontend/src/entities/`)
-Defines data structures and models:
-- **ChatMessage.ts**: Message entities, session models, user profiles
-- **User.ts**: User-related entities
-- **Analytics.ts**: Analytics and tracking entities
-
-### Benefits of BCE Framework
-1. **Separation of Concerns**: Each layer has a specific responsibility
-2. **Testability**: Easy to unit test each layer independently
-3. **Maintainability**: Changes in one layer don't affect others
-4. **Scalability**: Easy to extend functionality
-5. **Code Reusability**: Business logic can be reused across components
-
-## Project Structure
+## 🏗️ Architecture
 
 ```
 automotive_chatbot/
-├── backend/                    # Python Backend (FastAPI + RASA)
-│   ├── api/                   # FastAPI application
-│   │   ├── main.py           # Main application entry
-│   │   ├── routes/           # API endpoints
-│   │   ├── models/           # Database models
-│   │   └── services/         # Business services
-│   ├── data/                 # RASA Training Data (Root Level)
-│   │   ├── nlu.yml          # Natural Language Understanding
-│   │   ├── stories.yml      # Conversation flows
-│   │   └── rules.yml        # Conversation rules
-│   ├── rasa/                # RASA Project Directory
-│   │   ├── config.yml       # RASA configuration
-│   │   ├── data/           # Symlinked to ../data/
-│   │   └── models/         # Trained models
-│   ├── config.yml           # Main RASA config
-│   ├── domain.yml           # RASA domain definition
-│   └── requirements.txt     # Python dependencies
-├── frontend/                  # React Frontend (Next.js)
-│   ├── src/
-│   │   ├── business/        # Business Logic Layer
-│   │   ├── controllers/     # Controller Layer
-│   │   ├── entities/        # Entity/Model Layer
-│   │   ├── components/      # React Components
-│   │   └── app/            # Next.js App Router
-│   └── package.json
-├── scripts/                  # Automation Scripts
-│   ├── start_all.bat       # Start all services
-│   ├── start_rasa.bat      # Start RASA server
-│   ├── start_fastapi.bat   # Start FastAPI server
-│   └── start_frontend.bat  # Start React frontend
-├── web-interface/           # Static Web Interfaces
-│   ├── chat.html           # Simple chat interface
-│   └── chat-widget.html    # Advanced chat widget
-└── docs/                   # Documentation
-    └── USER_MANUAL.md      # This file
+├── backend/
+│   ├── api/                    # API Layer (FastAPI)
+│   │   ├── main.py            # Main application entry point
+│   │   ├── config.py          # Configuration management
+│   │   ├── auth.py            # Authentication utilities
+│   │   ├── lta_rate_limiter.py# LTA API rate limiting
+│   │   └── actions/           # RASA action handlers
+│   ├── domain.yml             # RASA conversation domain
+│   ├── endpoints.yml          # RASA endpoint configuration
+│   ├── config.yml             # RASA model configuration
+│   ├── credentials.yml        # RASA channel credentials
+│   └── requirements.txt       # Python dependencies
+├── frontend/                  # React.js frontend
+├── docs/                      # Documentation
+└── .env                       # Environment variables (secure)
 ```
 
-## RASA Configuration Explained
+## 🔧 Core Components
 
-### Why Two Data Locations?
+### **1. RASA Framework**
+- **Purpose**: Natural Language Understanding (NLU) and Dialog Management
+- **Files**:
+  - `domain.yml` - Defines intents, entities, responses, and actions
+  - `config.yml` - Pipeline configuration for NLU and policies
+  - `endpoints.yml` - Webhook and action server endpoints
+  - `credentials.yml` - Channel configurations (REST, WebSocket)
 
-#### 1. **`backend/data/`** - Primary Training Data
-This is the **main source of truth** for all RASA training data:
-- **Purpose**: Central location for all training data
-- **Contents**: 
-  - `nlu.yml`: Intent examples and entity training data
-  - `stories.yml`: Conversation flow examples
-  - `rules.yml`: Fixed conversation rules
-- **Why needed**: RASA requires training data to understand user intents and generate appropriate responses
+### **2. FastAPI Backend**
+- **Purpose**: RESTful API services and RASA action server
+- **Files**:
+  - `main.py` - Application entry point, CORS, health checks
+  - `config.py` - Settings management with pydantic
+  - `auth.py` - JWT authentication and user management
+  - `lta_rate_limiter.py` - LTA API abuse prevention
 
-#### 2. **`backend/rasa/`** - RASA Project Directory
-This is the **RASA project workspace**:
-- **Purpose**: Contains RASA-specific configuration and generated files
-- **Contents**:
-  - `config.yml`: RASA pipeline configuration
-  - `data/`: Symlinked to `../data/` (avoids duplication)
-  - `models/`: Trained RASA models
-- **Why needed**: RASA CLI expects a specific project structure
+### **3. RASA Action Handlers**
+- **Location**: `backend/api/actions/`
+- **Purpose**: Handle specific business operations
 
-### RASA Training Data Structure
+## 📁 RASA Actions Explained
 
-#### **NLU (Natural Language Understanding)**
-```yaml
-# backend/data/nlu.yml
-nlu:
-- intent: ask_oil_change
-  examples: |
-    - When should I change my oil?
-    - How often do I need an oil change?
-    - Oil change frequency for my car
+| **File** | **Purpose** | **Key Functions** |
+|----------|-------------|-------------------|
+| `coe_actions.py` | COE price queries from LTA API | Real-time pricing, historical data, predictions |
+| `vehicle_actions.py` | Vehicle information and search | Specifications, recommendations, inventory |
+| `testdrive_actions.py` | Test drive booking | Schedule management, confirmations |
+| `loan_actions.py` | Finance calculations | EMI calculator, eligibility checks |
+| `maintenance_actions.py` | Service scheduling | Maintenance reminders, booking |
+| `contact_actions.py` | Contact information | Business details, locations, support |
+| `feedback_actions.py` | Customer feedback | Ratings, reviews, satisfaction surveys |
+| `fuel_actions.py` | Fuel-related queries | Efficiency, costs, comparisons |
+| `default_actions.py` | Fallback handlers | Default responses, error handling |
+| `rasa_actions.py` | RASA integration | Custom action utilities |
 
-- intent: check_engine_light
-  examples: |
-    - What does check engine light mean?
-    - My check engine light is on
-    - Check engine light troubleshooting
-```
+## 🔒 Security Features
 
-#### **Stories (Conversation Flows)**
-```yaml
-# backend/data/stories.yml
-stories:
-- story: oil change inquiry
-  steps:
-  - intent: ask_oil_change
-  - action: utter_oil_change_info
-  - intent: ask_oil_type
-  - action: utter_oil_type_recommendation
-```
-
-#### **Rules (Fixed Responses)**
-```yaml
-# backend/data/rules.yml
-rules:
-- rule: Say goodbye anytime the user says goodbye
-  steps:
-  - intent: goodbye
-  - action: utter_goodbye
-```
-
-### Configuration Files
-
-#### **Domain (`backend/domain.yml`)**
-Defines the chatbot's universe:
-- **Intents**: What users can say
-- **Entities**: Important information to extract
-- **Responses**: What the bot can say back
-- **Actions**: Custom actions the bot can perform
-
-#### **Config (`backend/config.yml`)**
-Defines the RASA pipeline:
-- **Language**: Language model to use
-- **Pipeline**: NLU processing steps
-- **Policies**: How to decide what to do next
-
-## Quick Start Guide
-
-### Prerequisites
-- Python 3.8+ with pip
-- Node.js 18+ with npm
-- MongoDB (local or cloud)
-
-### 1. Install Dependencies
-
+### **Environment Variables (.env)**
 ```bash
-# Backend dependencies
-cd backend
-pip install -r requirements.txt
+# LTA API Security
+LTA_API_KEY=your-lta-api-key
+LTA_RATE_LIMIT_REQUESTS=100
+LTA_MIN_REQUEST_INTERVAL=10
 
-# Frontend dependencies
-cd ../frontend
-npm install
-```
+# Application Security
+SECRET_KEY=jwt-secret-key
+DEBUG=false
 
-### 2. Start All Services
-
-```bash
-# Use the all-in-one script
-cd scripts
-./start_all.bat
-```
-
-This will start:
-- MongoDB (if not running)
-- RASA server (http://localhost:5005)
-- FastAPI backend (http://localhost:8000)
-- React frontend (http://localhost:3000)
-
-### 3. Access the Application
-
-- **Main Application**: http://localhost:3000
-- **API Documentation**: http://localhost:8000/docs
-- **Simple Chat Interface**: Open `web-interface/chat.html`
-- **Advanced Chat Widget**: Open `web-interface/chat-widget.html`
-
-## Development Guide
-
-### Adding New Intents
-
-1. **Add training examples** in `backend/data/nlu.yml`:
-```yaml
-- intent: new_intent_name
-  examples: |
-    - Example user message 1
-    - Example user message 2
-```
-
-2. **Add responses** in `backend/domain.yml`:
-```yaml
-responses:
-  utter_new_response:
-  - text: "Response to the new intent"
-```
-
-3. **Create conversation flows** in `backend/data/stories.yml`:
-```yaml
-- story: new intent story
-  steps:
-  - intent: new_intent_name
-  - action: utter_new_response
-```
-
-4. **Retrain the model**:
-```bash
-cd backend
-rasa train
-```
-
-### Frontend Development with BCE
-
-#### Adding New Business Logic
-```typescript
-// frontend/src/business/NewService.ts
-export class NewService {
-  // Business logic here
-}
-```
-
-#### Adding New Controller
-```typescript
-// frontend/src/controllers/NewController.ts
-export class NewController {
-  private service: NewService;
-  
-  // Controller logic here
-}
-```
-
-#### Adding New Entity
-```typescript
-// frontend/src/entities/NewEntity.ts
-export interface NewEntity {
-  // Entity properties here
-}
-```
-
-### Backend API Development
-
-The FastAPI backend follows RESTful principles:
-
-```python
-# backend/api/routes/new_route.py
-from fastapi import APIRouter
-
-router = APIRouter()
-
-@router.get("/new-endpoint")
-async def new_endpoint():
-    return {"message": "New endpoint"}
-```
-
-## Deployment
-
-### Production Deployment
-
-1. **Environment Variables**:
-```bash
-# .env file
+# Database
 MONGODB_URL=mongodb://localhost:27017
-RASA_URL=http://localhost:5005
-API_URL=http://localhost:8000
 ```
 
-2. **Build Frontend**:
+### **Rate Limiting**
+- **Max requests**: 100 per hour to LTA API
+- **Min interval**: 10 seconds between requests
+- **Caching**: 30-minute cache for COE data
+- **Fallback**: Graceful degradation on API limits
+
+## 🚀 Quick Start
+
+### **1. Installation**
 ```bash
-cd frontend
-npm run build
-npm start
+python setup.py
 ```
 
-3. **Start Backend Services**:
+### **2. Configuration**
 ```bash
-cd backend
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-rasa run --enable-api --cors "*" --port 5005
+cp env_template_secure.txt .env
+# Edit .env with your API keys
 ```
 
-### Docker Deployment
-
-```dockerfile
-# Dockerfile example for backend
-FROM python:3.9
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### 1. **Dependency Conflicts**
+### **3. Run Services**
 ```bash
-# Solution: Use the fixed requirements.txt
-pip install -r backend/requirements.txt
+# Start RASA
+rasa run --enable-api --cors "*"
+
+# Start Action Server  
+rasa run actions
+
+# Start FastAPI
+python backend/api/main.py
 ```
 
-#### 2. **RASA Training Fails**
-```bash
-# Check data format
-rasa data validate
+### **4. Access Points**
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **RASA API**: http://localhost:5005
+- **Frontend**: http://localhost:3000
 
-# Retrain with debug
-rasa train --debug
-```
+## 📊 Monitoring & Analytics
 
-#### 3. **Frontend Build Errors**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
-
-#### 4. **API Connection Issues**
-- Check if all services are running
-- Verify CORS settings in FastAPI
-- Check firewall/port settings
-
-### Performance Optimization
-
-1. **RASA Model Optimization**:
-   - Use appropriate pipeline components
-   - Optimize training data quality
-   - Regular model retraining
-
-2. **Frontend Optimization**:
-   - Implement proper caching
-   - Use React.memo for expensive components
-   - Optimize bundle size
-
-3. **Backend Optimization**:
-   - Use async/await properly
-   - Implement database indexing
-   - Add response caching
-
-### Monitoring and Logging
-
-1. **RASA Logging**:
-```yaml
-# config.yml
-debug_plots: true
-```
-
-2. **FastAPI Logging**:
+### **API Usage Tracking**
 ```python
-import logging
-logging.basicConfig(level=logging.INFO)
+from backend.api.lta_rate_limiter import lta_rate_limiter
+print(f"Current usage: {len(lta_rate_limiter.request_history)} requests/hour")
 ```
 
-3. **Frontend Error Tracking**:
-```typescript
-// Error boundary implementation
-class ErrorBoundary extends React.Component {
-  // Error handling logic
-}
-```
+### **Health Monitoring**
+- GET `/health` - System status
+- GET `/api/analytics` - Usage statistics
+- Logs in console for debugging
 
-## Support
+## 🛠️ Development Guide
 
-For technical support or questions:
-1. Check this user manual
-2. Review the code documentation
-3. Check the troubleshooting section
-4. Create an issue in the project repository
+### **Adding New Actions**
+1. Create new file in `backend/api/actions/`
+2. Import in `domain.yml` actions list
+3. Add corresponding stories in RASA
+4. Test with `rasa shell`
+
+### **Modifying API Endpoints**
+1. Edit `backend/api/main.py`
+2. Add new routers as needed
+3. Update authentication if required
+4. Test with FastAPI docs
+
+### **Environment Setup**
+- Python 3.9+ required
+- RASA 3.6.4 compatibility
+- MongoDB for persistent data
+- Redis for caching (optional)
+
+## 🔧 Troubleshooting
+
+### **Common Issues**
+1. **Import errors**: Check virtual environment activation
+2. **LTA API limits**: Check rate limiter logs
+3. **RASA not responding**: Verify action server connection
+4. **Authentication errors**: Check JWT secret key
+
+### **Support Contacts**
+- **Technical**: Check logs in console
+- **API Issues**: Verify `.env` configuration
+- **RASA Problems**: Check `domain.yml` syntax
 
 ---
 
-**Last Updated**: January 2025  
-**Version**: 2.0.0  
-**Framework**: BCE (Business-Controller-Entity) 
+*Last updated: December 2024*
+*Version: 2.0.0* 

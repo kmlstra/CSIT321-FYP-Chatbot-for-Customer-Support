@@ -11,18 +11,44 @@ pipeline:
   max_ngram: 4
 - name: DIETClassifier
   epochs: 20
+  constrain_similarities: true
+  model_confidence: softmax
+  batch_size: 8
+  learning_rate: 0.001
 - name: EntitySynonymMapper
 - name: ResponseSelector
-  epochs: 20
+  epochs: 60  # Reduced from 150 for hardware efficiency
+  retrieval_intent: None
+  constrain_similarities: true
+  model_confidence: softmax
+  # Hardware efficiency settings
+  batch_size: 16  # Memory efficient batch size
+  learning_rate: 0.001  # Optimized learning rate
+  epochs_patience: 10  # Early stopping
 
 policies:
 - name: MemoizationPolicy
 - name: RulePolicy
-- name: UnexpecTEDIntentPolicy
-  max_history: 5
-  epochs: 20
+  core_fallback_threshold: 0.3  # FIXED: Lowered from 0.6 to allow more intents to be properly classified
+  core_fallback_action_name: "action_default_fallback"
+  enable_fallback_prediction: true
+  restrict_rules: false
+  check_for_contradictions: true
+# UnexpecTEDIntentPolicy disabled due to experimental nature and training issues
+# - name: UnexpecTEDIntentPolicy
+#   max_history: 5
+#   epochs: 50
 - name: TEDPolicy
-  max_history: 5
-  epochs: 20
+  max_history: 5  # Reduced from 8 for memory efficiency
+  epochs: 60  # Reduced from 150 for hardware efficiency
   constrain_similarities: true
+  model_confidence: softmax
+  loss_type: "cross_entropy"
+  ranking_length: 10
+  evaluate_every_number_of_epochs: 5  # More frequent evaluation
+  evaluate_on_number_of_examples: 50  # Reduced for efficiency
+  # Hardware efficiency settings
+  batch_size: 16  # Memory efficient batch size
+  learning_rate: 0.001  # Optimized learning rate
+  epochs_patience: 10  # Early stopping
 assistant_id: 20250521-234810-damp-noir

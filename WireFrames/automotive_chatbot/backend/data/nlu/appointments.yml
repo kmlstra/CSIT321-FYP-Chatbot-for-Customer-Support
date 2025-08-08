@@ -1,0 +1,268 @@
+version: "3.1"
+
+nlu:
+- intent: book_appointment
+  examples: |
+    - I want to book an appointment
+    - Can I schedule an appointment?
+    - I'd like to make an appointment
+    - Book me an appointment please
+    - Schedule an appointment for me
+    - I need to book a service appointment
+    - Can you help me schedule a visit?
+    - I want to book a [test drive](service_type) appointment
+    - Schedule a [maintenance](service_type) appointment
+    - Book an appointment for [car inspection](service_type)
+    - I need an appointment for [oil change](service_type)
+    - Can I book a [brake service](service_type) appointment?
+    - Schedule me for [tire replacement](service_type)
+    - I want to book a [sales consultation](service_type) appointment
+    - I want to book a sales consultation appointment
+    - sale consult
+    - sales consult
+    - sales consultation
+    - I need sales consultation
+    - book sales consultation
+    - schedule sales consultation
+    - I want sales consultation
+    - sales meeting
+    - consultation appointment
+    - I want to book an appointment on [Monday](appointment_date)
+    - Can I get an appointment for [tomorrow](appointment_date)?
+    - Book me for [next week](appointment_date)
+    - I need an appointment on [December 15th](appointment_date)
+    - Schedule for [2024-01-20](appointment_date)
+    - Book an appointment at [2pm](appointment_time)
+    - Can I get a [10:30 AM](appointment_time) slot?
+    - Schedule me for [3:00 PM](appointment_time)
+    - I want an appointment at [9 AM](appointment_time)
+    - Book for [11:45](appointment_time)
+    - I prefer [6pm](appointment_time)
+    - How about [6:00 PM](appointment_time)?
+    - Can I book at [7pm](appointment_time)?
+    - Schedule for [8:00 PM](appointment_time)
+    - I want [5pm](appointment_time)
+    - Book me at [4:30 PM](appointment_time)
+    - Available at [6:30 PM](appointment_time)?
+    - I can come at [7:30 PM](appointment_time)
+    - How about [8:30 PM](appointment_time)?
+    - Schedule at [5:30 PM](appointment_time)
+    - My name is [John Smith](customer_name) and I want to book an appointment
+    - Book an appointment for [Sarah Johnson](customer_name)
+    - Schedule under the name [Michael Chen](customer_name)
+    - My phone number is [98765432](customer_phone)
+    - You can reach me at [+65 8765 4321](customer_phone)
+    - Contact me on [9876-5432](customer_phone)
+
+- intent: ask_appointment_availability
+  examples: |
+    - What slots are available?
+    - When can I book an appointment?
+    - What times do you have free?
+    - Are there any openings this week?
+    - What's your availability?
+    - Do you have any slots on [Friday](appointment_date)?
+    - Are there appointments available for [next Monday](appointment_date)?
+    - What times are free on [December 20th](appointment_date)?
+    - Any slots available at [2pm](appointment_time)?
+    - Do you have [morning](appointment_time) appointments?
+    - What about [afternoon](appointment_time) slots?
+    - Check availability for [test drive](service_type)
+    - Any openings for [car service](service_type)?
+
+- intent: view_appointments
+  examples: |
+    - Show me my appointments
+    - What appointments do I have?
+    - Check my bookings
+    - List my scheduled appointments
+    - View my upcoming appointments
+    - What's on my schedule?
+    - Show my appointment history
+    - Display all my appointments
+    - Check appointments for [97654321](customer_phone)
+    - Show bookings for phone [+65 8765 4321](customer_phone)
+    - My appointments under [John Smith](customer_name)
+    - Check schedule for [Sarah Johnson](customer_name)
+    - Check my appointments with [96543210](customer_phone)
+    - Look up appointments for [8765-4321](customer_phone)
+    - Find my bookings using [94471414](customer_phone)
+    - Search appointments by phone [95432109](customer_phone)
+    - View appointments for [94471414](customer_phone)
+    - Show my bookings [94321098](customer_phone)
+    - Check my schedule [8765-4321](customer_phone)
+    - Look up my bookings [9123-4567](customer_phone)
+    - Find appointments [94471414](customer_phone)
+    - Display bookings for [93210987](customer_phone)
+    - Show schedule [8765-4321](customer_phone)
+    - Check bookings [+65 8123 4567](customer_phone)
+    - View my schedule [94471414](customer_phone)
+    - My booking history [92109876](customer_phone)
+    - Appointment history [8765-4321](customer_phone)
+    - Show my upcoming appointments [94471414](customer_phone)
+    - Check my upcoming bookings [90987654](customer_phone)
+    - View my appointment list [8765-4321](customer_phone)
+    - Display my scheduled appointments [94471414](customer_phone)
+    - can i check my appointment details
+    - i want to check my appointment
+    - can you check my appointment
+    - i want to view my appointment
+    - can you show my appointment
+    - i need to check my booking
+    - can you view my booking
+    - show me my booking details
+    - i want to see my appointments
+    - can you display my appointments
+
+- intent: cancel_appointment
+  examples: |
+    - Cancel my appointment
+    - I want to cancel my booking
+    - Remove my appointment
+    - Delete my scheduled appointment
+    - I can't make it, cancel please
+    - Cancel the appointment please
+    - I need to cancel my visit
+    - Remove my booking
+    - Cancel appointment [APT-12345](appointment_id)
+    - Remove booking [APT-67890](appointment_id)
+    - Delete appointment ID [APT-11111](appointment_id)
+    - Cancel appointment [12345](appointment_id)
+    - I want to cancel appointment with ID [12345](appointment_id)
+    - Cancel my appointment [67890](appointment_id)
+    - Remove booking ID [54321](appointment_id)
+    - Cancel booking [98765](appointment_id)
+    - Delete appointment [11111](appointment_id)
+    - Cancel my [Monday](appointment_date) appointment
+    - Remove my [2pm](appointment_time) booking
+    - Cancel the [test drive](service_type) appointment
+    - I want to cancel my [maintenance](service_type) booking
+
+- intent: reschedule_appointment
+  examples: |
+    - Reschedule my appointment
+    - Can I change my appointment time?
+    - Move my appointment to another day
+    - I need to reschedule
+    - Change my booking time
+    - Shift my appointment
+    - Can we reschedule?
+    - Move my appointment to [Friday](appointment_date)
+    - Reschedule to [next week](appointment_date)
+    - Change to [December 25th](appointment_date)
+    - Move my appointment to [3pm](appointment_time)
+    - Reschedule for [morning](appointment_time)
+    - Change to [10:30 AM](appointment_time)
+    - Reschedule appointment [APT-12345](appointment_id)
+    - Change booking [APT-67890](appointment_id)
+
+- intent: confirm_appointment
+  examples: |
+    - Yes, confirm the appointment
+    - That works for me
+    - Perfect, book it
+    - Yes, that time is good
+    - Confirm the booking
+    - That's fine
+    - Yes, please book it
+    - Sounds good
+    - That time works
+    - Yes, I'll take that slot
+    - Confirm my appointment
+    - Book that time
+    - Yes, schedule it
+    - That's perfect
+    - I'll take it
+
+- intent: provide_appointment_details
+  examples: |
+    - My name is [John Smith](customer_name)
+    - I'm [Sarah Johnson](customer_name)
+    - Call me [Mike Wilson](customer_name)
+    - My contact number is [91234567](customer_phone)
+    - Phone: [+65 8765 4321](customer_phone)
+    - You can reach me at [94471414](customer_phone)
+    - My email is [john@email.com](customer_email)
+    - Email: [sarah.johnson@gmail.com](customer_email)
+    - Contact me at [mike.wilson@company.com](customer_email)
+    - My phone number is [91234567](customer_phone)
+    - Call me at [8765-4321](customer_phone)
+    - Contact number: [9876 5432](customer_phone)
+    - Phone number [+65 9123 4567](customer_phone)
+    - My number is [87654321](customer_phone)
+    - Reach me at [9245-5124](customer_phone)
+    - Contact: [+65-8888-9999](customer_phone)
+    - Phone: [6123 4567](customer_phone)
+    - My contact is [9111-2222](customer_phone)
+    - Call [8333-4444](customer_phone)
+    - Number: [9555-6666](customer_phone)
+    - [9245512447](customer_phone)
+    - my phone number is [9245512447](customer_phone)
+    - [92455124](customer_phone)
+    - phone [92455124](customer_phone)
+    - contact [92455124](customer_phone)
+    - [81234567](customer_phone)
+    - [61234567](customer_phone)
+    - my number [9245512447](customer_phone)
+    - call me [9245512447](customer_phone)
+    - phone number [9245512447](customer_phone)
+    - I want to book for [2024-01-15](appointment_date)
+    - Schedule it for [next Monday](appointment_date)
+    - How about [tomorrow](appointment_date)?
+    - At [2:00 PM](appointment_time)
+    - Around [10:30 AM](appointment_time)
+    - I prefer [3:15 PM](appointment_time)
+    - [6pm](appointment_time)
+    - [6:00 PM](appointment_time)
+    - [7pm](appointment_time)
+    - [8:00 PM](appointment_time)
+    - [5pm](appointment_time)
+    - [4:30 PM](appointment_time)
+    - [6:30 PM](appointment_time)
+    - [7:30 PM](appointment_time)
+    - [8:30 PM](appointment_time)
+    - [5:30 PM](appointment_time)
+    - I can do [6pm](appointment_time)
+    - How about [6:00 PM](appointment_time)
+    - I'm free at [7pm](appointment_time)
+    - Available [8:00 PM](appointment_time)
+    - I prefer [5pm](appointment_time)
+    - Can we do [6:30 PM](appointment_time)
+    - [John Smith](customer_name) [89876543](customer_phone)
+    - [Sarah Johnson](customer_name) [sarah@email.com](customer_email)
+    - [Mike Wilson](customer_name) [+65 8765 4321](customer_phone) [mike@company.com](customer_email)
+    - Book for [2024-01-20](appointment_date) at [11:00 AM](appointment_time)
+    - [Test Drive](service_type) on [Friday](appointment_date)
+    - [Sales Consultation](service_type) [next week](appointment_date) [2:00 PM](appointment_time)
+    - I'd like to provide my details for the booking
+    - Here are my contact details for the appointment
+    - Let me give you my information for the booking
+    - I want to complete my booking with these details
+    - Here's my info for the appointment
+    - My details for the booking are
+    - I'm providing my information to book
+    - Let me share my contact info for scheduling
+    - Here are my booking details
+    - I want to give you my details to proceed with booking
+    - My information for the appointment booking
+    - I'm ready to provide my details for the booking
+    - Let me complete the booking with my information
+    - Here's what you need for my appointment
+    - I want to finish booking with these details
+
+- intent: ask_appointment_status
+  examples: |
+    - What's the status of my appointment?
+    - Is my appointment confirmed?
+    - Check my appointment status
+    - Has my booking been confirmed?
+    - What's the status of booking [APT-12345](appointment_id)?
+    - Is appointment [APT-67890](appointment_id) confirmed?
+    - Check status for [88765432](customer_phone)
+    - Status of my [Monday](appointment_date) appointment
+    - Is my [2pm](appointment_time) booking confirmed?
+    - What's the status of my [test drive](service_type) appointment?
+    - Has my appointment been approved?
+    - Is everything set for my visit?
+    - Confirm my appointment details
+    - Check if my booking went through

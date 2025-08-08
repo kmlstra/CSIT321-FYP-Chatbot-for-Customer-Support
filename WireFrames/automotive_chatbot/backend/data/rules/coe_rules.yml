@@ -1,0 +1,23 @@
+version: "3.1"
+
+rules:
+
+- rule: Provide COE prices
+  steps:
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- rule: Explain COE renewal process
+  steps:
+  - intent: ask_coe_renewal
+  - action: action_explain_coe_renewal
+
+- rule: Provide COE renewal assistance
+  steps:
+  - intent: ask_coe_renewal_assistance
+  - action: action_coe_renewal_assistance
+
+- rule: Provide COE bidding assistance
+  steps:
+  - intent: ask_coe_bidding_assistance
+  - action: action_coe_bidding_assistance
