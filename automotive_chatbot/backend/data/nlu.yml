@@ -1,0 +1,1145 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hello
+    - hi
+    - hey
+    - helo
+    - helo there
+    - helo bot
+    - helo chatbot
+    - hi there
+    - hey there
+    - good morning
+    - good afternoon
+    - good evening
+    - helllo
+    - hii
+    - heya
+    - hai
+    - hallo
+
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you later
+    - talk to you later
+    - have a good day
+    - thanks, bye
+    - see you
+
+- intent: affirm
+  examples: |
+    - yes
+    - yep
+    - yeah
+    - of course
+    - that sounds good
+    - correct
+    - right
+    - sure
+    - absolutely
+
+- intent: deny
+  examples: |
+    - no
+    - nope  
+    - I don't think so
+    - don't like that
+    - no way
+    - not really
+    - nah
+
+- intent: ask_coe_prices
+  examples: |
+    - coe price
+    - coe prices
+    - COE Prices
+    - latest coe price
+    - latest coe prices
+    - current coe price
+    - current coe prices
+    - what is the coe price
+    - what are the coe prices
+    - how much is coe
+    - coe bidding results
+    - coe premium
+    - certificate of entitlement price
+    - certificate of entitlement prices
+    - coe
+    - COE
+    - latest coe
+    - current coe
+    - coe today
+    - coe this month
+    - what's the COE price
+    - current COE rates
+    - COE pricing
+    - COE cost today
+    - COE category A price
+    - COE category B price
+
+- intent: ask_vehicle_info
+  examples: |
+    - tell me about [toyota](car_brand)
+    - what about [honda](car_brand)
+    - [honda civic](car_model)
+    - [toyota camry](car_model)
+    - [mercedes](car_brand)
+    - [bmw](car_brand)
+    - [audi](car_brand)
+    - [hyundai](car_brand)
+    - [kia](car_brand)
+    - [nissan](car_brand)
+    - [mazda](car_brand)
+    - [subaru](car_brand)
+    - [volkswagen](car_brand)
+    - [volvo](car_brand)
+    - [lexus](car_brand)
+    - [infiniti](car_brand)
+    - show me [toyota](car_brand) cars
+    - what [honda](car_brand) models do you have
+    - [civic](car_model)
+    - [camry](car_model)
+    - [accord](car_model)
+    - [corolla](car_model)
+    - [altima](car_model)
+    - toyota camry
+    - totoyota camry
+    - Toyota Camry
+    - toyota alphard
+    - Toyota Alphard
+    - latest toyota alphard
+    - honda civic
+    - Honda Civic
+    - bmw 3 series
+    - BMW 3 Series
+    - mercedes c class
+    - can i ask about latest toyota alphard
+    - a sedan car
+    - sedan car information
+    - sedan cars
+    - toyota
+    - honda
+    - bmw
+    - mercedes
+    - tell me about your cars
+    - what cars do you have
+    - what models are available
+    - show me your vehicles
+    - what types of cars do you sell
+    - car information
+    - vehicle information
+    - vehicle details
+    - car details
+    - car specs
+    - vehicle specs
+
+- intent: ask_pricing
+  examples: |
+    - pricing
+    - price
+    - prices
+    - how much
+    - cost
+    - costs
+    - what's the price
+    - what are the prices
+    - vehicle prices
+    - car prices
+    - vehicle pricing
+    - car pricing
+    - price list
+    - price range
+    - budget
+    - affordable cars
+    - expensive cars
+    - cheap cars
+    - how much does it cost
+    - tell me the price
+    - how much is it
+    - what's the cost
+    - can i check the price of cat a today
+    - can i check the price of category a today
+    - check price of cat a
+    - check price of category a
+    - price of cat a
+    - price of category a
+    - cat a price today
+    - category a price today
+
+- intent: book_test_drive
+  examples: |
+    - book a test drive
+    - schedule a test drive
+    - can I test drive
+    - test drive
+    - Test Drive
+    - arrange test drive
+    - book test drive
+    - schedule test drive
+    - I want to test drive
+    - can I book a test drive
+    - how to book test drive
+    - test drive booking
+    - drive test
+    - try the car
+    - can I schedule a test drive
+    - I'd like to test a car
+    - how do I book a test drive
+    - arrange a test drive
+    - can i book a test drive on this sunday 10am for honda civic my name is ivan and my contact number is 92474141
+
+- intent: ask_maintenance
+  examples: |
+    - maintenance
+    - Maintenance
+    - service
+    - servicing
+    - repair
+    - change oil
+    - oil change
+    - tire change
+    - brake service
+    - engine service
+    - car wash
+    - maintenance tips
+    - service schedule
+    - when to service
+    - how often service
+    - maintenance cost
+    - service cost
+    - repair cost
+    - warranty
+    - parts
+    - when should I service my car
+    - maintenance schedule
+    - service intervals
+    - how often should I service
+    - maintenance requirements
+    - how to check tire pressure
+    - how to check tyre pressure
+    - tire pressure check
+    - tyre pressure check
+    - signs of brake problems
+    - brake problems
+    - brake issues
+    - brake maintenance
+    - how to maintain brakes
+
+- intent: ask_registration
+  examples: |
+    - registration
+    - how to register
+    - vehicle registration
+    - car registration
+    - register car
+    - register vehicle
+    - registration process
+    - registration documents
+    - registration fee
+    - registration requirements
+    - paperwork
+    - documents needed
+    - LTA registration
+    - transfer ownership
+
+- intent: ask_features
+  examples: |
+    - features
+    - car features
+    - vehicle features
+    - what features
+    - safety features
+    - technology features
+    - comfort features
+    - entertainment features
+    - specifications
+    - specs
+    - what does it have
+    - what's included
+    - standard features
+    - optional features
+
+- intent: ask_contact
+  examples: |
+    - contact
+    - Contact Us
+    - contact us
+    - how to reach you
+    - contact information
+    - get in touch
+    - call you
+    - contact details
+    - how to contact
+    - reach out
+    - contact info
+    - company contact
+    - support contact
+    - sales contact
+    - customer service
+    - helpline
+    - hotline
+
+
+# PROBLEM 5 FIX: Specific intents for email, phone, and WhatsApp queries
+- intent: ask_email_only
+  examples: |
+    - email
+    - email address
+    - what is your email
+    - company email
+    - email only
+    - just email
+    - give me email
+    - send me email
+    - your email address
+    - contact email
+    - email details
+    - email information
+
+- intent: ask_phone_only
+  examples: |
+    - phone
+    - phone number
+    - telephone
+    - contact number
+    - phone only
+    - just phone
+    - give me phone number
+    - what is your phone
+    - call number
+    - telephone number
+    - mobile number
+    - customer support number
+    - service number
+
+- intent: ask_whatsapp_only
+  examples: |
+    - whatsapp
+    - whatsapp number
+    - wa number
+    - whatsapp only
+    - just whatsapp
+    - give me whatsapp
+    - whatsapp contact
+    - wa contact
+    - whatsapp details
+    - can I whatsapp you
+
+- intent: ask_store_location
+  examples: |
+    - store
+    - address
+    - locate
+    - store location
+    - where is your store
+    - shop location
+    - where is the shop
+    - shop address
+    - store address
+    - where can I find you
+    - your location
+    - directions to store
+    - how to get to your store
+    - where are you located
+    - find your store
+
+- intent: ask_operating_hours
+  examples: |
+    - operating hours
+    - what time open
+    - when are you open
+    - opening hours
+    - office hours
+    - working hours
+    - store hours
+    - business hours
+
+# Enhanced Singapore-specific intents
+
+- intent: ask_coe_category
+  examples: |
+    - coe category
+    - coe categories
+    - what coe category
+    - which coe category
+    - difference between coe categories
+    - which category for my car
+    - coe category for 1600cc
+    - explain coe categories
+    - what are coe categories
+    - coe categories explained
+    - all coe categories
+
+- intent: ask_coe_category_a
+  examples: |
+    - category A
+    - coe category A price
+    - what's category A
+    - cat a
+    - cat A
+    - may i know what is cat a
+    - what is cat a
+    - cat a price
+    - cat A price
+    - explain cat a
+    - explain cat A
+    - tell me about cat a
+    - about cat a
+    - category a details
+    - cat a details
+    - cat a information
+    - learn about cat a
+
+- intent: ask_coe_category_b
+  examples: |
+    - category B
+    - coe category B price
+    - what's category B
+    - cat b
+    - cat B
+    - may i know what is cat b
+    - what is cat b
+    - cat b price
+    - cat B price
+    - explain cat b
+    - explain cat B
+    - tell me about cat b
+    - about cat b
+    - category b details
+    - cat b details
+    - cat b information
+    - learn about cat b
+
+- intent: ask_coe_category_c
+  examples: |
+    - category C
+    - coe category C price
+    - what's category C
+    - cat c
+    - cat C
+    - may i know what is cat c
+    - what is cat c
+    - cat c price
+    - cat C price
+    - explain cat c
+    - explain cat C
+    - tell me about cat c
+    - about cat c
+    - category c details
+    - cat c details
+    - cat c information
+    - learn about cat c
+    - goods vehicle category
+
+- intent: ask_coe_category_e
+  examples: |
+    - category E
+    - coe category E price
+    - what's category E
+    - cat e
+    - cat E
+    - may i know what is cat e
+    - what is cat e
+    - cat e price
+    - cat E price
+    - explain cat e
+    - explain cat E
+    - tell me about cat e
+    - about cat e
+    - category e details
+    - cat e details
+    - cat e information
+    - learn about cat e
+    - open category
+
+- intent: ask_coe_bidding_process
+  examples: |
+    - coe bidding
+    - how does coe bidding work
+    - coe bidding process
+    - when is coe bidding
+    - coe bidding schedule
+    - how to bid for coe
+    - coe bidding exercise
+    - coe bidding results
+    - coe bidding dates
+    - when is next coe bidding
+    - coe auction
+    - bidding exercise
+
+- intent: ask_loan_financing
+  examples: |
+    - loan
+    - car loan
+    - vehicle loan
+    - financing
+    - auto loan
+    - hire purchase
+    - bank loan
+    - loan interest rate
+    - loan terms
+    - down payment
+    - monthly installment
+    - financing options
+    - bank financing
+    - loan approval
+    - credit assessment
+    - how to get car loan
+    - car financing
+    - auto financing
+    - loan rates
+    - finance rates
+    - interest rates
+    - how much loan can I get
+    - loan eligibility
+    - apply for loan
+    - any loan available
+    - do you provide loan
+    - loan availability
+    - can I get loan
+
+- intent: calculate_loan
+  examples: |
+    - loan calculator
+    - calculate loan
+    - loan calculation
+    - calculator
+    - calculate monthly payment
+    - payment calculator
+    - Loan Calculator
+    - monthly payment calculator
+    - car loan calculator
+    - vehicle loan calculator
+    - finance calculator
+    - calculate installment
+    - monthly installment calculator
+    - loan computation
+    - compute loan payment
+    - budget calculator for 180000 car
+
+- intent: provide_loan_details
+  examples: |
+    - calculate loan for 180000 car with 36000 down payment for 7 years
+    - loan for 200000 with 40000 down payment 4 years
+    - calculate 180000 car 20000 down 6 years
+    - loan calculator 250000 50000 5 years 2.5 rate
+    - 180k car 20% down payment 7 years loan
+    - car price 180000 down payment 36000 loan tenure 7 years
+    - 180000 car loan 20% down 7 years 3.33% interest
+    - can u calculate the monthly installment for a car price 180000 with 20%downpayment for 7 years loan with a 3.33% interest rate
+    - can u calculate the montly installment for a car price 180000 with 20%downpayment for 7 years loan with a 3.33% interest rate
+    - calculate monthly installment for car price 180000 with 20% down payment for 7 years
+    - monthly installment for 180000 car 20% down 7 years 3.33%
+
+- intent: request_specific_car_reviews
+  examples: |
+    - show me honda civic reviews
+    - bmw 320i ratings and reviews
+    - what do people say about toyota camry
+    - honda civic reviews
+    - toyota camry reviews
+    - reviews for honda civic
+    - bmw 320i reviews
+    - mercedes c200 reviews
+    - honda vezel reviews
+    - mazda cx5 reviews
+    - show reviews for toyota camry
+    - i want to see honda civic reviews
+    - tell me about bmw 320i reviews
+    - show me mazda cx5 ratings
+    - mazda cx5 ratings and reviews
+    - can i get some reviews of honda civic
+    - car reviews for mercedes c200
+    - honda vezel customer reviews
+    - what do people say about mazda cx5
+    - ratings for honda civic
+    - customer feedback on toyota camry
+    - reviews of bmw cars
+    - mercedes reviews
+
+- intent: ask_insurance
+  examples: |
+    - car insurance
+    - vehicle insurance
+    - auto insurance
+    - motor insurance
+    - insurance premium
+    - insurance cost
+    - comprehensive insurance
+    - third party insurance
+    - insurance coverage
+    - insurance claims
+    - insurance companies
+    - cheapest insurance
+    - best insurance
+    - insurance comparison
+
+- intent: ask_road_tax
+  examples: |
+    - road tax
+    - vehicle tax
+    - annual road tax
+    - road tax cost
+    - road tax payment
+    - road tax renewal
+    - how much is road tax
+    - road tax calculation
+    - road tax rates
+    - when to pay road tax
+
+- intent: ask_parking
+  examples: |
+    - parking
+    - parking rates
+    - parking fees
+    - where to park
+    - parking costs
+    - HDB parking
+    - shopping mall parking
+    - street parking
+    - parking coupons
+    - electronic parking
+    - carpark rates
+    - parking calculator
+
+- intent: ask_fuel_prices
+  examples: |
+    - fuel price
+    - petrol price
+    - diesel price
+    - fuel cost
+    - RON 95 price
+    - RON 98 price
+    - petrol station
+    - fuel consumption
+    - fuel efficiency
+    - miles per gallon
+    - kilometers per liter
+
+- intent: ask_electric_vehicles
+  examples: |
+    - electric car
+    - electric vehicle
+    - EV
+    - hybrid car
+    - tesla
+    - electric vehicle charging
+    - EV charging points
+    - electric car price
+    - hybrid vs electric
+    - EV benefits
+    - EV rebate
+    - electric car range
+    - charging station locations
+
+- intent: ask_depreciation
+  examples: |
+    - car depreciation
+    - vehicle depreciation
+    - resale value
+    - car value
+    - depreciation rate
+    - how much will my car depreciate
+    - car loses value
+    - second hand car value
+    - trade in value
+    - market value
+
+- intent: first_time_buyer
+  examples: |
+    - first time buyer
+    - first car
+    - new to buying cars
+    - never bought a car
+    - first time car buyer
+    - buying my first car
+    - new driver
+    - just got license
+    - complete beginner
+    - don't know about cars
+
+- intent: budget_planning
+  examples: |
+    - budget planning
+    - total cost of ownership
+    - how much to budget
+    - total car cost
+    - annual car cost
+    - monthly car expenses
+    - cost calculator
+    - budget calculator
+    - all inclusive cost
+    - what's the total cost
+    - budget calculation for car loan
+    - comprehensive budget planning
+
+- intent: ask_second_hand_cars
+  examples: |
+    - second hand car
+    - used car
+    - pre-owned car
+    - second hand vehicles
+    - used car market
+    - used car prices
+    - buying used car
+    - second hand car dealer
+    - certified pre-owned
+    - used car inspection
+
+- intent: compare_cars
+  examples: |
+    - compare cars
+    - car comparison
+    - compare models
+    - compare brands
+    - which is better
+    - difference between
+    - versus
+    - vs
+    - honda vs toyota
+    - civic vs camry
+    - best value for money
+    - which should I choose
+
+- intent: ask_maintenance_cost
+  examples: |
+    - maintenance cost
+    - service cost
+    - how much to maintain
+    - maintenance expenses
+    - service charges
+    - repair costs
+    - parts cost
+    - maintenance budget
+    - annual maintenance cost
+
+- intent: ask_coe_renewal
+  examples: |
+    - coe renewal
+    - renew coe
+    - coe expiry
+    - coe extension
+    - what happens when coe expires
+    - parf rebate
+    - scrap vs renew
+    - coe renewal cost
+    - 10 year coe
+
+- intent: ask_scrap_car
+  examples: |
+    - scrap car
+    - scrap vehicle
+    - end of life vehicle
+    - parf rebate
+    - cevs rebate
+    - how to scrap car
+    - scrap car procedure
+    - authorized scrapper
+    - deregister car
+
+- intent: ask_popular_models
+  examples: |
+    - popular cars
+    - best selling cars
+    - most popular models
+    - top cars in singapore
+    - recommended cars
+    - popular brands
+    - best cars
+    - top models
+    - most bought cars
+
+- intent: ask_climate_considerations
+  examples: |
+    - singapore weather
+    - tropical climate
+    - hot weather
+    - humid weather
+    - air conditioning
+    - cooling system
+    - weather considerations
+    - climate effects on car
+    - sun protection
+    - heat resistance
+
+- intent: ask_brand_recommendations
+  examples: |
+    - which brand
+    - recommend brand
+    - best brand
+    - reliable brand
+    - which car brand
+    - brand comparison
+    - most reliable cars
+    - brand reputation
+    - quality brands
+
+- intent: luxury_vs_economy
+  examples: |
+    - luxury vs economy
+    - premium vs budget
+    - expensive vs cheap
+    - luxury cars
+    - economy cars
+    - budget cars
+    - premium cars
+    - high end cars
+    - affordable cars
+
+- intent: ask_family_cars
+  examples: |
+    - family car
+    - family vehicle
+    - car for family
+    - 7 seater
+    - mpv
+    - family friendly
+    - spacious car
+    - big car
+    - car with children
+    - family sedan
+
+- intent: ask_sports_cars
+  examples: |
+    - sports car
+    - performance car
+    - fast car
+    - sporty car
+    - coupe
+    - convertible
+    - high performance
+    - racing car
+    - luxury sports car
+
+- intent: ask_economic_cars
+  examples: |
+    - economical car
+    - fuel efficient car
+    - cheap to maintain
+    - budget car
+    - affordable car
+    - economical choice
+    - fuel saver
+    - low running cost
+    - cheap car
+
+- intent: ask_clarification
+  examples: |
+    - what do you mean
+    - can you explain
+    - I don't understand
+    - clarify
+    - explain more
+    - what does that mean
+    - confused
+    - not clear
+    - elaborate
+
+- intent: ask_help
+  examples: |
+    - help
+    - I need help
+    - can you help
+    - assist me
+    - support
+    - I'm lost
+    - what can you do
+    - what can u do
+    - capabilities
+    - functions
+    - what are your features
+    - what services do you provide
+    - guide me
+    - help please
+
+- intent: ask_contact
+  examples: |
+    - contact
+    - Contact Us
+    - contact us
+    - phone number
+    - email
+    - address
+    - how to reach you
+    - contact information
+    - get in touch
+    - call you
+    - visit
+    - contact details
+    - how to contact
+    - reach out
+    - contact info
+    - company contact
+    - support contact
+    - sales contact
+    - customer service
+    - helpline
+    - hotline
+
+- intent: ask_business_hours
+  examples: |
+    - business hours
+    - what time do you open
+    - what time do you close
+    - business schedule
+    - shop hours
+    - showroom hours
+    - when do you open
+    - when do you close
+    - what are your hours
+    - hours of operation
+
+- intent: out_of_scope
+  examples: |
+    - I want to order food
+    - what's the weather
+    - tell me a joke
+    - play music
+    - book a hotel
+    - flight booking
+    - restaurant recommendation
+    - movie times
+    - news
+    - sports scores
+    - any
+    - anything
+
+- intent: confirm_schedule_visit
+  examples: |
+    - yes
+    - yes please
+    - schedule visit
+    - I want to visit
+    - book a visit
+    - I want to schedule
+    - please schedule
+    - confirm
+    - that's correct
+    - ok, schedule
+    - yes, please book
+
+- intent: ask_coe_predictions_confirm
+  examples: |
+    - coe predictions
+    - predict coe prices
+    - future coe prices
+    - coe forecast
+    - what will coe prices be
+    - coe price predictions
+    - predict future coe
+    - coe trend
+    - coe outlook
+    - future coe costs
+    - can u predict the coe price for next few months
+    - what are the future coe prices
+    - coe price prediction for next month
+    - estimate coe prices next month
+    - coe forecast for coming months
+
+- intent: ask_capability_confirm  
+  examples: |
+    - can you calculate
+    - do you calculate
+    - are you able to calculate
+    - can you help with calculations
+    - do you do calculations
+    - can you compute
+    - are you able to help
+    - do you provide calculations
+    - can you help me calculate
+    - do you offer calculation services
+
+- intent: search_vehicles
+  examples: |
+    - search cars
+    - find cars
+    - show me cars
+    - list cars
+    - available cars
+    - car inventory
+    - what cars do you have
+    - browse cars
+    - car listings
+    - show vehicles
+
+- intent: search_budget_cars
+  examples: |
+    - budget cars
+    - cheap cars
+    - affordable cars
+    - under 90000
+    - low cost cars
+    - economical cars
+    - budget friendly
+    - inexpensive cars
+    - cars under 90k
+    - show me budget cars
+
+- intent: search_family_cars
+  examples: |
+    - family cars
+    - 7 seater cars
+    - mpv cars
+    - suv cars
+    - spacious cars
+    - cars for family
+    - big cars
+    - family vehicles
+    - show me family cars
+    - cars with kids
+
+- intent: search_luxury_cars
+  examples: |
+    - luxury cars
+    - premium cars
+    - expensive cars
+    - high end cars
+    - bmw cars
+    - mercedes cars
+    - audi cars
+    - luxury vehicles
+    - show me luxury cars
+    - premium vehicles
+
+- intent: search_eco_cars
+  examples: |
+    - eco cars
+    - hybrid cars
+    - fuel efficient cars
+    - green cars
+    - environment friendly cars
+    - eco friendly cars
+    - low emission cars
+    - hybrid vehicles
+    - show me eco cars
+    - fuel saving cars
+
+- intent: ask_persona_recommendations
+  examples: |
+    - young professional first car
+    - young professional recommendations
+    - budget conscious first car
+    - first car recommendations
+    - family oriented with kids
+    - family car recommendations
+    - family oriented recommendations
+    - cars for family with children
+    - luxury enthusiast premium performance
+    - luxury enthusiast recommendations
+    - premium performance cars
+    - luxury car recommendations
+    - persona based recommendations
+    - recommend cars for my lifestyle
+    - personalized recommendations
+    - cars that match my profile
+    # PROBLEM 7 & 8 FIX: Add realistic trigger phrases for 3 personas
+    # Young Professional triggers
+    - im a young freshgraduate just started working, can u some recommend me some affordable entry level vehicle?
+    - fresh graduate just started working need something affordable and reliable
+    - just started working entry level position need affordable car
+    - entry level job need reliable car with good fuel economy
+    - affordable reliable car for fresh graduate
+    - good fuel economy car for young professional
+    - low maintenance car for entry level job
+    - budget conscious need reliable first car
+    - young professional need affordable transport
+    - fresh graduate need entry level vehicle
+    - just started career need budget friendly car
+    - affordable car with good fuel economy
+    - reliable entry level vehicle
+    - low maintenance affordable car
+    # Family-oriented triggers  
+    - i have family with kids need spacious car with safety features
+    - family with children need safe spacious vehicle
+    - need 7 seater car for family trips
+    - spacious suv for family with kids
+    - mpv for school runs and weekend trips
+    - child safety features important for family car
+    - family oriented need safe reliable vehicle
+    - safety features for family with children
+    - weekend trips with family need spacious car
+    - school runs need family friendly vehicle
+    - family car with child safety features
+    - spacious car for family outings
+    - 7 seater for large family
+    - suv for family adventures
+    # Luxury enthusiast triggers
+    - executive status symbol need premium luxury car
+    - bmw mercedes audi for business executive
+    - prestige luxury car with comfort features
+    - high end premium vehicle for status
+    - luxury enthusiast want performance and comfort
+    - executive car with premium features
+    - status symbol luxury vehicle
+    - comfort features and prestige important
+    - high end bmw or mercedes
+    - luxury car for business professional
+    - premium comfort features essential
+    - prestige brand for executive
+    - luxury enthusiast performance oriented
+
+# PROBLEM 6: Feedback intent training data (FIXED - added simple "Feedback" word)
+- intent: ask_feedback
+  examples: |
+    - feedback
+    - Feedback
+    - can i feedback on someone
+    - i want to give feedback
+    - feedback about staff
+    - i have feedback
+    - feedback about sales
+    - want to feedback
+    - feedback on service
+    - can i give feedback
+    - feedback form
+    - customer feedback
+    - staff feedback
+    - sales feedback
+    - service feedback
+
+- intent: give_feedback
+  examples: |  
+    - john from sales was very helpful
+    - the service advisor was rude
+    - sarah provided excellent service
+    - poor customer service experience
+    - amazing experience with the staff
+    - the manager was unprofessional
+    - great service from the team
+    - disappointed with the service
+    - outstanding customer support
+    - terrible experience today
+    - highly recommend this place
+    - will not recommend to others
+    - id like to give feedback for Alan from sales team - he was helpful, cool and a nice guy. Really appreciate his help
+    - i want to give feedback for john from sales - he was amazing and very professional
+    - feedback for sarah from customer service - she was really helpful and patient
+    - id like to provide feedback about the sales consultant - he was excellent
+    - want to give feedback for the manager - great service and very knowledgeable
+    - feedback about alan from sales - really appreciate his assistance and professionalism
+    - i have feedback for the sales team member - he was helpful and friendly
+    - would like to give feedback for the staff member - excellent customer service
+
+# PROBLEM 7: Car reviews intent training data (FIXED - removed duplicates and conflicts)
+- intent: ask_car_reviews
+  examples: |
+    - Car Reviews & Ratings
+    - car reviews and ratings
+    - car ratings and reviews
+    - show me car reviews
+    - customer reviews
+    - vehicle reviews
+    - owner reviews
+    - user ratings
+    - car feedback
+    - review of cars
+    - ratings and reviews
+    - i want to see reviews
+    - do you have reviews
+    - can you show reviews
+    - reviews available

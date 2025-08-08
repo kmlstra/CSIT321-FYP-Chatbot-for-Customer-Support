@@ -1,0 +1,59 @@
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        <h1>Test</h1>
+        <script src="clevercompanion-widget.js"></script>
+    
+        <script>
+            // Page functionality
+            function startChat() {
+                if (window.CleverCompanionWidget) {
+                    window.CleverCompanionWidget.open();
+                }
+            }
+            
+            function quickAction(action) {
+                if (window.CleverCompanionWidget) {
+                    window.CleverCompanionWidget.open();
+                    setTimeout(() => {
+                        window.CleverCompanionWidget.sendMessage(action);
+                    }, 500);
+                }
+            }
+            
+            function scrollToDemo() {
+                document.getElementById('demo-section').scrollIntoView({ 
+                    behavior: 'smooth' 
+                });
+            }
+            
+            // Add smooth scrolling and animations
+            document.addEventListener('DOMContentLoaded', function() {
+                // Animate elements on scroll
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }
+                    });
+                }, observerOptions);
+                
+                // Observe all cards
+                document.querySelectorAll('.card-hover').forEach(card => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.6s ease';
+                    observer.observe(card);
+                });
+            });
+        </script>
+    </body>
+</html>

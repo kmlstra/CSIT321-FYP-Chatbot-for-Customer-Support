@@ -1,0 +1,155 @@
+# ==================================================
+# DEVELOPER-FRIENDLY .GITIGNORE
+# Allows local development while keeping repo clean
+# ==================================================
+
+# Large Dependencies (always exclude)
+node_modules/
+frontend/node_modules/
+WireFrames/automotive_chatbot/backend/node_modules/
+
+# Python compiled files (always exclude)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Build directories (always exclude)
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# Virtual environments (exclude - people create their own)
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+backend/venv/
+frontend/venv/
+
+# Environment variables (selective)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env*
+# Allow backend/.env for configuration sharing
+!backend/.env
+
+# Next.js build files
+.next/
+out/
+.vercel
+
+# Production builds
+/build
+/dist
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE files (allow basic .vscode settings, exclude .idea)
+.idea/
+*.swp
+*.swo
+*~
+# Allow .vscode for shared settings
+# .vscode/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Rasa models (large files) - exclude trained models but keep training data
+backend/models/
+.rasa/
+*.tar.gz
+
+# Keep training data (these should be in Git)
+!backend/data/
+!backend/domain.yml
+!backend/config.yml
+!backend/credentials.yml
+!backend/endpoints.yml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store?
+Icon?
+
+# MongoDB data directories
+data/db/ 
+/.venv/
+
+
+.cursor/
+.cursor-settings/
+cursor.db
+.cursor-session
+.env

@@ -1,0 +1,76 @@
+# RASA 3.6.4 + MINIMAL RAG - WORKING VERSIONS ONLY
+# Based on compatibility research - TESTED COMBINATIONS
+# 
+# CRITICAL: After installation, run:
+# pip install packaging==20.9 --force-reinstall --no-deps
+
+# RASA CORE (ALREADY INSTALLED IN SETUP.PY)
+rasa==3.6.4
+rasa-sdk==3.6.1
+
+# RASA SYSTEM REQUIREMENTS (STRICT - MUST BE EXACT)
+packaging==20.9
+protobuf>=4.23.3,<4.23.4
+networkx>=2.6,<2.8
+pydantic>=1.10.0,<1.10.10
+
+# SCIENTIFIC COMPUTING (RASA MODEL COMPATIBILITY)
+scipy>=1.7.0,<1.12.0
+
+# DATABASE SUPPORT
+pymongo>=3.12,<4.0
+motor>=2.5.0,<3.0.0
+
+# SQL DATABASE
+SQLAlchemy==1.4.53
+
+# WEB FRAMEWORK
+fastapi==0.104.1
+uvicorn>=0.23.0,<0.24.0
+
+# WEBSOCKETS (RASA COMPATIBLE - RESEARCH BASED)
+websockets==10.0
+
+# NLP CORE (ESSENTIAL ONLY)
+transformers>=4.21.0,<4.25.0
+numpy>=1.19.2,<1.25.0
+
+# BASIC RAG (NO PROBLEMATIC PACKAGES)
+langchain>=0.0.300,<0.0.360
+
+# VECTOR SEARCH (SIMPLE FAISS ONLY)
+faiss-cpu>=1.7.4,<1.8.0
+
+# FILE PROCESSING (BASIC ONLY)
+pypdf>=3.15.0,<4.0.0
+openpyxl>=3.1.0,<4.0.0
+
+# HTTP UTILITIES
+requests>=2.31.0,<3.0.0
+
+# Environment Variables
+python-dotenv>=1.0.0,<2.0.0
+
+# JWT AUTHENTICATION
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+PyJWT>=2.8.0,<3.0.0
+
+# EMAIL VALIDATION
+email-validator>=2.0.0,<3.0.0
+
+# FORM DATA HANDLING
+python-multipart>=0.0.20,<1.0.0
+
+# DATA ANALYTICS
+pandas>=1.5.0,<2.0.0 
+
+# DATABASE DRIVERS FOR CLIENT CONNECTIONS
+aiomysql>=0.1.1,<1.0.0
+asyncpg>=0.28.0,<1.0.0
+
+# ENCRYPTION FOR DATABASE PASSWORDS
+cryptography>=41.0.0,<42.0.0
+
+# ADDITIONAL DATABASE DRIVERS
+pyodbc>=4.0.39,<5.0.0

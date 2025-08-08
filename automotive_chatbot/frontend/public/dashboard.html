@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleverCompanion - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .metric-card {
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-900 text-white shadow-xl">
+            <div class="p-6 border-b border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-car text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">CleverCompanion</h1>
+                        <p class="text-sm text-gray-400">Admin Dashboard</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="mt-6">
+                <div class="px-4">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Main</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="#" onclick="showSection('analytics')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-chart-line mr-3"></i>
+                                Analytics
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSection('conversations')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-comments mr-3"></i>
+                                Conversations
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSection('users')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-users mr-3"></i>
+                                Users
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="px-4 mt-8">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Bot Management</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="#" onclick="showSection('responses')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-edit mr-3"></i>
+                                Edit Responses
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSection('intents')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-brain mr-3"></i>
+                                Intents & Actions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSection('training')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-graduation-cap mr-3"></i>
+                                Training Data
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="px-4 mt-8">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Data</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="#" onclick="showSection('vehicles')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-car mr-3"></i>
+                                Vehicle Database
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" onclick="showSection('maintenance')" class="sidebar-item flex items-center px-4 py-2 text-sm rounded-lg hover:bg-gray-800 transition-colors">
+                                <i class="fas fa-wrench mr-3"></i>
+                                Maintenance Data
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div>
+                        <h2 id="page-title" class="text-2xl font-semibold text-gray-800">Analytics Dashboard</h2>
+                        <p id="page-subtitle" class="text-sm text-gray-600">Monitor your chatbot performance</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="relative p-2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-bell"></i>
+                            <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                            <span class="text-sm font-medium text-gray-700">Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-y-auto p-6">
+                <!-- Analytics Section -->
+                <div id="analytics-section" class="section-content">
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="metric-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Total Conversations</p>
+                                    <p class="text-3xl font-bold text-gray-900">1,234</p>
+                                    <p class="text-sm text-green-600">+12% from last month</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-comments text-blue-600"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Active Users</p>
+                                    <p class="text-3xl font-bold text-gray-900">856</p>
+                                    <p class="text-sm text-green-600">+8% from last week</p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-users text-green-600"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Avg Response Time</p>
+                                    <p class="text-3xl font-bold text-gray-900">1.2s</p>
+                                    <p class="text-sm text-red-600">+0.1s from last week</p>
+                                </div>
+                                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-clock text-yellow-600"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metric-card bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600">Satisfaction Rate</p>
+                                    <p class="text-3xl font-bold text-gray-900">94%</p>
+                                    <p class="text-sm text-green-600">+2% from last month</p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-star text-purple-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Conversations Over Time</h3>
+                            <canvas id="conversationsChart" width="400" height="200"></canvas>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Popular Topics</h3>
+                            <canvas id="topicsChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">New user inquiry about Toyota Camry</p>
+                                    <p class="text-xs text-gray-500">2 minutes ago</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">COE price query resolved</p>
+                                    <p class="text-xs text-gray-500">5 minutes ago</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg">
+                                <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">Maintenance reminder sent</p>
+                                    <p class="text-xs text-gray-500">10 minutes ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Responses Section -->
+                <div id="responses-section" class="section-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                        <div class="p-6 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800">Edit Bot Responses</h3>
+                            <p class="text-sm text-gray-600">Customize chatbot responses for different actions</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Action Categories -->
+                                <div class="space-y-2">
+                                    <h4 class="font-medium text-gray-800">Action Categories</h4>
+                                    <div class="space-y-1">
+                                        <button onclick="loadActionResponses('coe')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-certificate mr-2 text-blue-600"></i>
+                                            COE Prices
+                                        </button>
+                                        <button onclick="loadActionResponses('maintenance')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-wrench mr-2 text-green-600"></i>
+                                            Maintenance Tips
+                                        </button>
+                                        <button onclick="loadActionResponses('loan')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-calculator mr-2 text-purple-600"></i>
+                                            Loan Calculator
+                                        </button>
+                                        <button onclick="loadActionResponses('contact')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-phone mr-2 text-orange-600"></i>
+                                            Contact Info
+                                        </button>
+                                        <button onclick="loadActionResponses('vehicle_search')" class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 transition-colors">
+                                            <i class="fas fa-search mr-2 text-red-600"></i>
+                                            Vehicle Search
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Response List -->
+                                <div id="response-list" class="space-y-2">
+                                    <h4 class="font-medium text-gray-800">Select an action to edit responses</h4>
+                                    <p class="text-sm text-gray-500">Choose a category from the left to view and edit responses</p>
+                                </div>
+
+                                <!-- Response Editor -->
+                                <div id="response-editor" class="space-y-4">
+                                    <h4 class="font-medium text-gray-800">Response Editor</h4>
+                                    <div class="border border-gray-200 rounded-lg p-4">
+                                        <textarea id="response-textarea" class="w-full h-48 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Select a response to edit..."></textarea>
+                                        <div class="flex justify-between items-center mt-4">
+                                            <div class="text-xs text-gray-500">
+                                                <span id="char-count">0</span> characters
+                                            </div>
+                                            <div class="space-x-2">
+                                                <button onclick="previewResponse()" class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                                    Preview
+                                                </button>
+                                                <button onclick="saveResponse()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other sections (conversations, users, etc.) -->
+                <div id="conversations-section" class="section-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Conversations</h3>
+                        <!-- Conversation content here -->
+                        <p class="text-gray-600">Conversation management interface coming soon...</p>
+                    </div>
+                </div>
+
+                <div id="users-section" class="section-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">User Management</h3>
+                        <!-- User management content here -->
+                        <p class="text-gray-600">User management interface coming soon...</p>
+                    </div>
+                </div>
+
+                <!-- More sections... -->
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard JavaScript
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section-content').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.remove('hidden');
+            
+            // Update page title
+            const titles = {
+                'analytics': 'Analytics Dashboard',
+                'conversations': 'Conversations',
+                'users': 'User Management',
+                'responses': 'Edit Responses',
+                'intents': 'Intents & Actions',
+                'training': 'Training Data',
+                'vehicles': 'Vehicle Database',
+                'maintenance': 'Maintenance Data'
+            };
+            
+            document.getElementById('page-title').textContent = titles[sectionName] || 'Dashboard';
+        }
+
+        // Action response management
+        const actionResponses = {
+            'coe': {
+                'Category A': 'Current COE Category A price is $96,999...',
+                'Category B': 'Current COE Category B price is $113,000...',
+                'Category C': 'Current COE Category C price is $88,500...',
+                'Category E': 'Current COE Category E price is $113,900...',
+                'General COE': 'Here are the latest COE prices for all categories...'
+            },
+            'maintenance': {
+                'Oil Change': 'Regular oil changes are crucial for engine health...',
+                'Tire Care': 'Proper tire maintenance ensures safety and performance...',
+                'Brake Service': 'Brake maintenance is essential for vehicle safety...',
+                'Battery Care': 'Keep your car battery in optimal condition...'
+            },
+            'loan': {
+                'Calculator': 'Our loan calculator helps you estimate monthly payments...',
+                'Bank Options': 'We work with various banks to provide financing...',
+                'Interest Rates': 'Current interest rates range from...'
+            },
+            'contact': {
+                'Phone': 'You can reach us at +65 6XXX XXXX...',
+                'Email': 'Send us an email at info@clevercompanion.com...',
+                'Address': 'Visit our showroom at...',
+                'Hours': 'Our operating hours are...'
+            },
+            'vehicle_search': {
+                'Search Results': 'Here are the vehicles matching your criteria...',
+                'No Results': 'Sorry, no vehicles found matching your search...',
+                'Popular Models': 'Popular vehicle models include...'
+            }
+        };
+
+        function loadActionResponses(category) {
+            const responseList = document.getElementById('response-list');
+            const responses = actionResponses[category] || {};
+            
+            let html = `<h4 class="font-medium text-gray-800">${category.toUpperCase()} Responses</h4>`;
+            
+            Object.keys(responses).forEach(responseName => {
+                html += `
+                    <button onclick="editResponse('${category}', '${responseName}')" 
+                            class="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200">
+                        ${responseName}
+                    </button>
+                `;
+            });
+            
+            responseList.innerHTML = html;
+        }
+
+        function editResponse(category, responseName) {
+            const textarea = document.getElementById('response-textarea');
+            const response = actionResponses[category][responseName];
+            textarea.value = response;
+            textarea.dataset.category = category;
+            textarea.dataset.responseName = responseName;
+            updateCharCount();
+        }
+
+        function updateCharCount() {
+            const textarea = document.getElementById('response-textarea');
+            const charCount = document.getElementById('char-count');
+            charCount.textContent = textarea.value.length;
+        }
+
+        function previewResponse() {
+            const textarea = document.getElementById('response-textarea');
+            alert('Preview:\n\n' + textarea.value);
+        }
+
+        function saveResponse() {
+            const textarea = document.getElementById('response-textarea');
+            const category = textarea.dataset.category;
+            const responseName = textarea.dataset.responseName;
+            
+            if (category && responseName) {
+                actionResponses[category][responseName] = textarea.value;
+                
+                // Here you would normally send the updated response to the backend
+                fetch('/api/update-response', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        category: category,
+                        responseName: responseName,
+                        content: textarea.value
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        alert('Response saved successfully!');
+                    } else {
+                        alert('Error saving response. Please try again.');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    alert('Response saved locally (backend integration needed)');
+                });
+            }
+        }
+
+        // Character count update
+        document.getElementById('response-textarea').addEventListener('input', updateCharCount);
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Conversations Chart
+            const ctx1 = document.getElementById('conversationsChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Conversations',
+                        data: [120, 190, 300, 500, 200, 300],
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Topics Chart
+            const ctx2 = document.getElementById('topicsChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['COE Prices', 'Vehicle Search', 'Maintenance', 'Loans', 'Contact'],
+                    datasets: [{
+                        data: [30, 25, 20, 15, 10],
+                        backgroundColor: [
+                            '#3B82F6',
+                            '#10B981',
+                            '#F59E0B',
+                            '#EF4444',
+                            '#8B5CF6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

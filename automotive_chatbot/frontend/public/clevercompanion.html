@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleverCompanion - Singapore Automotive Assistant</title>
+    <meta name="description" content="CleverCompanion is Singapore's premier automotive chatbot assistant. Get instant help with COE prices, vehicle recommendations, test drives, and more.">
+    <meta name="keywords" content="Singapore automotive, COE prices, car buying, vehicle assistant, chatbot">
+    
+    <!-- Tailwind CSS -->
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+    
+    <!-- Custom Tailwind Config -->
+    <!-- <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            500: '#4f46e5',
+                            600: '#4338ca',
+                            700: '#3730a3'
+                        }
+                    }
+                }
+            }
+        }
+    </script> -->
+    
+    <!-- <style>
+        /* Custom styles for enhanced design */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Hide scrollbar */
+        .hide-scrollbar {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.8s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style> -->
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50">
+    Header - Exact dashboard structure
+    <header class="bg-white/80 backdrop-blur-sm border-b border-indigo-100 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <span class="text-white text-xl">🚗</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            CleverCompanion
+                        </h1>
+                        <p class="text-sm text-gray-600">Singapore Automotive Assistant</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a 
+                        href="http://localhost:3000/dashboard" 
+                        class="px-4 py-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                    >
+                        Admin Dashboard
+                    </a>
+                    <a 
+                        href="http://localhost:3000/" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                    >
+                        Live Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content - Full width dashboard layout -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Hero Section -->
+        <div class="hero-gradient rounded-3xl p-12 mb-12 text-white fade-in">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-5xl font-bold mb-6">
+                    Welcome to CleverCompanion
+                </h2>
+                <p class="text-xl mb-8 opacity-90">
+                    Singapore's premier automotive chatbot assistant. Get instant help with COE prices, 
+                    vehicle recommendations, financing options, and more.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button 
+                        onclick="startChat()" 
+                        class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300 transform hover:scale-105"
+                    >
+                        🚗 Start Chatting Now
+                    </button>
+                    <button 
+                        onclick="scrollToDemo()" 
+                        class="px-8 py-4 border-2 border-white text-white rounded-xl font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-300"
+                    >
+                        📱 See Demo Below
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Grid - Dashboard style -->
+        <div class="mb-12 slide-in">
+            <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">What Can I Help You With?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover cursor-pointer" onclick="quickAction('COE Prices')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">💰</span>
+                        </div>
+                        <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Live Data</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">COE Prices</h4>
+                    <p class="text-sm text-gray-600">Get latest Certificate of Entitlement prices and trends</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover cursor-pointer" onclick="quickAction('Test Drive')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">🚗</span>
+                        </div>
+                        <span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Book Now</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Test Drive</h4>
+                    <p class="text-sm text-gray-600">Schedule test drives for your preferred vehicles</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover cursor-pointer" onclick="quickAction('Maintenance')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">🔧</span>
+                        </div>
+                        <span class="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Guide</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Maintenance</h4>
+                    <p class="text-sm text-gray-600">Vehicle maintenance tips and service scheduling</p>
+                </div>
+
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover cursor-pointer" onclick="quickAction('Contact Us')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <span class="text-2xl">📞</span>
+                        </div>
+                        <span class="text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">24/7</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Contact Us</h4>
+                    <p class="text-sm text-gray-600">Get in touch with our automotive experts</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-12 fade-in">
+            <div class="p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">Why Choose CleverCompanion?</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white text-2xl">🤖</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">AI-Powered Assistant</h4>
+                        <p class="text-gray-600">Advanced RASA-powered chatbot with natural language understanding</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white text-2xl">📊</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">Real-Time Data</h4>
+                        <p class="text-gray-600">Live COE prices, market trends, and up-to-date vehicle information</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-white text-2xl">🇸🇬</span>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">Singapore-Focused</h4>
+                        <p class="text-gray-600">Specialized knowledge of Singapore's automotive market and regulations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Chat Section -->
+        <div id="demo-section" class="bg-white rounded-xl shadow-sm border border-gray-100 slide-in">
+            <div class="p-6 border-b border-gray-100">
+                <h3 class="text-xl font-semibold text-gray-900">Try CleverCompanion</h3>
+                <p class="text-sm text-gray-600 mt-1">Experience our automotive assistant in action</p>
+            </div>
+            <div class="p-6">
+                <div class="bg-gradient-to-b from-gray-50 to-white rounded-lg border border-gray-200 h-96 flex flex-col">
+                    <!-- Chat Demo Header -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 rounded-t-lg">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                <span class="text-white">🚗</span>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-semibold">CleverCompanion</h4>
+                                <p class="text-indigo-100 text-sm">Your automotive assistant</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Demo Messages -->
+                    <div class="flex-1 p-6 space-y-4 overflow-y-auto hide-scrollbar">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="text-white text-sm">🤖</span>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg rounded-bl-none p-3 max-w-xs shadow-sm">
+                                <p class="text-sm text-gray-800">Hello! I'm CleverCompanion, your Singapore automotive assistant. How can I help you today?</p>
+                                <p class="text-xs text-gray-500 mt-2">Just now</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-3 justify-end">
+                            <div class="bg-indigo-600 text-white rounded-lg rounded-br-none p-3 max-w-xs">
+                                <p class="text-sm">What are the current COE prices?</p>
+                                <p class="text-xs text-indigo-100 mt-2">Just now</p>
+                            </div>
+                            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="text-white text-sm">👤</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                <span class="text-white text-sm">🤖</span>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg rounded-bl-none p-3 max-w-sm shadow-sm">
+                                <p class="text-sm text-gray-800">
+                                    📊 <strong>Latest COE Prices (Singapore)</strong><br><br>
+                                    🚗 <strong>Category A</strong>: $96,999 <span style="color: #ef4444;">🔴↗ +$2,100</span><br>
+                                    🚙 <strong>Category B</strong>: $113,000 <span style="color: #10b981;">🟢↘ -$1,500</span><br><br>
+                                    Would you like vehicle recommendations or financing options?
+                                </p>
+                                <p class="text-xs text-gray-500 mt-2">Just now</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Demo Input -->
+                    <div class="border-t border-gray-200 p-4">
+                        <div class="flex space-x-3">
+                            <input 
+                                type="text" 
+                                placeholder="Try asking about COE prices, test drives, or vehicle recommendations..."
+                                class="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                onclick="startChat()"
+                                readonly
+                            >
+                            <button 
+                                onclick="startChat()"
+                                class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button 
+                        onclick="startChat()"
+                        class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+                    >
+                        🚀 Start Real Conversation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="text-center">
+                <div class="flex items-center justify-center space-x-3 mb-4">
+                    <div class="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white">🚗</span>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        CleverCompanion
+                    </span>
+                </div>
+                <p class="text-gray-600 mb-4">Singapore's Premier Automotive Chatbot Assistant</p>
+                <div class="flex justify-center space-x-6 text-sm text-gray-500">
+                    <a href="#" class="hover:text-indigo-600 transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-indigo-600 transition-colors">Terms of Service</a>
+                    <a href="#" class="hover:text-indigo-600 transition-colors">Contact Support</a>
+                </div>
+                <p class="text-xs text-gray-400 mt-4">© 2024 CleverCompanion. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Load CleverCompanion Widget -->
+    <script src="clevercompanion-widget.js"></script>
+    
+    <script>
+        // Page functionality
+        function startChat() {
+            if (window.CleverCompanionWidget) {
+                window.CleverCompanionWidget.open();
+            }
+        }
+        
+        function quickAction(action) {
+            if (window.CleverCompanionWidget) {
+                window.CleverCompanionWidget.open();
+                setTimeout(() => {
+                    window.CleverCompanionWidget.sendMessage(action);
+                }, 500);
+            }
+        }
+        
+        function scrollToDemo() {
+            document.getElementById('demo-section').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+        
+        // Add smooth scrolling and animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate elements on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Observe all cards
+            document.querySelectorAll('.card-hover').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,465 @@
+version: "3.1"
+
+stories:
+
+- story: greet and goodbye
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: ask coe prices
+  steps:
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- story: ask coe prices after greeting
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- story: ask vehicle information
+  steps:
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+
+- story: ask pricing
+  steps:
+  - intent: ask_pricing
+  - action: action_vehicle_pricing
+
+- story: ask store location
+  steps:
+  - intent: ask_store_location
+  - action: action_store_location
+
+- story: ask operating hours
+  steps:
+  - intent: ask_operating_hours
+  - action: action_operating_hours
+
+- story: ask contact information
+  steps:
+  - intent: ask_contact
+  - action: action_contact_us
+
+# PROBLEM 5 FIX: Specific contact stories
+- story: ask email only
+  steps:
+  - intent: ask_email_only
+  - action: action_email_only
+
+- story: ask phone only
+  steps:
+  - intent: ask_phone_only
+  - action: action_phone_only
+
+- story: ask whatsapp only
+  steps:
+  - intent: ask_whatsapp_only
+  - action: action_whatsapp_only
+
+- story: book test drive
+  steps:
+  - intent: book_test_drive
+  - action: action_book_test_drive
+
+- story: ask maintenance
+  steps:
+  - intent: ask_maintenance
+  - action: action_get_maintenance_info
+
+- story: ask registration
+  steps:
+  - intent: ask_registration
+  - action: utter_registration
+
+- story: ask features
+  steps:
+  - intent: ask_features
+  - action: utter_features
+
+- story: out of scope
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+
+- story: coe price conversation
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+
+- story: vehicle inquiry flow
+  steps:
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+  - intent: ask_pricing
+  - action: action_vehicle_pricing
+  - intent: book_test_drive
+  - action: action_book_test_drive
+
+- story: maintenance inquiry flow
+  steps:
+  - intent: ask_maintenance
+  - action: action_get_maintenance_info
+  - intent: ask_pricing
+  - action: action_vehicle_pricing
+
+- story: comprehensive inquiry flow
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_features
+  - action: utter_features
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+  - intent: book_test_drive
+  - action: action_book_test_drive
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: test drive with confirmation
+  steps:
+  - intent: book_test_drive
+  - action: action_book_test_drive
+  - intent: affirm
+  - action: utter_greet
+
+- story: test drive with denial
+  steps:
+  - intent: book_test_drive
+  - action: action_book_test_drive
+  - intent: deny
+  - action: utter_features
+
+- story: pricing to features flow
+  steps:
+  - intent: ask_pricing
+  - action: action_vehicle_pricing
+  - intent: ask_features
+  - action: utter_features
+
+- story: out of scope with follow up
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+  - intent: ask_features
+  - action: utter_features
+
+- story: coe maintenance combo
+  steps:
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_maintenance
+  - action: action_get_maintenance_info
+
+- story: vehicle to test drive flow
+  steps:
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+  - intent: book_test_drive
+  - action: action_book_test_drive
+
+# Enhanced Singapore Automotive Stories
+
+- story: coe category inquiry
+  steps:
+  - intent: ask_coe_category
+  - action: action_explain_coe_categories
+
+- story: coe category a inquiry
+  steps:
+  - intent: ask_coe_category_a
+  - action: action_coe_category_a
+
+- story: coe category b inquiry
+  steps:
+  - intent: ask_coe_category_b
+  - action: action_coe_category_b
+
+- story: coe category c inquiry
+  steps:
+  - intent: ask_coe_category_c
+  - action: action_coe_category_c
+
+- story: coe category e inquiry
+  steps:
+  - intent: ask_coe_category_e
+  - action: action_coe_category_e
+
+- story: coe bidding process
+  steps:
+  - intent: ask_coe_bidding_process
+  - action: action_explain_coe_bidding
+
+- story: loan financing inquiry
+  steps:
+  - intent: ask_loan_financing
+  - action: action_calculate_loan
+
+# PROBLEM 9 FIX: Loan calculator story
+- story: calculate loan
+  steps:
+  - intent: calculate_loan
+  - action: action_calculate_loan
+
+- story: insurance inquiry
+  steps:
+  - intent: ask_insurance
+  - action: action_get_insurance_info
+
+- story: road tax inquiry
+  steps:
+  - intent: ask_road_tax
+  - action: action_get_road_tax_info
+
+- story: parking information
+  steps:
+  - intent: ask_parking
+  - action: action_get_parking_info
+
+- story: fuel prices inquiry
+  steps:
+  - intent: ask_fuel_prices
+  - action: action_get_fuel_prices
+
+- story: electric vehicle inquiry
+  steps:
+  - intent: ask_electric_vehicles
+  - action: action_get_ev_info
+
+- story: depreciation inquiry
+  steps:
+  - intent: ask_depreciation
+  - action: action_get_depreciation_info
+
+- story: comprehensive vehicle purchase flow
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+  - intent: ask_loan_financing
+  - action: action_calculate_loan
+  - intent: ask_insurance
+  - action: action_get_insurance_info
+  - intent: book_test_drive
+  - action: action_book_test_drive
+  - intent: goodbye
+  - action: utter_goodbye
+
+- story: first time buyer flow
+  steps:
+  - intent: first_time_buyer
+  - action: action_first_time_buyer_guide
+  - intent: ask_coe_category
+  - action: action_explain_coe_categories
+  - intent: ask_loan_financing
+  - action: action_calculate_loan
+
+- story: loan calculator flow
+  steps:
+  - intent: calculate_loan
+  - action: action_calculate_loan
+
+- story: loan financing to calculator
+  steps:
+  - intent: ask_loan_financing
+  - action: action_calculate_loan
+  - intent: calculate_loan
+  - action: action_calculate_loan
+
+- story: budget planning flow
+  steps:
+  - intent: budget_planning
+  - action: action_budget_calculator
+
+- story: calculate montly installment
+  steps:
+  - intent: calculate_loan
+  - action: action_budget_calculator
+
+- story: second hand car inquiry
+  steps:
+  - intent: ask_second_hand_cars
+  - action: action_get_second_hand_info
+  - intent: ask_depreciation
+  - action: action_get_depreciation_info
+
+- story: car comparison flow
+  steps:
+  - intent: compare_cars
+  - action: action_compare_vehicles
+  - intent: ask_features
+  - action: utter_features
+  - intent: ask_pricing
+  - action: action_vehicle_pricing
+
+- story: maintenance cost planning
+  steps:
+  - intent: ask_maintenance
+  - action: action_get_maintenance_info
+  - intent: ask_maintenance_cost
+  - action: action_get_maintenance_costs
+
+- story: coe renewal inquiry
+  steps:
+  - intent: ask_coe_renewal
+  - action: action_explain_coe_renewal
+
+- story: scrap car inquiry
+  steps:
+  - intent: ask_scrap_car
+  - action: action_get_scrap_info
+
+- story: popular models inquiry
+  steps:
+  - intent: ask_popular_models
+  - action: action_get_popular_models
+
+- story: climate considerations
+  steps:
+  - intent: ask_climate_considerations
+  - action: action_climate_advice
+
+- story: brand recommendations
+  steps:
+  - intent: ask_brand_recommendations
+  - action: action_recommend_brands
+
+- story: luxury vs economy
+  steps:
+  - intent: luxury_vs_economy
+  - action: action_luxury_economy_comparison
+
+- story: family car recommendations
+  steps:
+  - intent: ask_family_cars
+  - action: action_recommend_family_cars
+
+- story: sports car inquiry
+  steps:
+  - intent: ask_sports_cars
+  - action: action_recommend_sports_cars
+
+- story: economic car inquiry
+  steps:
+  - intent: ask_economic_cars
+  - action: action_recommend_economic_cars
+
+- story: error recovery flow
+  steps:
+  - intent: out_of_scope
+  - action: utter_out_of_scope
+  - intent: ask_coe_prices
+  - action: action_coe_prices
+
+- story: clarification flow
+  steps:
+  - intent: ask_clarification
+  - action: action_provide_clarification
+  - intent: ask_vehicle_info
+  - action: action_get_vehicle_info
+
+- story: help and support
+  steps:
+  - intent: ask_help
+  - action: action_provide_help
+
+- story: contact information
+  steps:
+  - intent: ask_contact
+  - action: action_contact_us
+
+- story: business hours inquiry
+  steps:
+  - intent: ask_business_hours
+  - action: action_operating_hours
+
+- story: schedule visit confirmation
+  steps:
+  - intent: ask_business_hours
+  - action: action_operating_hours
+  - intent: confirm_schedule_visit
+  - action: action_contact_us
+
+- story: search vehicles general
+  steps:
+  - intent: search_vehicles
+  - action: action_search_vehicles
+
+- story: search budget cars
+  steps:
+  - intent: search_budget_cars
+  - action: action_search_vehicles
+
+- story: search family cars  
+  steps:
+  - intent: search_family_cars
+  - action: action_search_vehicles
+
+- story: search luxury cars
+  steps:
+  - intent: search_luxury_cars
+  - action: action_search_vehicles
+
+- story: search eco cars
+  steps:
+  - intent: search_eco_cars
+  - action: action_search_vehicles
+
+- story: persona based recommendations
+  steps:
+  - intent: ask_persona_recommendations
+  - action: action_persona_based_recommendations
+
+- story: coe predictions confirmation
+  steps:
+  - intent: ask_coe_predictions_confirm
+  - action: action_coe_predictions_confirm
+
+- story: capability confirmation
+  steps:
+  - intent: ask_capability_confirm
+  - action: action_capability_confirm
+
+- story: calculate loan
+  steps:
+  - intent: calculate_loan
+  - action: action_calculate_loan
+
+- story: ask feedback
+  steps:
+  - intent: ask_feedback
+  - action: action_feedback_request
+
+- story: give feedback
+  steps:
+  - intent: give_feedback
+  - action: action_process_feedback
+
+- story: ask car reviews
+  steps:
+  - intent: ask_car_reviews
+  - action: action_get_car_reviews
+
+- story: provide loan calculation details
+  steps:
+  - intent: provide_loan_details
+  - action: action_loan_calculation_result
+
+- story: request specific car reviews
+  steps:
+  - intent: request_specific_car_reviews
+  - action: action_show_car_reviews
