@@ -21,8 +21,11 @@ try:
         print("Starting Automotive Chatbot API Server...")
         print(f"Backend directory: {backend_dir}")
         print(f"Project root: {project_root}")
-        print("Server will be available at: http://localhost:8000")
-        print("API documentation: http://localhost:8000/docs")
+        # Use unified domain:port approach
+        domain = os.getenv('DOMAIN', 'http://localhost')
+        backend_port = os.getenv('BACKEND_PORT', '8001')
+        print(f"Server will be available at: {domain}:{backend_port}")
+        print(f"API documentation: {domain}:{backend_port}/docs")
         print("\nPress Ctrl+C to stop the server\n")
         
         uvicorn.run(

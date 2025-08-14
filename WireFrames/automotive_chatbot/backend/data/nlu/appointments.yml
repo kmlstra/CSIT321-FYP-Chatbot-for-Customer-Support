@@ -27,6 +27,15 @@ nlu:
     - I want sales consultation
     - sales meeting
     - consultation appointment
+    - [test drive](service_type)
+    - [sales consultation](service_type)
+    - [trade-in evaluation](service_type)
+    - I want [test drive](service_type)
+    - I need [sales consultation](service_type)
+    - Book [trade-in evaluation](service_type)
+    - Schedule [test drive](service_type)
+    - I'd like [sales consultation](service_type)
+    - Can I get [trade-in evaluation](service_type)
     - I want to book an appointment on [Monday](appointment_date)
     - Can I get an appointment for [tomorrow](appointment_date)?
     - Book me for [next week](appointment_date)

@@ -43,14 +43,18 @@ venv.bak/
 backend/venv/
 frontend/venv/
 
-# Environment variables (selective)
+# Environment variables (comprehensive)
+.env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
 frontend/.env*
-# Allow backend/.env for configuration sharing
-!backend/.env
+backend/.env*
+*.env
 
 # Next.js build files
 .next/
@@ -81,6 +85,27 @@ coverage/
 
 # nyc test coverage
 .nyc_output
+
+# Test files and directories
+tests/
+test_*/
+*_test.py
+test_*.py
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+test-results/
+test_data/
+mock_data/
+fixtures/
 
 # Dependency directories
 jspm_packages/

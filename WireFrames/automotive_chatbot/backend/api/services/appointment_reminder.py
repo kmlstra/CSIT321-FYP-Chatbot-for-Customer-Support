@@ -12,8 +12,8 @@ from typing import List, Dict, Any
 # Add the backend directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from backend.config.database import DatabaseContext
-from backend.api.services.email_service import send_appointment_reminder_email, is_email_enabled
+from api.config.database import DatabaseContext
+from api.services.email_service import send_appointment_reminder_email, is_email_enabled
 
 # Configure logging
 logging.basicConfig(

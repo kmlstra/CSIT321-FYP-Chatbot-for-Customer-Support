@@ -5,13 +5,17 @@ Handles contact information, store location, and operating hours for second-hand
 from typing import Any, Text, Dict, List, Optional
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
-from backend.api.middleware.auto_logger import AutoLoggedAction
-from backend.api.utils.information import support_info
+from .auto_logger import AutoLoggedAction
+from api.utils.cache import contact_cache
+from api.cache.client_cache import get_client_cache, get_fallback_contact_data
+from api.cache.feature_cache_manager import check_live_support_feature_enabled
 import logging
 from datetime import datetime
 import pytz
 
 logger = logging.getLogger(__name__)
+
+
 
 
 class ActionSmartContact(AutoLoggedAction):
@@ -27,7 +31,7 @@ class ActionSmartContact(AutoLoggedAction):
     def name(self) -> Text:
         return "action_smart_contact"
     
-    def _get_current_time_context(self) -> Dict[str, Any]:
+    def _get_current_time_context(self, business_hours: Dict = None) -> Dict[str, Any]:
         """Get current time context for business hours awareness"""
         try:
             # Singapore timezone
@@ -36,15 +40,39 @@ class ActionSmartContact(AutoLoggedAction):
             current_hour = current_time.hour
             current_day = current_time.strftime('%A').lower()
             
-            # Business hours: Mon-Fri 9AM-7PM, Sat 9AM-6PM, Sun 10AM-5PM
-            if current_day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']:
-                is_business_hours = 9 <= current_hour < 19
-            elif current_day == 'saturday':
-                is_business_hours = 9 <= current_hour < 18
-            elif current_day == 'sunday':
-                is_business_hours = 10 <= current_hour < 17
-            else:
-                is_business_hours = False
+            # Default business hours if not provided
+            if not business_hours:
+                business_hours = {
+                    'monday': {'open': '09:00', 'close': '19:00'},
+                    'tuesday': {'open': '09:00', 'close': '19:00'},
+                    'wednesday': {'open': '09:00', 'close': '19:00'},
+                    'thursday': {'open': '09:00', 'close': '19:00'},
+                    'friday': {'open': '09:00', 'close': '19:00'},
+                    'saturday': {'open': '09:00', 'close': '18:00'},
+                    'sunday': {'open': '10:00', 'close': '17:00'}
+                }
+            
+            # Check if current day has business hours
+            day_hours = business_hours.get(current_day, {})
+            is_business_hours = False
+            
+            if day_hours and 'open' in day_hours and 'close' in day_hours:
+                try:
+                    open_time = datetime.strptime(day_hours['open'], '%H:%M').time()
+                    close_time = datetime.strptime(day_hours['close'], '%H:%M').time()
+                    current_time_only = current_time.time()
+                    
+                    is_business_hours = open_time <= current_time_only < close_time
+                except ValueError:
+                    # Fallback to default logic if parsing fails
+                    if current_day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']:
+                        is_business_hours = 9 <= current_hour < 19
+                    elif current_day == 'saturday':
+                        is_business_hours = 9 <= current_hour < 18
+                    elif current_day == 'sunday':
+                        is_business_hours = 10 <= current_hour < 17
+                    else:
+                        is_business_hours = False
             
             return {
                 'current_time': current_time,
@@ -79,9 +107,9 @@ class ActionSmartContact(AutoLoggedAction):
         """Generate contextual greeting based on time context and intent"""
         # Always provide consistent messaging regardless of specific intent
         if not time_context.get('is_business_hours', True):
-            return f"Thank you for contacting CleverCompanion Singapore! While our phone lines are currently closed, here's how to reach us. {time_context.get('time_until_open', '')}:"
+            return f"Thank you for contacting us! While our phone lines are currently closed, here's how to reach us. {time_context.get('time_until_open', '')}:"
         else:
-            return "Thank you for contacting CleverCompanion Singapore! Here's how to reach us:"
+            return "Thank you for contacting us! Here's how to reach us:"
     
     def _analyze_contact_intent(self, user_message: str) -> Dict[str, bool]:
         """Enhanced contact intent analysis with better context understanding"""
@@ -139,7 +167,7 @@ class ActionSmartContact(AutoLoggedAction):
             'is_urgent': is_urgent
         }
     
-    def _get_operating_hours_info(self, user_message: str) -> str:
+    def _get_operating_hours_info(self, user_message: str, client_data) -> str:
         """Get specific operating hours information based on user query"""
         message_lower = user_message.lower()
         
@@ -149,6 +177,9 @@ class ActionSmartContact(AutoLoggedAction):
         
         if is_public_holiday_query:
             # Return specific public holiday information with contact details
+            whatsapp_number = client_data.get('whatsapp', client_data.get('phone', ''))
+            email = client_data.get('email', 'Email not available')
+            address = client_data.get('address', 'Address not available')
             return f"""
 🎉 **Public Holiday Hours**
 We are CLOSED on all Singapore Public Holidays
@@ -169,9 +200,9 @@ We are CLOSED on all Singapore Public Holidays
 WhatsApp us anytime - we'll respond when we're back!
 
 📞 **Emergency Contact (Holidays)**
-💬 **WhatsApp:** {support_info.whatsapp_number}
-📧 **Email:** {support_info.email}
-📍 **Address:** {support_info.address}
+💬 **WhatsApp:** {whatsapp_number}
+📧 **Email:** {email}
+📍 **Address:** {address}
 """
         
         # Check for specific day queries
@@ -182,14 +213,21 @@ WhatsApp us anytime - we'll respond when we're back!
                 specific_day = day
                 break
         
+        # Get business hours from client data
+        business_hours = client_data.get('business_hours', {})
+        
         if specific_day:
-            # Return specific day hours
-            if specific_day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']:
-                hours = "9:00 AM - 7:00 PM"
-            elif specific_day == 'saturday':
-                hours = "9:00 AM - 6:00 PM"
-            else:  # sunday
-                hours = "10:00 AM - 5:00 PM"
+            # Return specific day hours from client data
+            if specific_day in business_hours:
+                day_hours = business_hours[specific_day]
+                if isinstance(day_hours, dict) and 'open' in day_hours and 'close' in day_hours:
+                    hours = f"{day_hours['open']} - {day_hours['close']}"
+                elif isinstance(day_hours, str):
+                    hours = day_hours if day_hours.lower() != 'closed' else "Closed"
+                else:
+                    hours = "Closed"
+            else:
+                hours = "Closed"
             
             return f"""
 🕒 **{specific_day.title()} Hours**
@@ -197,17 +235,31 @@ WhatsApp us anytime - we'll respond when we're back!
 """
         else:
             # Return general hours with public holiday information
+            # Format business hours from client data
+            def format_hours(day_key, default_hours):
+                if day_key in business_hours:
+                    day_hours = business_hours[day_key]
+                    if isinstance(day_hours, dict) and 'open' in day_hours and 'close' in day_hours:
+                        return f"{day_hours['open']} - {day_hours['close']}"
+                    elif isinstance(day_hours, str):
+                        return day_hours if day_hours.lower() != 'closed' else "Closed"
+                return default_hours
+            
+            weekday_hours = format_hours('monday', "9:00 AM - 7:00 PM")
+            saturday_hours = format_hours('saturday', "9:00 AM - 6:00 PM")
+            sunday_hours = format_hours('sunday', "10:00 AM - 5:00 PM")
+            
             return f"""
 🕒 **Operating Hours**
 
 📅 **Weekdays (Monday - Friday)**
-⏰ 9:00 AM - 7:00 PM
+⏰ {weekday_hours}
 
 📅 **Saturday**
-⏰ 9:00 AM - 6:00 PM
+⏰ {saturday_hours}
 
 📅 **Sunday**
-⏰ 10:00 AM - 5:00 PM
+⏰ {sunday_hours}
 
 🎉 **Public Holidays: CLOSED**
 
@@ -227,61 +279,97 @@ WhatsApp us anytime - we'll respond when we're back!
 WhatsApp us anytime - we'll respond when we're back!
 """
     
-    def _get_email_info(self, conversation_id: str) -> str:
+    def _get_email_info(self, conversation_id: str, client_data) -> str:
         """Get only email information with clickable button"""
+        email = client_data.get('email', 'Email not available')
         return f"""
 📧 **Email Support**
-<a href="mailto:{support_info.email}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
+<a href="mailto:{email}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
 
 ⚡ We respond within 24 hours
 """
 
-    def _get_phone_info(self) -> str:
+    def _get_phone_info(self, client_data) -> str:
         """Get only phone information with clickable button"""
+        phone = client_data.get('phone', 'Phone not available')
         return f"""
 📞 **Phone Support**
-<a href="tel:{support_info.phone_number}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
+<a href="tel:{phone}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
 ⚡ Available during business hours
 """
 
-    def _get_whatsapp_info(self, conversation_id: str) -> str:
+    def _get_whatsapp_info(self, conversation_id: str, client_data) -> str:
         """Get only WhatsApp information with button"""
-        whatsapp_url = support_info.get_whatsapp_url(f'Conversation ID: {conversation_id}')
+        whatsapp_number = client_data.get('whatsapp', client_data.get('phone', ''))
+        # Clean conversation ID by removing any HTML tags or session info
+        clean_id = conversation_id.split('<')[0].split('&')[0].split('?')[0].strip()
+        whatsapp_message = f"I need live support. Conversation ID: {clean_id}"
+        whatsapp_url = f"https://wa.me/{whatsapp_number.replace('+', '').replace(' ', '')}?text={whatsapp_message}"
         return f"""
 💬 **WhatsApp Support**
 <button onclick="window.open('{whatsapp_url}', '_blank')" class="cc-whatsapp-btn" style="background-color: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">💬 Chat with Us on WhatsApp</button>
 ⚡ Quick response during business hours
 """
 
-    def _get_location_info(self) -> str:
+    def _get_location_info(self, client_data) -> str:
         """Get only location information with embedded map"""
         # Create simple Google Maps embed URL using actual address without API key
         import urllib.parse
-        encoded_address = urllib.parse.quote_plus(support_info.address)
+        address = client_data.get('address', 'Address not available')
+        encoded_address = urllib.parse.quote_plus(address)
         maps_embed_url = f"https://maps.google.com/maps?q={encoded_address}&output=embed"
+        google_maps_url = f"https://maps.google.com/maps?q={encoded_address}"
         return f"""
 📍 **Our Location**
-{support_info.address}
+{address}
 🏢 Visit our showroom and service center
 
 <iframe src="{maps_embed_url}" width="300" height="200" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
 
-<a href="{support_info.google_maps_url}" target="_blank" class="cc-maps-btn">📍 View on Google Maps</a>
+<a href="{google_maps_url}" target="_blank" class="cc-maps-btn">📍 View on Google Maps</a>
 """
 
-    def _get_full_contact_card(self, conversation_id: str, context_message: Optional[str] = None, availability_note: Optional[str] = None) -> str:
+    def _get_full_contact_card(self, conversation_id: str, client_data, context_message: Optional[str] = None, availability_note: Optional[str] = None) -> str:
         """Get the full contact card with all contact information - FIXED: No duplicate buttons"""
         # Use default messages if not provided
+        business_name = client_data.get('business_name', 'Our Business')
         if not context_message:
-            context_message = "Contact CleverCompanion"
+            context_message = f"Contact {business_name}"
         if not availability_note:
             availability_note = "Choose your preferred way to reach us"
             
-        whatsapp_url = support_info.get_whatsapp_url(f'Conversation ID: {conversation_id}')
+        whatsapp_number = client_data.get('whatsapp', client_data.get('phone', ''))
+        # Clean conversation ID by removing any HTML tags or session info
+        clean_id = conversation_id.split('<')[0].split('&')[0].split('?')[0].strip()
+        whatsapp_message = f"I need live support. Conversation ID: {clean_id}"
+        whatsapp_url = f"https://wa.me/{whatsapp_number.replace('+', '').replace(' ', '')}?text={whatsapp_message}"
+        
         # Create simple Google Maps embed URL using actual address without API key
         import urllib.parse
-        encoded_address = urllib.parse.quote_plus(support_info.address)
+        address = client_data.get('address', 'Address not available')
+        encoded_address = urllib.parse.quote_plus(address)
         maps_embed_url = f"https://maps.google.com/maps?q={encoded_address}&output=embed"
+        google_maps_url = f"https://maps.google.com/maps?q={encoded_address}"
+        
+        # Get operating hours from client data
+        business_hours = client_data.get('business_hours', {})
+        
+        def format_hours(day_key, default_hours):
+            if day_key in business_hours:
+                day_hours = business_hours[day_key]
+                if isinstance(day_hours, dict) and 'open' in day_hours and 'close' in day_hours:
+                    return f"{day_hours['open']} - {day_hours['close']}"
+                elif isinstance(day_hours, str):
+                    return day_hours if day_hours.lower() != 'closed' else "Closed"
+            return default_hours
+        
+        weekday_hours = format_hours('monday', "9:00 AM - 7:00 PM")
+        saturday_hours = format_hours('saturday', "9:00 AM - 6:00 PM")
+        sunday_hours = format_hours('sunday', "10:00 AM - 5:00 PM")
+        
+        phone = client_data.get('phone', 'Phone not available')
+        email = client_data.get('email', 'Email not available')
+        
         return f"""
 📞 **{context_message}**
 {availability_note}
@@ -291,31 +379,36 @@ WhatsApp us anytime - we'll respond when we're back!
 ⚡ Quick response during business hours
 
 📞 **Phone Support**
-<a href="tel:{support_info.phone_number}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
+<a href="tel:{phone}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
 ⚡ Available during business hours
 
 📧 **Email Support**
-<a href="mailto:{support_info.email}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
+<a href="mailto:{email}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
 ⚡ We respond within 24 hours
 
 📍 **Our Location**
-{support_info.address}
+{address}
 🏢 Visit our showroom and service center
 
 <iframe src="{maps_embed_url}" width="300" height="200" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
 
-<a href="{support_info.google_maps_url}" target="_blank" class="cc-maps-btn">📍 View on Google Maps</a>
+<a href="{google_maps_url}" target="_blank" class="cc-maps-btn">📍 View on Google Maps</a>
 
 🕒 **Operating Hours**
-📅 **Weekdays (Mon-Fri):** 9:00 AM - 7:00 PM
-📅 **Saturday:** 9:00 AM - 6:00 PM
-📅 **Sunday:** 10:00 AM - 5:00 PM
+📅 **Weekdays (Mon-Fri):** {weekday_hours}
+📅 **Saturday:** {saturday_hours}
+📅 **Sunday:** {sunday_hours}
 🎉 **Public Holidays:** CLOSED
 """
     
-    def _get_urgent_contact_response(self, conversation_id: str, time_context: Dict[str, Any]) -> str:
+    def _get_urgent_contact_response(self, conversation_id: str, time_context: Dict[str, Any], client_data) -> str:
         """Get urgent contact response with WhatsApp and phone prioritized - FIXED: No duplicate buttons"""
-        whatsapp_url = support_info.get_whatsapp_url(f'URGENT - Conversation ID: {conversation_id}')
+        whatsapp_number = client_data.get('whatsapp', client_data.get('phone', ''))
+        # Clean conversation ID by removing any HTML tags or session info
+        clean_id = conversation_id.split('<')[0].split('&')[0].split('?')[0].strip()
+        whatsapp_message = f"I need live support. Conversation ID: {clean_id}"
+        whatsapp_url = f"https://wa.me/{whatsapp_number.replace('+', '').replace(' ', '')}?text={whatsapp_message}"
+        phone = client_data.get('phone', 'Phone not available')
         return f"""
 🚨 **Urgent Support**
 Get immediate assistance
@@ -325,12 +418,12 @@ Usually responds within 5 minutes
 <button onclick="window.open('{whatsapp_url}', '_blank')" class="cc-whatsapp-btn" style="background-color: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">💬 Chat with Us on WhatsApp</button>
 
 📞 **Direct Phone**
-<a href="tel:{support_info.phone_number}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
+<a href="tel:{phone}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
 
 ⚡ WhatsApp is fastest • 📞 Phone: Mon-Fri 9AM-7PM
 """
 
-    def _get_contextual_contact_response(self, user_message: str, conversation_id: str, time_context: Dict[str, Any]) -> str:
+    def _get_contextual_contact_response(self, user_message: str, conversation_id: str, time_context: Dict[str, Any], client_data) -> str:
         """Get contextual contact response based on current time and context"""
         # Determine context based on time - focus on general availability
         if not time_context.get('is_business_hours', True):
@@ -344,20 +437,50 @@ Usually responds within 5 minutes
             availability_note = "All support channels active"
             
         # Use the consolidated full contact card with context
-        return self._get_full_contact_card(conversation_id, context_message, availability_note)
+        return self._get_full_contact_card(conversation_id, client_data, context_message, availability_note)
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         try:
+            # Check if contact support feature is enabled for this client
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            if not check_live_support_feature_enabled(client_id):
+                dispatcher.utter_message(text="I'm sorry, but contact support is not available at the moment. Please try again later or check our website for alternative ways to reach us.")
+                return []
+            
             # Get the user's message and conversation ID
             user_message = tracker.latest_message.get('text', '')
             conversation_id = tracker.sender_id
-            logger.info(f"Smart contact action triggered with message: {user_message}")
             
-            # Get time context
-            time_context = self._get_current_time_context()
+            # Check cache first for contact data
+            cache_key = f"contact_data_{client_id}" if client_id else "contact_data_fallback"
+            client_data = contact_cache.get(cache_key)
+            
+            if client_data:
+                logger.info(f"Retrieved contact data from cache for client_id: {client_id}")
+            else:
+                # Get client-specific data from cache (with automatic MongoDB fallback)
+                if client_id:
+                    cache = get_client_cache()
+                    client_data = cache.get_client_data(client_id)
+                    if client_data:
+                        logger.info(f"Retrieved client data from cache for client_id: {client_id}")
+                        # Cache the contact data for faster future access
+                        contact_cache.set(cache_key, client_data, ttl=3600)  # 1 hour cache
+            
+                # Use fallback data if client data not available
+                if not client_data:
+                    client_data = get_fallback_contact_data()
+                    logger.info(f"Using fallback contact data for client_id: {client_id}")
+                    # Cache fallback data too
+                    contact_cache.set(cache_key, client_data, ttl=3600)  # 1 hour cache
+            
+            logger.info(f"Smart contact action triggered with message: {user_message}, client_id: {client_id}")
+            
+            # Get time context with client business hours
+            time_context = self._get_current_time_context(client_data.get('business_hours', {}))
             
             # Analyze what the user is looking for
             intent_analysis = self._analyze_contact_intent(user_message)
@@ -365,7 +488,7 @@ Usually responds within 5 minutes
             # Handle urgent requests with priority contact methods
             if intent_analysis.get('is_urgent', False):
                 if intent_analysis['needs_phone'] or intent_analysis['needs_whatsapp']:
-                    urgent_response = self._get_urgent_contact_response(conversation_id, time_context)
+                    urgent_response = self._get_urgent_contact_response(conversation_id, time_context, client_data)
                     dispatcher.utter_message(text=urgent_response)
                     logger.info(f"Urgent contact response sent successfully")
                     return []
@@ -393,23 +516,23 @@ Usually responds within 5 minutes
             if specific_intents == 1 and not is_general_contact:
                 if intent_analysis['needs_hours']:
                     # Only show operating hours
-                    hours_info = self._get_operating_hours_info(user_message)
+                    hours_info = self._get_operating_hours_info(user_message, client_data)
                     response_parts.append(hours_info)
                 elif intent_analysis['needs_email']:
                     # Only show email info
-                    email_info = self._get_email_info(conversation_id)
+                    email_info = self._get_email_info(conversation_id, client_data)
                     response_parts.append(email_info)
                 elif intent_analysis['needs_phone']:
                     # Only show phone info
-                    phone_info = self._get_phone_info()
+                    phone_info = self._get_phone_info(client_data)
                     response_parts.append(phone_info)
                 elif intent_analysis['needs_whatsapp']:
                     # Only show WhatsApp info
-                    whatsapp_info = self._get_whatsapp_info(conversation_id)
+                    whatsapp_info = self._get_whatsapp_info(conversation_id, client_data)
                     response_parts.append(whatsapp_info)
                 elif intent_analysis['needs_location']:
                     # Only show location info
-                    location_info = self._get_location_info()
+                    location_info = self._get_location_info(client_data)
                     response_parts.append(location_info)
             else:
                 # Show greeting for multiple intents or general requests
@@ -418,11 +541,11 @@ Usually responds within 5 minutes
                 # If multiple specific intents or general contact request, show appropriate response
                 if specific_intents > 1:
                     # Multiple specific requests - show full contact card
-                    contact_card = self._get_full_contact_card(conversation_id)
+                    contact_card = self._get_full_contact_card(conversation_id, client_data)
                     response_parts.append(contact_card)
                 elif intent_analysis['needs_all'] or specific_intents == 0 or is_general_contact:
                     # General contact request - show contextual response with all contact options
-                    contact_card = self._get_contextual_contact_response(user_message, conversation_id, time_context)
+                    contact_card = self._get_contextual_contact_response(user_message, conversation_id, time_context, client_data)
                     response_parts.append(contact_card)
             
             final_response = "\n\n".join(response_parts)
@@ -434,19 +557,25 @@ Usually responds within 5 minutes
             logger.error(f"Error in ActionSmartContact: {e}")
             # Fallback response
             conversation_id = tracker.sender_id
-            whatsapp_url = support_info.get_whatsapp_url(f'Conversation ID: {conversation_id}')
-            fallback_response = f"""🤝 **CleverCompanion Support**
+            # Get client_id for fallback as well
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            fallback_data = get_fallback_contact_data()
+            
+            whatsapp_number = fallback_data.get('whatsapp', fallback_data.get('phone', ''))
+            whatsapp_message = f"Conversation ID: {conversation_id}"
+            whatsapp_url = f"https://wa.me/{whatsapp_number.replace('+', '').replace(' ', '')}?text={whatsapp_message}"
+            fallback_response = f"""🤝 **{fallback_data.get('business_name', 'Our Business')} Support**
 
-📞 **Phone:** {support_info.phone_number}
-<a href="tel:{support_info.phone_number}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
+📞 **Phone:** {fallback_data.get('phone', 'Phone not available')}
+<a href="tel:{fallback_data.get('phone', '')}" class="cc-contact-link cc-phone-btn">📞 Call Now</a>
 
-📧 **Email:** {support_info.email}
-<a href="mailto:{support_info.email}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
+📧 **Email:** {fallback_data.get('email', 'Email not available')}
+<a href="mailto:{fallback_data.get('email', '')}" class="cc-contact-link cc-email-btn">📧 Send Email</a>
 
-💬 **WhatsApp:** {support_info.whatsapp_number}
+💬 **WhatsApp:** {whatsapp_number}
 <button onclick="window.open('{whatsapp_url}', '_blank')" class="cc-whatsapp-btn" style="background-color: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px;">💬 Chat Now</button>
 
-📍 **Address:** {support_info.address}
+📍 **Address:** {fallback_data.get('address', 'Address not available')}
 🕒 **Hours:** Mon-Fri 9AM-7PM, Sat 9AM-6PM, Sun 10AM-5PM"""
             dispatcher.utter_message(text=fallback_response)
         

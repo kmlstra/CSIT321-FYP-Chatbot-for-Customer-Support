@@ -1,0 +1,197 @@
+# RASA 3.6.4 + MINIMAL RAG - WORKING VERSIONS ONLY
+# Based on compatibility research - TESTED COMBINATIONS
+# 
+# CRITICAL: After installation, run:
+# pip install packaging==20.9 --force-reinstall --no-deps
+
+# RASA CORE (ALREADY INSTALLED IN SETUP.PY)
+rasa==3.6.4
+rasa-sdk==3.6.1
+
+# RASA SYSTEM REQUIREMENTS (STRICT - MUST BE EXACT)
+packaging==20.9
+protobuf>=4.23.3,<4.23.4
+networkx>=2.6,<2.8
+pydantic>=1.10.0,<1.10.10
+
+# SCIENTIFIC COMPUTING (RASA MODEL COMPATIBILITY)
+scipy>=1.7.0,<1.12.0
+
+# DATABASE SUPPORT
+pymongo>=3.12,<4.0
+motor>=2.5.0,<3.0.0
+
+# SQL DATABASE
+SQLAlchemy==1.4.53
+
+# WEB FRAMEWORK
+fastapi==0.104.1
+uvicorn>=0.23.0,<0.24.0
+
+# WEBSOCKETS (RASA COMPATIBLE - RESEARCH BASED)
+websockets==10.0
+
+# NLP CORE (ESSENTIAL ONLY)
+transformers>=4.21.0,<4.25.0
+numpy>=1.19.2,<1.25.0
+
+# BASIC RAG (NO PROBLEMATIC PACKAGES)
+langchain>=0.0.300,<0.0.360
+
+# VECTOR SEARCH (SIMPLE FAISS ONLY)
+faiss-cpu>=1.7.4,<1.8.0
+
+# FILE PROCESSING (BASIC ONLY)
+pypdf>=3.15.0,<4.0.0
+openpyxl>=3.1.0,<4.0.0
+
+# HTTP UTILITIES
+requests>=2.31.0,<3.0.0
+
+# Environment Variables
+python-dotenv>=1.0.0,<2.0.0
+
+# JWT AUTHENTICATION
+python-jose[cryptography]>=3.3.0,<4.0.0
+passlib[bcrypt]>=1.7.4,<2.0.0
+PyJWT>=2.8.0,<3.0.0
+
+# EMAIL VALIDATION
+email-validator>=2.0.0,<3.0.0
+
+# FORM DATA HANDLING
+python-multipart>=0.0.20,<1.0.0
+
+# DATA ANALYTICS
+pandas>=1.5.0,<2.0.0 
+
+# DATABASE DRIVERS FOR CLIENT CONNECTIONS
+aiomysql>=0.1.1,<1.0.0
+asyncpg>=0.28.0,<1.0.0
+
+# ENCRYPTION FOR DATABASE PASSWORDS
+cryptography>=41.0.0,<42.0.0
+
+# ADDITIONAL DATABASE DRIVERS
+pyodbc>=4.0.39,<5.0.0
+
+# TESTING DEPENDENCIES
+pytest>=7.4.0,<8.0.0
+pytest-asyncio>=0.21.0,<1.0.0
+pytest-cov>=4.1.0,<5.0.0
+pytest-html>=4.1.0,<5.0.0
+pytest-json-report>=1.5.0,<2.0.0
+pytest-xdist>=3.5.0,<4.0.0
+pytest-timeout>=2.2.0,<3.0.0
+pytest-mock>=3.12.0,<4.0.0
+pytest-benchmark>=4.0.0,<5.0.0
+
+# CODE QUALITY & LINTING
+flake8>=6.1.0,<7.0.0
+black>=22.0.0,<23.0.0
+isort>=5.12.0,<6.0.0
+mypy>=1.7.0,<2.0.0
+bandit>=1.7.5,<2.0.0
+
+# DEVELOPMENT DEPENDENCIES
+watchdog>=3.0.0,<4.0.0
+ipython>=8.0.0,<8.17.0
+
+# ASYNC SUPPORT
+anyio>=3.7.1,<4.0.0
+
+# CACHING
+redis>=4.5.3,<5.0.0
+aioredis>=2.0.0,<3.0.0
+cachetools>=5.3.0,<6.0.0
+
+# PERFORMANCE MONITORING
+psutil>=5.9.0,<6.0.0
+memory-profiler>=0.61.0,<1.0.0
+
+# LOAD TESTING
+locust>=2.17.0,<3.0.0
+
+# MOCK SERVER FOR TESTING
+responses>=0.24.0,<1.0.0
+httpretty>=1.1.0,<2.0.0
+
+# TEST DATA GENERATION
+Faker>=20.1.0,<21.0.0
+factory-boy>=3.3.0,<4.0.0
+freezegun>=1.2.0,<2.0.0
+
+# COVERAGE REPORTING
+coverage[toml]>=7.3.0,<8.0.0
+
+# ADDITIONAL TESTING UTILITIES
+parameterized>=0.9.0,<1.0.0
+hypothesis>=6.92.0,<7.0.0
+vcrpy>=5.1.0,<6.0.0
+time-machine>=2.13.0,<3.0.0
+pyfakefs>=5.3.0,<6.0.0
+
+# PERFORMANCE TESTING
+py-spy>=0.3.14,<1.0.0
+
+# ADDITIONAL UTILITIES
+click>=8.1.0,<9.0.0
+rich>=13.7.0,<14.0.0
+tqdm>=4.66.0,<5.0.0
+colorama>=0.4.6,<1.0.0
+
+# DATA FORMATS
+PyYAML>=6.0.0,<7.0.0
+toml>=0.10.0,<1.0.0
+lxml>=4.9.0,<5.0.0
+
+# IMAGE PROCESSING (for widget customization)
+Pillow>=10.1.0,<11.0.0
+
+# PDF GENERATION (for reports)
+reportlab>=4.0.0,<5.0.0
+
+# WEBSOCKET SUPPORT
+websockets==10.0
+
+# RATE LIMITING
+slowapi>=0.1.9,<1.0.0
+
+# RETRY LOGIC
+tenacity>=8.2.0,<9.0.0
+
+# TEMPLATE ENGINE
+jinja2>=3.1.0,<4.0.0
+
+# STRING UTILITIES
+stringcase>=1.2.0,<2.0.0
+
+# URL UTILITIES
+furl>=2.1.0,<3.0.0
+url-normalize>=1.4.0,<2.0.0
+
+# FILE TYPE DETECTION
+filetype>=1.2.0,<2.0.0
+
+# WEB SCRAPING (for testing)
+beautifulsoup4>=4.12.0,<5.0.0
+
+# BROWSER AUTOMATION (for E2E testing)
+selenium>=4.16.0,<5.0.0
+
+# HTTP CLIENT & REQUESTS
+httpx>=0.25.0,<1.0.0
+aiohttp>=3.6.0,<3.9.0
+
+# DATE & TIME UTILITIES
+python-dateutil>=2.8.0,<3.0.0
+pytz>=2019.1,<2023.0
+
+# DATA VALIDATION & SERIALIZATION
+jsonschema>=3.2.0,<4.18.0
+
+# LOGGING & MONITORING
+loguru>=0.7.0,<1.0.0
+
+# FILE HANDLING
+aiofiles>=23.2.0,<24.0.0

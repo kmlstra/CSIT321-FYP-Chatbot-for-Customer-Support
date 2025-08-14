@@ -10,5 +10,6 @@ from api.actions.default_actions import *
 from api.actions.live_support_actions import *
 from api.actions.contact_actions import *
 from api.actions.loan_calculator_actions import *
+from api.actions.appointment_actions import *
 
 # This ensures RASA can find all the actions when it looks for the 'actions' module

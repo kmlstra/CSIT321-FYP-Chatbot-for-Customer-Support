@@ -7,7 +7,7 @@ from typing import Any, Text, Dict, List, Optional
 from rasa_sdk import Tracker
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet
-from ..middleware.auto_logger import AutoLoggedAction
+from .auto_logger import AutoLoggedAction
 import logging
 import requests
 import os
@@ -22,14 +22,17 @@ import random
 # Import visualization utilities
 from ..utils.visualization_utils import get_chart_for_coe_response
 
+# Import optimized feature cache manager
+from ..cache.feature_cache_manager import check_coe_feature_enabled
+
 logger = logging.getLogger(__name__)
 
 # Import secure configuration and rate limiter
 import sys
 import os
-from backend.api.config import settings
-from backend.api.middleware.lta_rate_limiter import rate_limited_lta_request, lta_rate_limiter
-from backend.api.services.notifications import notify_coe_api_failure
+from api.config import settings
+from api.middleware.lta_rate_limiter import rate_limited_lta_request, lta_rate_limiter
+from api.services.notifications import notify_coe_api_failure
 
 # ========================================
 # CONSTANTS FOR REUSABLE MESSAGES
@@ -43,6 +46,18 @@ COE_SERVICE_UNAVAILABLE_MESSAGE = """
     **🔄 Please try again later.**
 
     Thank you for your patience."""
+
+COE_FEATURE_DISABLED_MESSAGE = """
+    🚫 **COE Price Service Not Available**
+
+    I'm sorry, but COE price information is not currently enabled for your account. This feature may be temporarily disabled or not included in your current service plan.
+
+    **📞 For COE price information and vehicle inquiries, please:**
+    • Contact our support team directly
+    • Visit our showroom for personalized assistance
+    • Check with your account manager about enabling COE services
+
+    We're here to help with all your automotive needs! 🚗"""
 
 def extract_coe_query_details(text: str) -> dict:
     """Extract specific month/year from COE queries with comprehensive date support"""
@@ -275,7 +290,7 @@ def format_change(change: int, use_html: bool = False) -> str:
         else:
             return "➡️ No change"
 
-@rate_limited_lta_request(cache_key="coe_prices_live", cache_minutes=30)
+@rate_limited_lta_request(cache_key="coe_prices_live", cache_minutes=120)
 def get_live_coe_prices():
     """Fetch live COE prices from data.gov.sg API with rate limiting and caching"""
     try:
@@ -287,8 +302,12 @@ def get_live_coe_prices():
             timeout=10
         )
         
+        logger.info(f"COE API response status: {response.status_code}")
+        
         if response.status_code == 200:
             data = response.json()
+            logger.info(f"COE API response structure: result={('result' in data)}, records={('records' in data.get('result', {}))}, record_count={len(data.get('result', {}).get('records', []))}")
+            
             if 'result' in data and 'records' in data['result'] and data['result']['records']:
                 # Get the most recent bidding results for each category
                 records = data['result']['records']
@@ -306,7 +325,14 @@ def get_live_coe_prices():
                         if category and premium:
                             latest_prices[category] = int(float(premium))
                 
-                if len(latest_prices) >= 5:  # Need at least A, B, C, D, E
+                # Validate that we have all required categories
+                required_categories = ['A', 'B', 'C', 'D', 'E']
+                found_categories = set(latest_prices.keys())
+                
+                logger.info(f"Found categories in latest_prices: {found_categories}")
+                logger.info(f"Latest prices data: {latest_prices}")
+                
+                if len(found_categories) >= 4 and found_categories.intersection(required_categories):  # At least 4 out of 5 categories
                     # Parse the latest_month to datetime for consistency
                     try:
                         latest_date = datetime.strptime(latest_month, '%Y-%m') if latest_month else datetime.now()
@@ -401,6 +427,15 @@ def get_live_coe_prices():
                     }
                     logger.info(f"Successfully fetched COE prices: {result}")
                     return result
+                else:
+                    logger.warning(f"API response invalid, only found {len(found_categories)} categories: {found_categories}, using fallback prices")
+                    return get_fallback_coe_prices()
+            else:
+                logger.warning("API response missing result/records structure, using fallback prices")
+                return get_fallback_coe_prices()
+        else:
+            logger.warning(f"API request failed with status {response.status_code}, using fallback prices")
+            return get_fallback_coe_prices()
         
         # Fallback if API fails
         logger.warning("API response invalid, using fallback prices")
@@ -575,86 +610,96 @@ class ActionCOEPrices(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_prices"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
-        user_text = tracker.latest_message.get("text", "")
-        query_details = extract_coe_query_details(user_text)
+        try:
+            # Check if COE prices feature is enabled for this client
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            if client_id:
+                if not check_coe_feature_enabled(client_id):
+                    dispatcher.utter_message(
+                        text="I'm sorry, but COE price information is currently not available. Please contact our support team for assistance."
+                    )
+                    return []
         
-        if query_details['month'] and query_details['year']:
-            # Check if this is a future date prediction request
-            if query_details.get('prediction_requested', False):
-                # Handle future date prediction - redirect to prediction action
-                month_name = datetime(query_details['year'], query_details['month'], 1).strftime("%B %Y")
-                response = f"🔮 **COE Price Prediction for {month_name}**\n\nI understand you're asking about COE prices for {month_name}. Since this is a future date, let me provide you with our intelligent forecasting analysis instead.\n\nPlease ask me for 'COE predictions' to get detailed forecasting analysis based on current market trends and historical patterns."
-            else:
-                # Historical data request
-                year = query_details['year']
-                month = query_details['month']
-                bidding_round = query_details.get('bidding_round')
-                
-                historical_data = get_historical_coe_data(year, month)
-                
-                if historical_data:
-                    # Get data for the specific month (all bidding rounds)
-                    month_data_list = []
-                    for record in historical_data:
-                        if record['date'].year == year and record['date'].month == month:
-                            month_data_list.append(record)
+            user_text = tracker.latest_message.get("text", "")
+            query_details = extract_coe_query_details(user_text)
+        
+            if query_details['month'] and query_details['year']:
+                # Check if this is a future date prediction request
+                if query_details.get('prediction_requested', False):
+                    # Handle future date prediction - redirect to prediction action
+                    month_name = datetime(query_details['year'], query_details['month'], 1).strftime("%B %Y")
+                    response = f"🔮 **COE Price Prediction for {month_name}**\n\nI understand you're asking about COE prices for {month_name}. Since this is a future date, let me provide you with our intelligent forecasting analysis instead.\n\nPlease ask me for 'COE predictions' to get detailed forecasting analysis based on current market trends and historical patterns."
+                else:
+                    # Historical data request
+                    year = query_details['year']
+                    month = query_details['month']
+                    bidding_round = query_details.get('bidding_round')
                     
-                    if month_data_list:
-                        month_name = datetime(year, month, 1).strftime("%B %Y")
-                        response = format_historical_coe_response(month_data_list, month_name, bidding_round)
+                    historical_data = get_historical_coe_data(year, month)
+                    
+                    if historical_data:
+                        # Get data for the specific month (all bidding rounds)
+                        month_data_list = []
+                        for record in historical_data:
+                            if record['date'].year == year and record['date'].month == month:
+                                month_data_list.append(record)
+                        
+                        if month_data_list:
+                            month_name = datetime(year, month, 1).strftime("%B %Y")
+                            response = format_historical_coe_response(month_data_list, month_name, bidding_round)
+                        else:
+                            response = f"Sorry, I don't have COE data for the requested period. I have current data available."
                     else:
                         response = f"Sorry, I don't have COE data for the requested period. I have current data available."
-                else:
-                    response = f"Sorry, I don't have COE data for the requested period. I have current data available."
-                
-        else:
-            # Current data request
-            current_prices = get_live_coe_prices()
-
-            if current_prices is None:
-                response = COE_SERVICE_UNAVAILABLE_MESSAGE
+                    
             else:
-                # Extract current prices and trends from new format
-                prices = current_prices['current_prices']
-                pqp = current_prices.get('pqp_prices', {})
-                trends = current_prices['trends']
-                
-                # Determine current bidding round - improved detection
-                current_period = current_prices['bidding_period']
-                current_bidding_round = current_prices.get('current_bidding_round', '1')
-                current_round_display = current_prices.get('current_round_display', '1st')
-                bidding_round_text = current_prices.get('bidding_round_text', '1st BIDDING')
-                
-                # Enhanced bidding round detection
-                try:
-                    current_date = datetime.now()
+                # Current data request
+                current_prices = get_live_coe_prices()
+
+                if current_prices is None:
+                    response = COE_SERVICE_UNAVAILABLE_MESSAGE
+                else:
+                    # Extract current prices and trends from new format
+                    prices = current_prices['current_prices']
+                    pqp = current_prices.get('pqp_prices', {})
+                    trends = current_prices['trends']
                     
-                    # Use the actual bidding round data from API
-                    if current_bidding_round == '1':
-                        bidding_round_info = f"\n🔵 **Current Period:** {current_round_display} bidding round of {current_date.strftime('%B %Y')} (1st Wednesday)"
-                    elif current_bidding_round == '2':
-                        bidding_round_info = f"\n🔴 **Current Period:** {current_round_display} bidding round of {current_date.strftime('%B %Y')} (3rd Wednesday)"
-                    else:
-                        # Fallback to date-based detection
-                        current_day = current_date.day
-                        if current_day <= 15:
-                            bidding_round_info = f"\n🔵 **Current Period:** 1st bidding round of {current_date.strftime('%B %Y')} (1st Wednesday)"
+                    # Determine current bidding round - improved detection
+                    current_period = current_prices['bidding_period']
+                    current_bidding_round = current_prices.get('current_bidding_round', '1')
+                    current_round_display = current_prices.get('current_round_display', '1st')
+                    bidding_round_text = current_prices.get('bidding_round_text', '1st BIDDING')
+                    
+                    # Enhanced bidding round detection
+                    try:
+                        current_date = datetime.now()
+                        
+                        # Use the actual bidding round data from API
+                        if current_bidding_round == '1':
+                            bidding_round_info = f"\n🔵 **Current Period:** {current_round_display} bidding round of {current_date.strftime('%B %Y')} (1st Wednesday)"
+                        elif current_bidding_round == '2':
+                            bidding_round_info = f"\n🔴 **Current Period:** {current_round_display} bidding round of {current_date.strftime('%B %Y')} (3rd Wednesday)"
                         else:
-                            bidding_round_info = f"\n🔴 **Current Period:** 2nd bidding round of {current_date.strftime('%B %Y')} (3rd Wednesday)"
+                            # Fallback to date-based detection
+                            current_day = current_date.day
+                            if current_day <= 15:
+                                bidding_round_info = f"\n🔵 **Current Period:** 1st bidding round of {current_date.strftime('%B %Y')} (1st Wednesday)"
+                            else:
+                                bidding_round_info = f"\n🔴 **Current Period:** 2nd bidding round of {current_date.strftime('%B %Y')} (3rd Wednesday)"
+                        
+                        # Add general schedule info
+                        bidding_round_info += "\n📅 **Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
+                        
+                    except Exception as e:
+                        logger.warning(f"Error determining bidding round: {e}")
+                        bidding_round_info = "\n📅 **Bidding Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
                     
-                    # Add general schedule info
-                    bidding_round_info += "\n📅 **Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
-                    
-                except Exception as e:
-                    logger.warning(f"Error determining bidding round: {e}")
-                    bidding_round_info = "\n📅 **Bidding Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
-                
-                # Always format the base response consistently - ADD COE MARKER
-                base_response = f"""📊 **Latest COE Prices (Live Data)**
+                    # Always format the base response consistently - ADD COE MARKER
+                    base_response = f"""📊 **Latest COE Prices (Live Data)**
 
 🚗 **Category A:** ${prices['A']:,} {trends['A']}
 🚙 **Category B:** ${prices['B']:,} {trends['B']}
@@ -676,35 +721,50 @@ class ActionCOEPrices(AutoLoggedAction):
 
 📊 **Data Source:** Land Transport Authority (LTA) Singapore"""
 
-                # Try to generate price comparison chart
-                try:
-                    historical_data = get_historical_coe_data()
-                    chart_html = get_chart_for_coe_response(prices, historical_data, 'comparison')
-                    if chart_html:
-                        # Combine text and chart into a single message for proper frontend processing
-                        response = f"{base_response}\n\n{chart_html}"
-                    else:
-                        # Use base response if no chart
+                    # Try to generate price comparison chart
+                    try:
+                        historical_data = get_historical_coe_data()
+                        chart_html = get_chart_for_coe_response(prices, historical_data, 'comparison')
+                        if chart_html:
+                            # Combine text and chart into a single message for proper frontend processing
+                            response = f"{base_response}\n\n{chart_html}"
+                        else:
+                            # Use base response if no chart
+                            response = base_response
+                                
+                    except Exception as e:
+                        logger.warning(f"Could not generate price chart: {e}")
+                        # Use base response if chart generation fails
                         response = base_response
-                            
-                except Exception as e:
-                    logger.warning(f"Could not generate price chart: {e}")
-                    # Use base response if chart generation fails
-                    response = base_response
 
-        # Send the response - it will be processed by formatCOEData() on the frontend
-        dispatcher.utter_message(text=response)
-        
-        return []
+            # Send the response - it will be processed by formatCOEData() on the frontend
+            dispatcher.utter_message(text=response)
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"Error in ActionCOEPrices: {e}")
+            dispatcher.utter_message(
+                text="Sorry, there was an error retrieving COE price information. Please try again."
+            )
+            return []
+    
+
 
 
 class ActionExplainCOECategories(AutoLoggedAction):
     def name(self) -> Text:
         return "action_explain_coe_categories"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         # Get current prices for dynamic information
         current_prices = get_live_coe_prices()
@@ -830,9 +890,15 @@ class ActionExplainCOERenewal(AutoLoggedAction):
     def name(self) -> Text:
         return "action_explain_coe_renewal"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         # Get current prices for dynamic renewal cost calculation
         current_prices = get_live_coe_prices()
@@ -896,9 +962,15 @@ class ActionCOERenewalAssistance(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_renewal_assistance"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         response = """❌ **COE Renewal Application Assistance**
 
@@ -935,7 +1007,13 @@ class ActionCOERenewal(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_renewal"
     
-    def execute_action(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
+        
         response = """🔄 **COE Renewal Information**
 
 COE renewal allows you to extend your vehicle's Certificate of Entitlement for another 5 or 10 years.
@@ -974,7 +1052,13 @@ class ActionCoeBiddingAssistance(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_bidding_assistance"
     
-    def execute_action(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
+        
         response = """🚫 **COE Bidding Assistance**
 
 I'm unable to help you bid for COE directly through this chatbot. COE bidding must be done through official LTA channels only.
@@ -1008,9 +1092,15 @@ class ActionCOECategoryDetails(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_category_details"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         user_text = tracker.latest_message.get("text", "").lower()
         
@@ -1203,7 +1293,7 @@ class ActionExplainCOEBiddingProcess(AutoLoggedAction):
     def name(self) -> Text:
         return "action_explain_coe_bidding_process"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
@@ -1253,9 +1343,15 @@ class ActionCOETrends(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_trends"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         current_prices = get_live_coe_prices()
         
@@ -1311,9 +1407,15 @@ class ActionPQPChecker(AutoLoggedAction):
     def name(self) -> Text:
         return "action_pqp_checker"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         current_prices = get_live_coe_prices()
         
@@ -1383,9 +1485,15 @@ class ActionCOEPrediction(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_prediction"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         # First, provide explanation of COE prediction methodology
         explanation_response = f"""🔮 **COE Price Prediction Methodology Explained**
@@ -1811,9 +1919,15 @@ class ActionCOETimingRecommendation(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_timing_recommendation"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         current_prices = get_live_coe_prices()
         
@@ -2108,9 +2222,15 @@ class ActionCOEVisualization(AutoLoggedAction):
     def name(self) -> Text:
         return "action_coe_visualization"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if COE feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_coe_feature_enabled(client_id):
+            dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            return []
         
         user_text = tracker.latest_message.get("text", "").lower()
         

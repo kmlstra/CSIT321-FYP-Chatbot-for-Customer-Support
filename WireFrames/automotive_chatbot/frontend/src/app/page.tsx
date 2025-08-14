@@ -1,138 +1,153 @@
-export default function Home() {
+'use client';
+
+import { useState } from 'react';
+import { API_CONFIG } from '../config/api';
+
+export default function ClientLoginPage() {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_CONFIG.API_URL}/api/auth/client-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Store authentication token
+        localStorage.setItem('client_token', result.access_token);
+        localStorage.setItem('client_data', JSON.stringify(result.client));
+        localStorage.setItem('user_data', JSON.stringify(result.user));
+        
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">🤖 CleverCompanion</h1>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-500">Admin Dashboard</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                ● Online
-              </span>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="max-w-md w-full mx-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-2xl">🚗</span>
           </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to CleverCompanion Dashboard</h2>
-          <p className="text-lg text-gray-600">Access your automotive chatbot tools and support features</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            CleverCompanion
+          </h1>
+          <p className="text-gray-600 mt-2">Client Dashboard Login</p>
         </div>
 
-        {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* CleverCompanion Chat Widget */}
-          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-xl font-bold">💬</span>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">CleverCompanion Chat</h3>
-                  <p className="text-sm text-gray-500">Interactive automotive assistant</p>
-                </div>
-              </div>
-              <p className="text-gray-600 mb-4">
-                Access the main CleverCompanion chatbot interface for customer interactions, COE price queries, and automotive assistance.
-              </p>
-              <div className="flex space-x-3">
-                <a
-                  href="/clevercompanion.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  🚀 Launch Chat
-                </a>
-                <a
-                  href="/clevercompanion.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                >
-                  💬 Chat Demo
-                </a>
-              </div>
+        {/* Login Form */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="admin@yourcompany.com"
+              />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              Don&apos;t have an account?{' '}
+              <a href="/client-signup" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                Sign up here
+              </a>
+            </p>
           </div>
 
-          {/* Chat History Viewer */}
-          <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-xl font-bold">📋</span>
-                  </div>
-                </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Chat History Viewer</h3>
-                  <p className="text-sm text-gray-500">Live support dashboard</p>
-                </div>
-              </div>
-              <p className="text-gray-600 mb-4">
-                View and manage customer conversation history. Search by conversation ID to access complete chat logs for support purposes.
-              </p>
-              <div className="flex space-x-3">
-                <a
-                  href="/conversations"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  🔍 All Conversations
-                </a>
-                <a
-                  href="/chat-history"
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                >
-                  📄 Individual Search
-                </a>
-              </div>
-            </div>
+          <div className="mt-4 text-center">
+            <p className="text-gray-500 text-xs">
+              Need help? Contact support at{' '}
+              <a href="mailto:support@clevercompanion.com" className="text-indigo-600">
+                support@clevercompanion.com
+              </a>
+            </p>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🚀 Quick Access</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">💬</div>
-              <div className="text-sm font-medium text-gray-900 mt-2">Chat Interface</div>
-              <div className="text-xs text-gray-500">Customer interactions</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">📋</div>
-              <div className="text-sm font-medium text-gray-900 mt-2">History Viewer</div>
-              <div className="text-xs text-gray-500">Support dashboard</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">🔧</div>
-              <div className="text-sm font-medium text-gray-900 mt-2">Admin Tools</div>
-              <div className="text-xs text-gray-500">Management panel</div>
-            </div>
+        {/* Test Credentials */}
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-semibold text-blue-800 mb-2">Test Credentials</h3>
+          <div className="text-blue-700 text-sm space-y-1">
+            <p><strong>Email:</strong> admin@abcmotors.com.sg</p>
+            <p><strong>Password:</strong> password123</p>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>CleverCompanion - Singapore Automotive Assistant Platform</p>
-          <p className="mt-1">🚗 Powered by RASA, FastAPI & React</p>
+        {/* Super Admin Access */}
+        <div className="mt-4 text-center">
+          <a 
+            href="/super-admin-login" 
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            Super Admin Access
+          </a>
         </div>
       </div>
     </div>
-  )
+  );
 }

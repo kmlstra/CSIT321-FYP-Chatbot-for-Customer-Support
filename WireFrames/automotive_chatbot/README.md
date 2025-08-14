@@ -131,17 +131,48 @@ CleverCompanion is an advanced automotive chatbot platform specifically designed
 
 ## 🔧 Recent Fixes & Updates
 
+### ✅ Backend Module Import Issues Fixed
+- **Issue**: `ModuleNotFoundError: No module named 'backend'` in multiple files
+- **Solution**: Fixed all import paths from `from backend.api.*` to `from api.*`
+- **Files Fixed**: `coe_actions.py`, `information.py`, `main.py`, and 10+ other backend files
+- **Status**: ✅ All import errors resolved, services starting successfully
+
+### ✅ Enhanced Environment Configuration System
+- **Feature**: Unified environment detection and switching with improved configuration
+- **Files Created**: 
+  - `switch-environment.ps1` - **NEW**: Enhanced unified environment switcher
+  - `switch-to-local.ps1` - **UPDATED**: Switch to localhost configuration (legacy)
+  - `switch-to-aws.ps1` - **UPDATED**: Switch to AWS production configuration (legacy)
+  - `ENVIRONMENT_SWITCH_GUIDE.md` - **NEW**: Comprehensive usage guide
+- **Key Improvements**:
+  - ✅ Fixed port mismatches (consistent 8001 backend port)
+  - ✅ Added missing `NEXT_PUBLIC_ENV` and `PROFILE_PICTURE_URL` variables
+  - ✅ Unified script with parameter support: `./switch-environment.ps1 -Environment <local|aws|production>`
+  - ✅ Better error handling and user feedback
+  - ✅ Complete frontend and backend configuration
+- **Environment Files**: Automatic `.env` and `.env.local` file management
+- **Status**: ✅ Enhanced one-command environment switching with full variable coverage
+
+### ✅ AWS Deployment Configuration
+- **Issue**: Frontend on AWS using localhost URLs instead of AWS domain
+- **Solution**: Updated production environment files with correct AWS IP (54.254.180.103)
+- **Files Updated**: 
+  - `frontend/.env.production` - AWS domain configuration
+  - `backend/.env.production` - AWS backend configuration
+  - `frontend/src/config/api.ts` - Environment-aware URL detection
+- **Status**: ✅ Production environment correctly configured for AWS
+
+### ✅ AWS Deployment Tools
+- **Created**: `deploy-to-aws.ps1` - Automated deployment script
+- **Created**: `AWS_DEPLOYMENT_GUIDE.md` - Comprehensive deployment guide
+- **Features**: Systemd services, nginx configuration, health monitoring
+- **Status**: ✅ Complete AWS deployment solution provided
+
 ### ✅ RASA Action Registration Fix
 - **Issue**: `RasaException: Failed to execute custom action 'action_contact_us'`
 - **Solution**: Updated `rasa_actions.py` to properly import and register contact actions
 - **Actions Fixed**: `action_contact_us`, `action_store_location`, `action_operating_hours`, `action_provide_business_hours`
 - **Status**: ✅ All contact actions now properly registered
-
-### ✅ Timestamp Display Fix
-- **Issue**: Timestamps showing `+0` (UTC) instead of Singapore timezone
-- **Analysis**: Backend correctly stores Singapore timezone, frontend displays user's local time
-- **Behavior**: Widget uses `toLocaleTimeString()` for user's local timezone display
-- **Status**: ✅ Working as intended - shows local time to users
 
 ### ✅ Chat History Viewer
 - **Feature**: New standalone page for live support agents
@@ -167,6 +198,27 @@ CleverCompanion is an advanced automotive chatbot platform specifically designed
 - **MongoDB Atlas account** (cloud database - no local MongoDB required)
 - **Good internet connection** (for RASA installation)
 - **5GB+ free disk space**
+
+### Environment Switching
+
+**Switch to Local Development:**
+```powershell
+./switch-environment.ps1 -Environment local
+npm run dev:all
+```
+
+**Switch to AWS Production:**
+```powershell
+./switch-environment.ps1 -Environment aws
+npm run dev:all
+```
+
+**Access Points (automatically displayed after switching):**
+- Frontend: http://localhost:3000 (local) or http://54.254.180.103 (AWS)
+- Backend API: http://localhost:8001 (local) or http://54.254.180.103:8001 (AWS)
+- Test Widget: http://localhost:3000/test-client-widget.html (local) or http://54.254.180.103/test-client-widget.html (AWS)
+
+📖 **For detailed usage guide, see:** `ENVIRONMENT_SWITCH_GUIDE.md`
 
 ## 🐳 Docker Deployment
 
@@ -198,101 +250,46 @@ docker compose build --no-cache
 
 ### 🌐 AWS EC2 Production Deployment
 
-Deploy to AWS EC2 with one command using our automated deployment scripts:
+**🚀 Streamlined AWS EC2 Deployment**
+
+Deploy to AWS EC2 using our unified deployment script:
 
 **Prerequisites:**
-- AWS EC2 instance (Ubuntu 20.04 LTS recommended)
-- Security Group with ports 22, 80, 443, 3000, 8001, 5005 open
-- PEM key file for SSH access
+- Docker Desktop installed and running
+- SSH access to EC2 instance: `54.254.180.103`
+- SSH key file: `cc.pem` (place in project root)
 
-**Windows (PowerShell):**
+**Single Command Deployment:**
 ```powershell
-cd deploy
-.\deploy-to-ec2.ps1 -EC2IP "YOUR_EC2_PUBLIC_IP" -PemKey "C:\path\to\your\key.pem"
+# Deploy to AWS EC2 with automatic Docker build and deployment
+.\deploy-to-ec2.ps1 -EC2Host "54.254.180.103"
 ```
 
-**Linux/Mac (Bash):**
-```bash
-cd deploy
-./deploy-to-ec2.sh YOUR_EC2_PUBLIC_IP /path/to/your/key.pem
-```
+**What the script does:**
+1. Builds Docker images locally (frontend, backend, RASA)
+2. Saves images as compressed tar files
+3. Copies images and configuration to EC2 via SSH
+4. Loads images and starts containers on EC2
+5. Performs health checks and cleanup
 
 **Access your deployed application:**
-- Frontend: `http://YOUR_EC2_IP:3000`
-- Backend API: `http://YOUR_EC2_IP:8001/docs`
-- RASA API: `http://YOUR_EC2_IP:5005`
+- Frontend: `http://54.254.180.103`
+- Test Widget: `http://54.254.180.103/test-client-widget.html`
+- Backend API: `http://54.254.180.103:8000/docs`
+- Rasa API: `http://54.254.180.103:5005`
 
-**For detailed deployment instructions, see:**
-- `deploy/DOCKER_DEPLOYMENT_GUIDE.md` - Complete AWS EC2 deployment guide
-- `deploy/LOCAL_TESTING_GUIDE.md` - Local Docker testing instructions
-- `deploy/README.md` - Deployment overview and quick reference
+**📖 Deployment Documentation:**
+- `DEPLOYMENT_PROCESS.md` - Comprehensive deployment guide and troubleshooting
+- `docker-compose.yml` - Local development with Docker Compose
 
-**Quick AWS EC2 Setup:**
+**🏗️ Alternative: Advanced Infrastructure**
+For production environments requiring advanced features (Load Balancers, Auto Scaling, Monitoring), see `aws-deployment/` directory.
 
-1. **Upload project to EC2:**
-   ```bash
-   # From Windows machine
-   cd deploy
-   .\upload-to-ec2.bat
-   ```
-
-2. **Deploy on EC2:**
-   ```bash
-   # SSH to EC2 and run
-   cd automotive_chatbot/deploy
-   ./ec2-deploy.sh
-   ```
-
-3. **Access your application:**
-   - Frontend: `http://your-ec2-ip:3000`
-   - Backend API: `http://your-ec2-ip:8001/docs`
-   - RASA API: `http://your-ec2-ip:5005`
-
-**Management Commands (on EC2):**
+**⚡ Local Docker Compose:**
 ```bash
-./start-chatbot.sh    # Start platform
-./stop-chatbot.sh     # Stop platform
-./status-chatbot.sh   # Check status
-./logs-chatbot.sh     # View logs
-./update-chatbot.sh   # Update deployment
+# For local development only:
+docker-compose up -d
 ```
-
-📖 **Detailed Guides:**
-- [Complete AWS EC2 Deployment Guide](./deploy/AWS_EC2_DOCKER_DEPLOYMENT.md)
-- [Docker Setup Guide](./deploy/DOCKER_SETUP_GUIDE.md)
-- [Deployment README](./deploy/README.md)
-
-### 🔧 Manual Deployment Alternatives
-
-If the automated `upload-to-ec2.bat` script fails, use these manual alternatives:
-
-**📋 Quick Reference:**
-- [Manual Deployment Guide](./deploy/MANUAL_DEPLOYMENT_GUIDE.md) - Comprehensive manual methods
-- [SFTP Instructions](./deploy/SFTP_INSTRUCTIONS.md) - Step-by-step SFTP upload
-- [Alternative Methods](./deploy/ALTERNATIVE_DEPLOYMENT_METHODS.md) - GUI tools & cloud methods
-- [Troubleshooting Guide](./deploy/TROUBLESHOOTING_GUIDE.md) - Common issues & solutions
-
-**🚀 Quick Manual Upload:**
-```powershell
-# Windows PowerShell method
-cd deploy
-.\manual-scp-upload.ps1
-
-# Windows Batch method
-.\manual-scp-upload.bat
-```
-
-**🎯 Recommended for Windows Users:**
-1. **WinSCP** (GUI) - User-friendly file transfer
-2. **FileZilla** (GUI) - Cross-platform SFTP client
-3. **Git-based** - Push to repository, clone on EC2
-4. **VS Code Remote SSH** - Integrated development environment
-
-**⚡ Emergency Methods:**
-- AWS Systems Manager Session Manager (no SSH keys needed)
-- Cloud storage transfer (S3, Google Drive, Dropbox)
-- Docker Hub deployment
-- Manual file creation via SSH
 
 ### Docker Troubleshooting
 
@@ -409,6 +406,62 @@ sudo journalctl -u coe-monitor -f
 sudo journalctl -u chatbot-monitor -f
 ```
 
+## 🔄 Environment Switching
+
+The application supports automatic environment detection and easy switching between development and production configurations.
+
+### Environment Files
+
+**Frontend Environment Files:**
+- `frontend/.env.development` - Localhost configuration
+- `frontend/.env.production` - AWS production configuration
+
+**Backend Environment Files:**
+- `backend/.env.development` - Local development settings
+- `backend/.env.production` - AWS production settings
+
+### Quick Environment Switching
+
+**Switch to Local Development:**
+```powershell
+.\switch-to-local.ps1
+npm run dev:all
+```
+
+**Switch to AWS Production:**
+```powershell
+.\switch-to-aws.ps1
+# Deploy to AWS using deployment guide
+```
+
+### Environment Configuration Details
+
+**Development Environment (localhost):**
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8001`
+- RASA: `http://localhost:5005`
+- MongoDB: Atlas cloud database
+
+**Production Environment (AWS):**
+- Frontend: `http://54.254.180.103`
+- Backend: `http://54.254.180.103:8000`
+- RASA: `http://54.254.180.103:5005`
+- MongoDB: Atlas cloud database
+
+### Manual Environment Loading
+
+The `load-env.ps1` script automatically loads environment variables based on `NODE_ENV`:
+
+```powershell
+# Load development environment
+$env:NODE_ENV = "development"
+.\load-env.ps1
+
+# Load production environment
+$env:NODE_ENV = "production"
+.\load-env.ps1
+```
+
 **AWS Deployment Options:**
 - **EC2 with Systemd**: Reliable, cost-effective, always-on
 - **ECS with Fargate**: Containerized, auto-scaling
@@ -476,15 +529,261 @@ Once running, access these URLs:
 | **RASA Actions** | http://localhost:5055 | Custom actions server |
 | **Admin Dashboard** | http://localhost:3000/dashboard | Admin interface |
 
+## ⚙️ Environment Configuration
+
+### 🔄 Environment Switching System
+
+The platform includes an automated environment switching system that allows seamless transitions between local development and AWS production environments.
+
+#### Quick Environment Switching
+
+**Switch to Local Development:**
+```powershell
+# Configure for localhost development
+.\switch-to-local.ps1
+```
+
+**Switch to AWS Production:**
+```powershell
+# Configure for AWS production (54.254.180.103)
+.\switch-to-aws.ps1
+```
+
+#### Environment Files Structure
+
+```
+automotive_chatbot/
+├── backend/
+│   ├── .env                    # Active environment configuration
+│   ├── .env.development        # Local development settings
+│   └── .env.production         # AWS production settings
+├── frontend/
+│   └── .env.local              # Frontend environment (auto-generated)
+├── switch-to-local.ps1         # Switch to local environment
+└── switch-to-aws.ps1           # Switch to AWS environment
+```
+
+#### Environment Configuration Details
+
+**Local Development Environment:**
+- **Domain**: `http://localhost`
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:8001`
+- **RASA API**: `http://localhost:5005`
+- **RASA Actions**: `http://localhost:5055`
+
+**AWS Production Environment:**
+- **Domain**: `http://54.254.180.103`
+- **Frontend**: `http://54.254.180.103`
+- **Backend API**: `http://54.254.180.103:8000`
+- **RASA API**: `http://54.254.180.103:5005`
+- **RASA Actions**: `http://54.254.180.103:5055`
+
+#### Automatic Configuration Features
+
+✅ **Frontend API Detection**: Automatically detects environment and uses appropriate endpoints  
+✅ **Environment Variables**: Centralized configuration in `backend/.env`  
+✅ **Port Management**: Different ports for development (8001) vs production (8000)  
+✅ **CORS Configuration**: Automatic CORS setup for both environments  
+✅ **Widget Integration**: Widget automatically adapts to current environment  
+
+#### Manual Environment Configuration
+
+If you prefer manual configuration, edit `backend/.env` directly:
+
+```bash
+# Core domain configuration
+DOMAIN=localhost  # Change this for production (e.g., 54.254.180.103)
+NEXT_PUBLIC_DOMAIN=http://localhost  # Frontend domain
+
+# Service ports
+FRONTEND_PORT=3000
+BACKEND_PORT=8001  # 8001 for local, 8000 for production
+RASA_PORT=5005
+RASA_ACTIONS_PORT=5055
+
+# API URLs (auto-configured by switching scripts)
+API_URL=http://localhost:8001
+RASA_API_URL=http://localhost:5005
+WIDGET_API_URL=http://localhost:8001
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:8001
+
+# MongoDB configuration
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/automotive_chatbot
+
+# Security and other settings...
+```
+
+### Unified Domain Configuration
+
+The platform uses a unified domain configuration approach for easier deployment and management. All service URLs are configured using a single `DOMAIN` variable combined with specific ports.
+
+**Benefits:**
+- **Single Point Configuration**: Change only the `DOMAIN` variable for different environments
+- **Easy Deployment**: No need to update multiple URL variables
+- **Consistent URLs**: All services use the same domain with different ports
+- **Environment Flexibility**: Works for localhost, EC2 IPs, or custom domains
+- **Automated Switching**: Use PowerShell scripts for instant environment changes
+
+**Usage Examples:**
+- **Local Development**: `DOMAIN=localhost` → `http://localhost:3000`, `http://localhost:8001`
+- **AWS EC2**: `DOMAIN=54.254.180.103` → `http://54.254.180.103`, `http://54.254.180.103:8000`
+- **Custom Domain**: `DOMAIN=chatbot.yourcompany.com` → `http://chatbot.yourcompany.com:3000`
+
+**Important Notes:**
+- All environment variables are centralized in `backend/.env`
+- MongoDB Atlas is required (no localhost MongoDB)
+- The configuration automatically applies to all Docker containers and services
+- Use switching scripts for development workflow efficiency
+
+### 🌐 AWS EC2 Server Management
+
+Comprehensive server management commands for the AWS EC2 production environment (`54.254.180.103`).
+
+#### Quick Server Management
+
+**Start All Services:**
+```bash
+# SSH into server and start all Docker services
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose up -d"
+```
+
+**Stop All Services:**
+```bash
+# Stop all running Docker services
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose down"
+```
+
+**Check Service Status:**
+```bash
+# View all running containers
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker ps"
+
+# Check specific service status
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker ps | grep frontend"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker ps | grep backend"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker ps | grep rasa"
+```
+
+#### Service Logs and Monitoring
+
+**View Real-time Logs:**
+```bash
+# All services logs
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose logs -f"
+
+# Specific service logs
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose logs -f frontend"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose logs -f backend"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose logs -f rasa"
+```
+
+**System Resource Monitoring:**
+```bash
+# Check system resources
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "htop"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "df -h"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "free -h"
+
+# Docker resource usage
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker stats"
+```
+
+#### Container Management
+
+**Restart Services:**
+```bash
+# Restart all services
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose restart"
+
+# Restart specific service
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose restart frontend"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose restart backend"
+```
+
+**Update and Rebuild:**
+```bash
+# Pull latest images and rebuild
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose pull && sudo docker-compose up -d --build"
+
+# Clean rebuild (removes old containers)
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "cd /home/ubuntu/automotive_chatbot && sudo docker-compose down && sudo docker system prune -f && sudo docker-compose up -d --build"
+```
+
+#### Health Checks
+
+**Service Health Verification:**
+```bash
+# Check if services are responding
+curl -f http://54.254.180.103 || echo "Frontend not responding"
+curl -f http://54.254.180.103:8000/health || echo "Backend not responding"
+curl -f http://54.254.180.103:5005/version || echo "RASA not responding"
+```
+
+**Port Availability:**
+```bash
+# Check if ports are open
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "netstat -tlnp | grep :80"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "netstat -tlnp | grep :8000"
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "netstat -tlnp | grep :5005"
+```
+
+#### Troubleshooting Commands
+
+**Common Issues:**
+```bash
+# Check Docker daemon status
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo systemctl status docker"
+
+# Restart Docker if needed
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo systemctl restart docker"
+
+# Check disk space (common issue)
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "df -h"
+
+# Clean up Docker resources
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker system prune -a -f"
+```
+
+**Emergency Recovery:**
+```bash
+# Force stop all containers
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker kill \$(sudo docker ps -q)"
+
+# Remove all containers and restart
+ssh -i "path/to/your/key.pem" ubuntu@54.254.180.103 "sudo docker rm \$(sudo docker ps -a -q) && cd /home/ubuntu/automotive_chatbot && sudo docker-compose up -d"
+```
+
+#### Production URLs
+
+Once services are running, access the application at:
+- **Frontend**: http://54.254.180.103
+- **Test Widget**: http://54.254.180.103/test-client-widget.html
+- **Backend API**: http://54.254.180.103:8000/docs
+- **RASA API**: http://54.254.180.103:5005
+
+**Note**: Replace `"path/to/your/key.pem"` with the actual path to your SSH private key file.
+
 ## 🎯 Widget Integration
 
 ### Embed Chatbot Widget
 ```html
 <!-- Add to any website -->
-<script src="http://localhost:3000/clevercompanion-widget.js"></script>
+<script src="http://YOUR_DOMAIN:3000/clevercompanion-widget.js"></script>
 ```
 
-The widget automatically initializes and connects to the RASA backend.
+**For different environments:**
+```html
+<!-- Local Development -->
+<script src="http://localhost:3000/clevercompanion-widget.js"></script>
+
+<!-- Production (replace with your domain/IP) -->
+<script src="http://your-domain.com:3000/clevercompanion-widget.js"></script>
+<script src="http://54.123.45.67:3000/clevercompanion-widget.js"></script>
+```
+
+The widget automatically initializes and connects to the RASA backend using the unified domain configuration.
 
 ## 🔍 Troubleshooting
 

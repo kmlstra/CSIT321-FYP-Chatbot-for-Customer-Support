@@ -11,9 +11,8 @@ from pathlib import Path
 import sys
 import pytz
 
-# Import from backend config directory
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
-from backend.config.database import get_collection, is_database_connected, DatabaseContext
+# Import from config directory using relative import
+from ..config.database import DatabaseContext
 
 logger = logging.getLogger(__name__)
 
@@ -28,28 +27,30 @@ class ConversationStorage:
     
     def _setup_collections(self):
         """Setup MongoDB collections with indexes."""
-        if not is_database_connected():
-            logger.info("MongoDB not available, skipping collection setup")
-            return
-            
         try:
-            # Use centralized database connection
-            conversations = get_collection('conversations')
-            chat_sessions = get_collection('chat_sessions')
-            
-            if conversations:
+            # Setup conversations collection indexes
+            with DatabaseContext('conversations') as conversations:
+                if not conversations:
+                    logger.info("MongoDB not available, skipping collection setup")
+                    return
+                
                 # Create indexes for better performance on conversations collection
                 try:
-                    # Unique index on conversation_id for fast lookups
-                    conversations.create_index([('conversation_id', 1)], unique=True, background=True)
+                    # Index on conversation_id for fast lookups (removed unique constraint to allow multiple conversations per session)
+                    conversations.create_index([('conversation_id', 1)], background=True)
                     # Index on timestamp for cleanup operations
                     conversations.create_index([('timestamp', 1)], background=True)
                     # Compound index for conversation_id + timestamp queries
                     conversations.create_index([('conversation_id', 1), ('timestamp', -1)], background=True)
                 except Exception as e:
-                    logger.debug(f"Index creation for conversations collection: {e}")
+                    pass
+            
+            # Setup chat_sessions collection indexes
+            with DatabaseContext('chat_sessions') as chat_sessions:
+                if not chat_sessions:
+                    logger.info("MongoDB not available, skipping collection setup")
+                    return
                 
-            if chat_sessions:
                 # Create indexes for chat_sessions collection
                 try:
                     # Drop existing conflicting index first
@@ -67,7 +68,7 @@ class ConversationStorage:
                     # Compound index for active session queries
                     chat_sessions.create_index([('expires_at', 1), ('session_id', 1)], background=True)
                 except Exception as e:
-                    logger.debug(f"Index creation for chat_sessions collection: {e}")
+                    pass
                 
             logger.info("MongoDB collections and indexes setup complete for both 'conversations' and 'chat_sessions' collections")
         except Exception as e:
@@ -110,11 +111,11 @@ class ConversationStorage:
                     }
                     
                     chat_sessions.insert_one(session_data)
-                    logger.debug(f"Created and stored session {session_id} in chat_sessions collection")
+                    pass
                 except Exception as e:
                     logger.error(f"Failed to store session {session_id}: {e}")
             else:
-                logger.debug(f"Created session {session_id} (fallback mode - not stored)")
+                pass
                 
         return session_id
     
@@ -129,7 +130,7 @@ class ConversationStorage:
         """
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                logger.debug(f"Session extension not available (fallback mode) for session {session_id}")
+                pass
                 return True  # Return True to not break the flow
                 
             try:
@@ -157,7 +158,7 @@ class ConversationStorage:
                 )
                 
                 if result.modified_count > 0:
-                    logger.debug(f"Extended session {session_id}")
+                    pass
                     return True
                 else:
                     logger.warning(f"Session {session_id} not found for extension")
@@ -181,9 +182,14 @@ class ConversationStorage:
         Returns:
             bool: True if message was stored successfully
         """
+        # Validate session_id to prevent null conversation_id errors
+        if not session_id or session_id.strip() == '':
+            logger.error(f"Invalid session_id provided: {session_id}")
+            return False
+            
         with DatabaseContext('conversations') as conversations:
             if not conversations:
-                logger.debug(f"Message not stored (fallback mode): {sender} - {content[:50]}...")
+                pass
                 return True  # Return True to not break the flow
             
             try:
@@ -221,26 +227,31 @@ class ConversationStorage:
                         )
                 
                 # Store conversation message with optimized $concat operation
-                conversations.update_one(
-                    {'conversation_id': session_id},
-                    [
-                        {
-                            '$set': {
-                                'conversation_id': session_id,
-                                'timestamp': current_time,
-                                'content': {
-                                    '$concat': [
-                                        {'$ifNull': ['$content', '']},
-                                        new_message_line
-                                    ]
+                # Ensure conversation_id is never null to prevent E11000 duplicate key error
+                if session_id and session_id.strip():
+                    conversations.update_one(
+                        {'conversation_id': session_id},
+                        [
+                            {
+                                '$set': {
+                                    'conversation_id': session_id,
+                                    'timestamp': current_time,
+                                    'content': {
+                                        '$concat': [
+                                            {'$ifNull': ['$content', '']},
+                                            new_message_line
+                                        ]
+                                    }
                                 }
                             }
-                        }
-                    ],
-                    upsert=True
-                )
+                        ],
+                        upsert=True
+                    )
+                else:
+                    logger.error(f"Cannot store message: invalid session_id '{session_id}'")
+                    return False
                 
-                logger.debug(f"Stored message for conversation {session_id}")
+                pass
                 return True
             except Exception as e:
                 logger.error(f"Failed to store message for conversation {session_id}: {e}")
@@ -276,7 +287,7 @@ class ConversationStorage:
                         },
                         upsert=True  # Create session if it doesn't exist
                     )
-                    logger.debug(f"Updated session activity for {session_id}")
+                    pass
                 except Exception as e:
                     logger.error(f"Failed to update session activity for {session_id}: {e}")
     
@@ -292,7 +303,7 @@ class ConversationStorage:
         """
         with DatabaseContext('conversations') as conversations:
             if not conversations:
-                logger.debug(f"No conversation history available (fallback mode) for session {session_id}")
+                pass
                 return []
                 
             try:
@@ -334,7 +345,7 @@ class ConversationStorage:
         """
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                logger.debug(f"Session info not available (fallback mode) for session {session_id}")
+                pass
                 return None
                 
             try:
@@ -357,10 +368,10 @@ class ConversationStorage:
                                 local_time = session[field].astimezone(singapore_tz)
                             session[field] = local_time.isoformat()
                     
-                    logger.debug(f"Retrieved session info for {session_id}")
+                    pass
                     return session
                 else:
-                    logger.debug(f"No session found for {session_id}")
+                    pass
                     return None
             except Exception as e:
                 logger.error(f"Failed to retrieve session info for {session_id}: {e}")
@@ -393,7 +404,7 @@ class ConversationStorage:
         # Clean up old conversations
         with DatabaseContext('conversations') as conversations:
             if not conversations:
-                logger.debug("Conversation cleanup not available (fallback mode)")
+                pass
                 return total_cleaned
                 
             try:
@@ -421,7 +432,7 @@ class ConversationStorage:
         """
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                logger.debug("No active sessions count available (fallback mode)")
+                pass
                 return 0
                 
             try:
@@ -433,7 +444,7 @@ class ConversationStorage:
                     {'expires_at': {'$gt': current_time}}
                 )
                 
-                logger.debug(f"Found {count} active sessions")
+                pass
                 return count
             except Exception as e:
                 logger.error(f"Failed to get active sessions count: {e}")

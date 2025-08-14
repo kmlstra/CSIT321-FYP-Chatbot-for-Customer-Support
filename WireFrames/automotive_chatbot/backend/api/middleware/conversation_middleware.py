@@ -6,9 +6,6 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
-from rasa_sdk import Action, Tracker
-from rasa_sdk.executor import CollectingDispatcher
-from rasa_sdk.events import SessionStarted, ActionExecuted, UserUttered, BotUttered
 from ..services.conversation_storage import conversation_storage
 
 logger = logging.getLogger(__name__)
@@ -118,31 +115,8 @@ class ConversationTracker:
         # )
         logger.debug(f"Action execution tracked for {sender_id}: {action_name}")
 
-class ConversationLoggingAction(Action):
-    """Base action class that logs conversations."""
-    
-    def name(self) -> str:
-        return "action_conversation_logging"
-    
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[str, Any]):
-        """Log conversation events."""
-        try:
-            sender_id = tracker.sender_id
-            latest_message = tracker.latest_message
-            
-            if latest_message:
-                # Store user message
-                ConversationTracker.store_user_message(
-                    sender_id=sender_id,
-                    message=latest_message.get('text', ''),
-                    intent=latest_message.get('intent', {}).get('name'),
-                    entities=latest_message.get('entities', [])
-                )
-            
-            return []
-        except Exception as e:
-            logger.error(f"Error in conversation logging: {e}")
-            return []
+# ConversationLoggingAction removed - should only be used in RASA actions server
+# This middleware is for FastAPI backend integration only
 
 def log_bot_response(sender_id: str, message: str, action_name: Optional[str] = None):
     """Helper function to log bot responses from actions.

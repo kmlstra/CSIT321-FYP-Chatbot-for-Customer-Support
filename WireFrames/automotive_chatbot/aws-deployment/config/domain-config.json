@@ -1,0 +1,49 @@
+{
+  "domains": {
+    "production": {
+      "main_domain": "your-domain.com",
+      "api_domain": "api.your-domain.com",
+      "widget_domain": "widget.your-domain.com",
+      "admin_domain": "admin.your-domain.com",
+      "ssl_enabled": true,
+      "force_https": true
+    },
+    "staging": {
+      "main_domain": "staging.your-domain.com",
+      "api_domain": "api-staging.your-domain.com",
+      "widget_domain": "widget-staging.your-domain.com",
+      "admin_domain": "admin-staging.your-domain.com",
+      "ssl_enabled": true,
+      "force_https": true
+    },
+    "development": {
+      "main_domain": "dev.your-domain.com",
+      "api_domain": "api-dev.your-domain.com",
+      "widget_domain": "widget-dev.your-domain.com",
+      "admin_domain": "admin-dev.your-domain.com",
+      "ssl_enabled": false,
+      "force_https": false
+    }
+  },
+  "ssl": {
+    "email": "admin@your-domain.com",
+    "provider": "letsencrypt",
+    "auto_renew": true
+  },
+  "cors": {
+    "allowed_origins": [
+      "https://your-domain.com",
+      "https://www.your-domain.com",
+      "https://admin.your-domain.com",
+      "https://widget.your-domain.com"
+    ]
+  },
+  "database": {
+    "mongodb_atlas_uri": "${MONGODB_ATLAS_URI}",
+    "database_name": "clevercompanion"
+  },
+  "external_services": {
+    "rasa_url": "http://localhost:5005",
+    "actions_url": "http://localhost:5055"
+  }
+}

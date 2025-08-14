@@ -4,7 +4,10 @@ This package contains utility functions and helper classes.
 """
 
 from .health_monitor import HealthMonitor
-from .visualization_utils import *
+from .visualization_utils import (
+    create_coe_price_chart,
+    COLORS
+)
 from .information import (
     support_info,
     get_whatsapp_number,
@@ -18,6 +21,8 @@ from .information import (
 
 __all__ = [
     'HealthMonitor',
+    'create_coe_price_chart',
+    'COLORS',
     'support_info',
     'get_whatsapp_number',
     'get_phone_number', 

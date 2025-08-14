@@ -15,13 +15,13 @@ import time
 import pandas as pd
 import re
 from datetime import datetime, timedelta
-from ..middleware.auto_logger import AutoLoggedAction
+from .auto_logger import AutoLoggedAction
 
 class ActionDefaultFallback(AutoLoggedAction):
     def name(self) -> Text:
         return "action_default_fallback"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
@@ -45,7 +45,7 @@ class ActionCapabilityConfirm(AutoLoggedAction):
     def name(self) -> Text:
         return "action_capability_confirm"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
@@ -82,7 +82,7 @@ class ActionProvideHelp(AutoLoggedAction):
     def name(self) -> Text:
         return "action_provide_help"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
@@ -118,7 +118,7 @@ class ActionProvideClarification(AutoLoggedAction):
     def name(self) -> Text:
         return "action_provide_clarification"
 
-    def execute_action(self, dispatcher: CollectingDispatcher,
+    def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         

@@ -16,7 +16,7 @@ class LTAAPIRateLimiter:
     Rate limiter for LTA API calls to prevent abuse and banning
     """
     
-    def __init__(self, max_requests_per_hour: int = 100, min_interval_seconds: int = 10):
+    def __init__(self, max_requests_per_hour: int = 100, min_interval_seconds: int = 2):
         self.max_requests_per_hour = max_requests_per_hour
         self.min_interval_seconds = min_interval_seconds
         self.request_history = []

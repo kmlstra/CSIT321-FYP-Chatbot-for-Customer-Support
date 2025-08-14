@@ -1,10 +1,14 @@
 from typing import Any, Text, Dict, List, Optional
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
+from api.cache.client_cache import get_client_cache
+from api.cache.feature_cache_manager import check_loan_calculator_feature_enabled
 import re
 import logging
 
 logger = logging.getLogger(__name__)
+
+
 
 class ActionLoanCalculator(Action):
     """Simple and user-friendly loan calculator"""
@@ -15,6 +19,12 @@ class ActionLoanCalculator(Action):
     def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if loan calculator feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_loan_calculator_feature_enabled(client_id):
+            dispatcher.utter_message(text="I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries.")
+            return []
         
         user_message = tracker.latest_message.get('text', '').lower()
         current_intent = tracker.latest_message.get('intent', {}).get('name')
@@ -274,3 +284,16 @@ class ActionCalculateLoanPayment(ActionLoanCalculator):
     
     def name(self) -> Text:
         return "action_loan_calculation_result"
+    
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Check if loan calculator feature is enabled for this client
+        client_id = tracker.get_slot("client_id")
+        if not check_loan_calculator_feature_enabled(client_id):
+            dispatcher.utter_message(text="I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries.")
+            return []
+        
+        # Call parent class implementation
+        return super().run(dispatcher, tracker, domain)

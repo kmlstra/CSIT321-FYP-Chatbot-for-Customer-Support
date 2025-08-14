@@ -125,16 +125,19 @@ const server = http.createServer((req, res) => {
 });
 
 // Start the server
-server.listen(PORT, 'localhost', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('🎉 CleverCompanion Static Server is running!');
     console.log('');
     console.log('📱 Access Points:');
-    console.log(`   🌐 Main Page:    http://localhost:${PORT}/`);
-    console.log(`   🌐 Main Page:    http://localhost:${PORT}/clevercompanion.html`);
-    console.log(`   📊 Dashboard:    http://localhost:${PORT}/dashboard.html`);
-    console.log(`   🔧 Widget JS:    http://localhost:${PORT}/clevercompanion-widget.js`);
-    console.log(`   🎨 Widget CSS:   http://localhost:${PORT}/clevercompanion-widget.css`);
+    // Use unified domain:port approach
+    const domain = process.env.DOMAIN || 'http://localhost';
+    const frontendPort = process.env.FRONTEND_PORT || PORT;
+    console.log(`   🌐 Main Page:    ${domain}:${frontendPort}/`);
+    console.log(`   🌐 Main Page:    ${domain}:${frontendPort}/clevercompanion.html`);
+    console.log(`   📊 Dashboard:    ${domain}:${frontendPort}/dashboard.html`);
+    console.log(`   🔧 Widget JS:    ${domain}:${frontendPort}/clevercompanion-widget.js`);
+    console.log(`   🎨 Widget CSS:   Embedded in JavaScript files`);
     console.log('');
     console.log('✅ Server ready to accept connections!');
     console.log('');
@@ -168,4 +171,4 @@ process.on('SIGTERM', () => {
         console.log('✅ Server closed successfully');
         process.exit(0);
     });
-}); 
+});

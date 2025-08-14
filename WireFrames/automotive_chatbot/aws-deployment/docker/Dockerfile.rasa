@@ -1,0 +1,37 @@
+# RASA Server Dockerfile - Simplified
+FROM rasa/rasa:3.6.4-full
+
+# Set environment variables
+ENV RASA_HOME=/app
+ENV PYTHONUNBUFFERED=1
+
+# Switch to root to install dependencies
+USER root
+
+# Create necessary directories
+RUN mkdir -p /app/models /app/logs /app/data
+
+# Set work directory
+WORKDIR /app
+
+# Copy RASA configuration files
+COPY ./backend/config.yml .
+COPY ./backend/domain.yml .
+COPY ./backend/endpoints.yml .
+COPY ./backend/credentials.yml .
+
+# Copy training data
+COPY ./backend/data/ ./data/
+
+# Copy custom actions
+COPY ./backend/actions.py .
+
+# Use existing rasa user from base image
+RUN chown -R 1001:1001 /app
+USER 1001
+
+# Expose ports
+EXPOSE 5005 5055
+
+# Start RASA server (train on startup if no model exists)
+CMD ["bash", "-c", "if [ ! -f models/*.tar.gz ]; then rasa train --config config.yml --domain domain.yml --data data/ --out models/; fi && rasa run --enable-api --cors '*' --debug --endpoints endpoints.yml"]

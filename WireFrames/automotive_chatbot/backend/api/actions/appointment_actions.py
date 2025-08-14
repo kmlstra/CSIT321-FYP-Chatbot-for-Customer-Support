@@ -6,15 +6,146 @@ from typing import Any, Text, Dict, List, Optional
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet, FollowupAction
-from backend.api.middleware.auto_logger import AutoLoggedAction
-from backend.config.database import get_collection, DatabaseContext
-from backend.api.utils.information import get_appointment_options_message, get_appointment_options_with_buttons, get_appointment_types, get_appointment_type_by_id
-from backend.api.services.email_service import send_appointment_confirmation_email, send_appointment_cancellation_email, is_email_enabled
+from .auto_logger import AutoLoggedAction
+from api.config.database import DatabaseContext
+from api.services.email_service import send_appointment_confirmation_email, send_appointment_cancellation_email, is_email_enabled
+from api.utils.cache import appointment_cache, client_cache
+from api.cache.feature_cache_manager import check_appointment_feature_enabled
 import logging
 from datetime import datetime, timedelta
 import pytz
 from bson import ObjectId
 import re
+import os
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment variables
+load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
+
+# MongoDB configuration
+MONGODB_URL = os.getenv('MONGODB_URL')
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'automotive_chatbot_saas')
+
+logger = logging.getLogger(__name__)
+
+# MongoDB connection helper
+async def get_mongodb_client():
+    """Get MongoDB client connection"""
+    try:
+        client = AsyncIOMotorClient(MONGODB_URL)
+        db = client[DATABASE_NAME]
+        # Test connection
+        await client.admin.command('ping')
+        return db
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        return None
+
+async def get_client_data_from_db(client_id: str):
+    """Retrieve client data directly from MongoDB"""
+    try:
+        db = await get_mongodb_client()
+        if not db:
+            return None
+            
+        # Get client data - try both string ID and ObjectId
+        client = await db.clients.find_one({"_id": client_id})
+        if not client:
+            # Try with ObjectId if string search fails
+            try:
+                client = await db.clients.find_one({"_id": ObjectId(client_id)})
+            except Exception:
+                pass
+        
+        if not client:
+            logger.warning(f"No client found for ID: {client_id}")
+            return None
+            
+        return client
+        
+    except Exception as e:
+        logger.error(f"Error retrieving client data from MongoDB: {e}")
+        return None
+
+def get_appointment_types():
+    """Get available appointment types with caching"""
+    cache_key = "appointment_types"
+    cached_types = appointment_cache.get(cache_key)
+    
+    if cached_types is not None:
+        return cached_types
+    
+    # Generate appointment types with icons and descriptions
+    types = [
+        {
+            "id": "test_drive", 
+            "name": "Test Drive", 
+            "duration": 60,
+            "icon": "🚗",
+            "description": "Experience our vehicles firsthand with a personalized test drive"
+        },
+        {
+            "id": "sales_consultation", 
+            "name": "Sales Consultation", 
+            "duration": 45,
+            "icon": "💼",
+            "description": "Get expert advice on vehicle selection and pricing options"
+        },
+        {
+            "id": "trade_in_evaluation", 
+            "name": "Trade-in Evaluation", 
+            "duration": 30,
+            "icon": "🔄",
+            "description": "Professional assessment of your current vehicle's trade-in value"
+        }
+    ]
+    
+    # Cache for 5 minutes
+    appointment_cache.set(cache_key, types, ttl=300)
+    return types
+
+def get_appointment_type_by_id(type_id: str):
+    """Get appointment type by ID"""
+    types = get_appointment_types()
+    for apt_type in types:
+        if apt_type["id"] == type_id:
+            return apt_type
+    return None
+
+def get_appointment_options_message():
+    """Generate formatted appointment options message"""
+    types = get_appointment_types()
+    message = "🚗 <strong>Select Your Appointment Type</strong>\n\nChoose from our available services:\n\n"
+    
+    for apt_type in types:
+        # Add icon and description if available, otherwise use basic format
+        icon = apt_type.get('icon', '🔧')
+        description = apt_type.get('description', f"Duration: {apt_type['duration']} minutes")
+        message += f"{icon} <strong>{apt_type['name']}</strong> - {description}\n"
+    
+    message += "\n💬 Simply type the service you need (e.g., \"test drive\", \"sales consultation\", \"trade-in evaluation\")"
+    return message
+
+def get_appointment_options_with_buttons():
+    """Generate appointment options with clickable buttons only"""
+    types = get_appointment_types()
+    
+    # Generate buttons for each appointment type
+    buttons = []
+    for apt_type in types:
+        icon = apt_type.get('icon', '🔧')
+        buttons.append({
+            "title": f"{icon} {apt_type['name']}",
+            "payload": apt_type['name'].lower()
+        })
+    
+    return {
+        "text": "",
+        "buttons": buttons
+    }
 
 
 class ActionValidateIntent(AutoLoggedAction):
@@ -36,6 +167,9 @@ class ActionValidateIntent(AutoLoggedAction):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         try:
+            # Store tracker for use in helper methods
+            self.tracker = tracker
+            
             # Get current intent and conversation context
             current_intent = tracker.latest_message.get('intent', {}).get('name')
             user_message = tracker.latest_message.get('text', '').lower()
@@ -77,6 +211,8 @@ class ActionValidateIntent(AutoLoggedAction):
         except Exception as e:
             logger.error(f"Error in ActionValidateIntent: {e}")
             return []
+    
+
     
     def _validate_intent_context(self, intent: str, message: str, tracker: Tracker) -> Optional[str]:
         """Validate if the intent makes sense in the current context"""
@@ -141,11 +277,20 @@ class ActionValidateIntent(AutoLoggedAction):
         """Handle unclear or low-confidence intents"""
         # Try to determine what the user might want based on keywords
         if any(word in message for word in ['appointment', 'book', 'schedule']):
-            dispatcher.utter_message(
-                text="It sounds like you want to book an appointment. "
-                     "I can help you schedule a test drive, sales consultation, or trade-in evaluation. "
-                     "What type of appointment would you like?"
-            )
+            # Check if appointment booking is enabled for this client
+            client_id = self.tracker.latest_message.get('metadata', {}).get('client_id')
+            appointment_available = check_appointment_feature_enabled(client_id) if client_id else True
+            if appointment_available:
+                dispatcher.utter_message(
+                    text="It sounds like you want to book an appointment. "
+                         "I can help you schedule a test drive, sales consultation, or trade-in evaluation. "
+                         "What type of appointment would you like?"
+                )
+            else:
+                dispatcher.utter_message(
+                    text="I understand you're interested in scheduling an appointment, but this feature is not available at the moment. "
+                         "Please contact us directly for assistance with scheduling."
+                )
         elif any(word in message for word in ['loan', 'calculate', 'financing']):
             dispatcher.utter_message(
                 text="It sounds like you want to calculate a car loan. "
@@ -168,8 +313,6 @@ class ActionValidateIntent(AutoLoggedAction):
             )
         
         return []
-
-logger = logging.getLogger(__name__)
 
 
 class ActionBookAppointment(AutoLoggedAction):
@@ -201,12 +344,28 @@ class ActionBookAppointment(AutoLoggedAction):
             
             # Extract entities from current message to supplement slots
             latest_message = tracker.latest_message
-            entities = latest_message.get('entities', [])
+            if not isinstance(latest_message, dict):
+                logger.warning(f"Latest message is not a dict: {type(latest_message)}")
+                entities = []
+            else:
+                entities = latest_message.get('entities', [])
+                if not isinstance(entities, list):
+                    logger.warning(f"Entities is not a list: {type(entities)}")
+                    entities = []
             
             # Update slots with entities from current message if slots are empty
             for entity in entities:
+                # Ensure entity is a dictionary before accessing its properties
+                if not isinstance(entity, dict):
+                    logger.warning(f"Skipping non-dict entity: {entity}")
+                    continue
+                    
                 entity_name = entity.get('entity')
                 entity_value = entity.get('value')
+                
+                # Validate entity data
+                if not entity_name or not entity_value:
+                    continue
                 
                 if entity_name == 'appointment_date' and not appointment_date:
                     appointment_date = entity_value
@@ -234,6 +393,7 @@ class ActionBookAppointment(AutoLoggedAction):
                 
                 # Send welcome message with appointment type selection buttons
                 service_options = self._get_service_options_message()
+                logger.info(f"Sending service options with {len(service_options['buttons'])} buttons: {service_options['buttons']}")
                 dispatcher.utter_message(
                     text=service_options["text"],
                     buttons=service_options["buttons"]
@@ -345,6 +505,39 @@ class ActionBookAppointment(AutoLoggedAction):
                 dispatcher.utter_message(text=unavailable_message)
                 return []
             
+            # Get client_id from tracker metadata
+            client_id = None
+            if isinstance(tracker.latest_message, dict):
+                metadata = tracker.latest_message.get('metadata', {})
+                if isinstance(metadata, dict):
+                    client_id = metadata.get('client_id')
+            
+            # Check if appointment booking feature is enabled for this client
+            if client_id:
+                try:
+                    client_data = get_client_data_from_db(client_id)
+                    if client_data:
+                        features = client_data.get('features', {})
+                        appointment_booking_enabled = features.get('appointment_booking', False)
+                        
+                        if not appointment_booking_enabled:
+                            dispatcher.utter_message(
+                                text="I'm sorry, but appointment booking is not available at the moment. "
+                                     "Please contact us directly for assistance with scheduling appointments."
+                            )
+                            return [
+                                SlotSet("appointment_date", None),
+                                SlotSet("appointment_time", None),
+                                SlotSet("service_type", None),
+                                SlotSet("customer_name", None),
+                                SlotSet("customer_phone", None),
+                                SlotSet("customer_email", None),
+                                SlotSet("appointment_active", None)
+                            ]
+                except Exception as e:
+                    logger.error(f"Error checking client features: {e}")
+                    # Continue with booking if feature check fails to avoid blocking legitimate users
+            
             # Create appointment record
             appointment_data = {
                 "appointment_id": str(ObjectId()),
@@ -356,7 +549,8 @@ class ActionBookAppointment(AutoLoggedAction):
                 "status": "confirmed",
                 "created_at": datetime.utcnow(),
                 "notes": "",
-                "conversation_id": tracker.sender_id
+                "conversation_id": tracker.sender_id,
+                "client_id": client_id
             }
             
             # Save to database
@@ -386,7 +580,7 @@ class ActionBookAppointment(AutoLoggedAction):
                     logger.error(f"Error sending email confirmation: {email_error}")
                     # Don't fail the booking if email fails
                 
-                # Clear appointment slots and add follow-up action
+                # Clear appointment slots - removed FollowupAction to fix response display
                 return [
                     SlotSet("appointment_date", None),
                     SlotSet("appointment_time", None),
@@ -394,19 +588,18 @@ class ActionBookAppointment(AutoLoggedAction):
                     SlotSet("customer_name", None),
                     SlotSet("customer_phone", None),
                     SlotSet("customer_email", None),
-                    SlotSet("appointment_active", None),
-                    FollowupAction("action_listen")
+                    SlotSet("appointment_active", None)
                 ]
             else:
                 dispatcher.utter_message(
-                    text="Sorry, there was an error booking your appointment. Please try again or contact us directly."
+                    text="⚠️ **Oops! Something went wrong while booking your appointment.**\n\n🔄 **Please try again in a moment, or:**\n• 📞 **Call us directly** for immediate assistance\n• 💬 **Use Live Support** for real-time help\n• 📧 **Email us** with your preferred appointment details\n\n🙏 **We apologize for the inconvenience and are here to help!**"
                 )
                 return []
                 
         except Exception as e:
             logger.error(f"Error in ActionBookAppointment: {e}")
             dispatcher.utter_message(
-                text="Sorry, there was an error processing your appointment request. Please try again."
+                text="🚨 **Technical Difficulties Encountered!**\n\n😔 **We're experiencing some technical issues while processing your appointment request.**\n\n🛠️ **What you can do:**\n• 🔄 **Try again** in a few minutes\n• 📞 **Call us directly** - we're here to help!\n• 💬 **Use Live Support** for immediate assistance\n• 📧 **Email your request** and we'll get back to you quickly\n\n✨ **Thank you for your patience - we'll get this sorted out!**"
             )
             return []
     
@@ -824,6 +1017,15 @@ class ActionViewAppointments(AutoLoggedAction):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         try:
+            # Check if appointment booking feature is enabled for this client
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            if client_id:
+                if not check_appointment_feature_enabled(client_id):
+                    dispatcher.utter_message(
+                        text="I'm sorry, but appointment viewing is currently not available. Please contact our support team for assistance."
+                    )
+                    return []
+            
             # Get customer phone number to find appointments
             customer_phone = tracker.get_slot("customer_phone")
             if not customer_phone:
@@ -841,7 +1043,10 @@ class ActionViewAppointments(AutoLoggedAction):
                 return []
             
             # Separate upcoming and past appointments
-            now = datetime.utcnow()
+            # Use Singapore timezone to match how appointments are stored
+            import pytz
+            sg_tz = pytz.timezone('Asia/Singapore')
+            now = datetime.now(sg_tz)
             upcoming = [apt for apt in appointments if apt['appointment_datetime'] > now]
             past = [apt for apt in appointments if apt['appointment_datetime'] <= now]
             
@@ -944,6 +1149,8 @@ class ActionViewAppointments(AutoLoggedAction):
             return "No appointments found."
         
         return "".join(message_parts)
+    
+
 
 
 class ActionCancelAppointment(AutoLoggedAction):
@@ -963,6 +1170,15 @@ class ActionCancelAppointment(AutoLoggedAction):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         try:
+            # Check if appointment booking feature is enabled for this client
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            if client_id:
+                if not check_appointment_feature_enabled(client_id):
+                    dispatcher.utter_message(
+                        text="I'm sorry, but appointment management is currently not available. Please contact our support team for assistance."
+                    )
+                    return []
+            
             appointment_id = tracker.get_slot("appointment_id")
             customer_phone = tracker.get_slot("customer_phone")
             

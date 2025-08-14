@@ -118,25 +118,40 @@ def notify_server_down(server_name: str, server_url: str, error_details: str = "
 
 def notify_rasa_server_down():
     """Alert when RASA chatbot server is down"""
+    import os
+    # Use unified domain:port approach
+    domain = os.getenv('DOMAIN', 'http://localhost')
+    rasa_port = os.getenv('RASA_PORT', '5005')
+    rasa_url = f"{domain}:{rasa_port}"
     return notify_server_down(
         "RASA Chatbot", 
-        "http://localhost:5005", 
+        rasa_url, 
         "RASA server not responding to health checks"
     )
 
 def notify_backend_server_down():
     """Alert when FastAPI backend server is down"""
+    import os
+    # Use unified domain:port approach
+    domain = os.getenv('DOMAIN', 'http://localhost')
+    backend_port = os.getenv('BACKEND_PORT', '8001')
+    backend_url = f"{domain}:{backend_port}"
     return notify_server_down(
         "FastAPI Backend", 
-        "http://localhost:8000", 
+        backend_url, 
         "Backend API server not responding"
     )
 
 def notify_frontend_server_down():
     """Alert when Frontend/Widget server is down"""
+    import os
+    # Use unified domain:port approach
+    domain = os.getenv('DOMAIN', 'http://localhost')
+    frontend_port = os.getenv('FRONTEND_PORT', '3000')
+    frontend_url = f"{domain}:{frontend_port}"
     return notify_server_down(
         "Frontend Server", 
-        "http://localhost:3000", 
+        frontend_url, 
         "Frontend/Widget server not responding"
     )
 
@@ -150,7 +165,7 @@ def notify_database_down(db_type: str = "MongoDB"):
 
         Timestamp: {timestamp} SGT
         Database: {db_type}
-        Connection: mongodb://localhost:27017
+        Connection: {os.getenv('MONGODB_URL', 'mongodb+srv://CleverAdmin:P%40ssw0rd%211@clevercompanioncluster.ygakb6r.mongodb.net/?retryWrites=true&w=majority&appName=AiChatBot')}
         Status: OFFLINE/UNREACHABLE
         Severity: CRITICAL
 

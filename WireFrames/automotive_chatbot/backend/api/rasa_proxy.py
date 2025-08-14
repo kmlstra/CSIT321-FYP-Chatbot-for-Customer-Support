@@ -6,6 +6,7 @@ import json
 import logging
 import httpx
 import asyncio
+import os
 from datetime import datetime
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
@@ -49,7 +50,7 @@ async def store_user_message_async(session_id: str, content: str, metadata: Dict
             sender='user',
             metadata=metadata
         )
-        logger.debug(f"User message stored asynchronously for session {session_id}")
+        pass
     except Exception as e:
         logger.error(f"Failed to store user message asynchronously: {e}")
 
@@ -63,7 +64,7 @@ async def store_bot_message_async(session_id: str, content: str, metadata: Dict[
             sender='bot',
             metadata=metadata
         )
-        logger.debug(f"Bot message stored asynchronously for session {session_id}")
+        pass
     except Exception as e:
         logger.error(f"Failed to store bot message asynchronously: {e}")
 
@@ -74,6 +75,12 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
     try:
         sender_id = chat_request.sender
         user_message = chat_request.message
+        
+        # FIX: Validate sender_id to prevent null conversation_id errors
+        if not sender_id or sender_id.strip() == '' or sender_id == 'null':
+            # Generate a fallback session ID if sender_id is invalid
+            sender_id = f"fallback_session_{datetime.now().timestamp()}_{hash(user_message) % 10000}"
+            logger.warning(f"Invalid sender_id received, using fallback: {sender_id}")
         
         logger.info(f"Chat request from {sender_id}: {user_message}")
         
@@ -93,10 +100,13 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
         
         async with httpx.AsyncClient() as client:
             try:
+                domain = os.getenv('DOMAIN', 'http://localhost')
+                rasa_port = os.getenv('RASA_PORT', '5005')
+                rasa_url = f"{domain}:{rasa_port}/webhooks/rest/webhook"
                 response = await client.post(
-                    "http://localhost:5005/webhooks/rest/webhook",
+                    rasa_url,
                     json=rasa_payload,
-                    timeout=10.0  # Reduced from 30s to 10s for faster response
+                    timeout=3.0  # Reduced to 3s for faster response
                 )
                 response.raise_for_status()
                 rasa_responses = response.json()
@@ -142,9 +152,12 @@ async def rasa_status():
     """Check RASA service status."""
     try:
         async with httpx.AsyncClient() as client:
+            domain = os.getenv('DOMAIN', 'http://localhost')
+            rasa_port = os.getenv('RASA_PORT', '5005')
+            rasa_status_url = f"{domain}:{rasa_port}/status"
             response = await client.get(
-                "http://localhost:5005/status",
-                timeout=5.0
+                rasa_status_url,
+                timeout=3.0
             )
             response.raise_for_status()
             return JSONResponse(content={

@@ -28,11 +28,32 @@ class HealthMonitor:
     """Monitors all critical services for the CleverCompanion chatbot system"""
     
     def __init__(self):
+        # Use unified domain:port approach for all service URLs
+        domain = os.getenv('DOMAIN', 'http://localhost')
+        rasa_port = os.getenv('RASA_PORT', '5005')
+        backend_port = os.getenv('BACKEND_PORT', '8001')
+        frontend_port = os.getenv('FRONTEND_PORT', '3000')
+        
         self.services = {
-            "RASA": {"url": "http://localhost:5005/webhooks/rest/webhook", "timeout": 5},
-            "Backend": {"url": "http://localhost:8000/health", "timeout": 5},
-            "Frontend": {"url": "http://localhost:3000", "timeout": 5},
-            "MongoDB": {"url": "mongodb://localhost:27017", "timeout": 3}
+            'rasa': {
+                'url': f"{domain}:{rasa_port}",
+                'endpoint': '/status',
+                'timeout': 10
+            },
+            'backend': {
+                'url': f"{domain}:{backend_port}",
+                'endpoint': '/health',
+                'timeout': 5
+            },
+            'frontend': {
+                'url': f"{domain}:{frontend_port}",
+                'endpoint': '/',
+                'timeout': 5
+            },
+            'mongodb': {
+                'url': os.getenv('MONGODB_URL', 'mongodb+srv://CleverAdmin:P%40ssw0rd%211@clevercompanioncluster.ygakb6r.mongodb.net/?retryWrites=true&w=majority&appName=AiChatBot'),
+                'timeout': 10
+            }
         }
         self.last_status = {}
         self.downtime_start = {}
@@ -40,8 +61,9 @@ class HealthMonitor:
     def check_rasa_server(self) -> Tuple[bool, str]:
         """Check if RASA server is responding"""
         try:
+            rasa_url = self.services["RASA"]["url"]
             response = requests.post(
-                "http://localhost:5005/webhooks/rest/webhook",
+                rasa_url,
                 json={"sender": "health_check", "message": "ping"},
                 timeout=5
             )
@@ -59,7 +81,8 @@ class HealthMonitor:
     def check_backend_server(self) -> Tuple[bool, str]:
         """Check if FastAPI backend server is responding"""
         try:
-            response = requests.get("http://localhost:8000/health", timeout=5)
+            backend_url = self.services["Backend"]["url"]
+            response = requests.get(backend_url, timeout=5)
             if response.status_code == 200:
                 return True, "Backend server responding normally"
             else:
@@ -74,7 +97,8 @@ class HealthMonitor:
     def check_frontend_server(self) -> Tuple[bool, str]:
         """Check if Frontend server is responding"""
         try:
-            response = requests.get("http://localhost:3000", timeout=5)
+            frontend_url = self.services["Frontend"]["url"]
+            response = requests.get(frontend_url, timeout=5)
             if response.status_code == 200:
                 return True, "Frontend server responding normally"
             else:
@@ -94,18 +118,19 @@ class HealthMonitor:
             import os
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
             
-            from backend.config.database import is_database_connected, get_mongodb_client
+            from api.config.database import DatabaseContext
             
-            if is_database_connected():
-                # Test the connection by pinging
-                client = get_mongodb_client()
-                if client:
-                    client.admin.command('ping')
-                    return True, "MongoDB server responding normally"
-                else:
-                    return False, "MongoDB client not available"
-            else:
-                return False, "MongoDB server connection failed - database may be down"
+            # Test MongoDB connection using DatabaseContext
+            try:
+                with DatabaseContext('clients') as collection:
+                    if collection is not None:
+                        # Test the connection by attempting a simple operation
+                        collection.database.client.admin.command('ping')
+                        return True, "MongoDB server responding normally"
+                    else:
+                        return False, "MongoDB connection not available"
+            except Exception as db_error:
+                return False, f"MongoDB connection failed: {str(db_error)}"
         except Exception as e:
             return False, f"MongoDB server error: {str(e)}"
     

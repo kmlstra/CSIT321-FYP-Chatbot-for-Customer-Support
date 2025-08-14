@@ -16,7 +16,10 @@ from .live_support_actions import ActionLiveSupport
 from .contact_actions import ActionSmartContact
 
 # Import Appointment actions
-from .appointment_actions import ActionBookAppointment, ActionViewAppointments, ActionCancelAppointment
+from .appointment_actions import ActionValidateIntent, ActionBookAppointment, ActionViewAppointments, ActionCancelAppointment
+
+# Import Loan Calculator actions
+from .loan_calculator_actions import ActionLoanCalculator, ActionCalculateLoanPayment
 
 # Export all actions for RASA to discover
 __all__ = [
@@ -45,7 +48,12 @@ __all__ = [
     'ActionSmartContact',
     
     # Appointment Actions
+    'ActionValidateIntent',
     'ActionBookAppointment',
     'ActionViewAppointments',
-    'ActionCancelAppointment'
+    'ActionCancelAppointment',
+    
+    # Loan Calculator Actions
+    'ActionLoanCalculator',
+    'ActionCalculateLoanPayment'
 ]
