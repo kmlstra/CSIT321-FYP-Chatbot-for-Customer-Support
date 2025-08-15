@@ -28,6 +28,15 @@ class HealthMonitor:
     """Monitors all critical services for the CleverCompanion chatbot system"""
     
     def __init__(self):
+<<<<<<< Updated upstream
+=======
+        # Use unified domain:port approach for all service URLs
+        domain = os.getenv('DOMAIN', 'http://localhost')
+        rasa_port = os.getenv('RASA_PORT', '5005')
+        backend_port = os.getenv('BACKEND_PORT', '8000')
+        frontend_port = os.getenv('FRONTEND_PORT', '3000')
+        
+>>>>>>> Stashed changes
         self.services = {
             "RASA": {"url": "http://localhost:5005/webhooks/rest/webhook", "timeout": 5},
             "Backend": {"url": "http://localhost:8000/health", "timeout": 5},

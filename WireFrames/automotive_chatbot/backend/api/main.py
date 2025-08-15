@@ -90,7 +90,460 @@ async def health_check():
         }
     }
 
+<<<<<<< Updated upstream
 from fastapi import APIRouter
+=======
+# Environment configuration endpoint
+@app.get("/api/config/env")
+async def get_environment_config():
+    """Serve environment configuration for frontend"""
+    return {
+        "DOMAIN": os.getenv("DOMAIN", "http://localhost"),
+        "BACKEND_URL": os.getenv("BACKEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000"),
+        "FRONTEND_URL": os.getenv("FRONTEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:3000"),
+        "RASA_URL": os.getenv("RASA_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5005"),
+        "RASA_ACTIONS_URL": os.getenv("RASA_ACTIONS_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5055"),
+        "PROFILE_PICTURE_URL": os.getenv("PROFILE_PICTURE_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000/static/boy.png")
+    }
+
+# Widget JavaScript file endpoint
+@app.get("/clevercompanion-widget.js")
+async def serve_widget_js():
+    """Serve the clevercompanion widget JavaScript file"""
+    from fastapi.responses import FileResponse
+    import os
+    
+    # Get the absolute path to the static directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(current_dir, "..", "static")
+    widget_path = os.path.join(static_dir, "clevercompanion-widget.js")
+    widget_path = os.path.abspath(widget_path)
+    
+    # Widget file lookup
+    
+    if not os.path.exists(widget_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Widget JavaScript file not found at {widget_path}"
+        )
+    
+    return FileResponse(
+        path=widget_path,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
+# Page interactions JavaScript file endpoint
+@app.get("/page-interactions.js")
+async def serve_page_interactions_js():
+    """Serve the page-interactions JavaScript file"""
+    from fastapi.responses import FileResponse
+    import os
+    
+    # Get the absolute path to the static directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(current_dir, "..", "static")
+    interactions_path = os.path.join(static_dir, "page-interactions.js")
+    interactions_path = os.path.abspath(interactions_path)
+    
+    # Page interactions file lookup
+    
+    if not os.path.exists(interactions_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Page interactions JavaScript file not found at {interactions_path}"
+        )
+    
+    return FileResponse(
+        path=interactions_path,
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
+# CLIENT AUTHENTICATION
+@app.post("/api/auth/client-login")
+async def client_login(request: ClientLoginRequest):
+    """Client user login endpoint"""
+    global admin_db
+    try:
+        # Find user by email
+        user = await admin_db.client_users.find_one({"email": request.email})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if hash_password(request.password) != user["password_hash"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Check if user is active
+        if user.get("status") != "active":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account is not active"
+            )
+        
+        # Get client information
+        from bson import ObjectId
+        client = await admin_db.clients.find_one({"_id": ObjectId(user["client_id"])})
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Client not found"
+            )
+        
+        # Check client status - this is the key fix for the login issue
+        if client.get("status") == "pending":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is pending approval. Please wait for admin approval before logging in."
+            )
+        elif client.get("status") != "active":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your client account is not active. Please contact support."
+            )
+        
+        # Update login information
+        await admin_db.client_users.update_one(
+            {"_id": user["_id"]},
+            {
+                "$set": {"last_login": datetime.utcnow()},
+                "$inc": {"login_count": 1}
+            }
+        )
+        
+        # Create JWT token
+        token_data = {
+            "user_id": str(user["_id"]),
+            "client_id": str(user["client_id"]),
+            "email": user["email"],
+            "role": user["role"],
+            "type": "client_user"
+        }
+        
+        access_token = create_access_token(token_data)
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": str(user["_id"]),
+                "email": user["email"],
+                "name": user["name"],
+                "role": user["role"],
+                "client_id": str(user["client_id"])
+            },
+            "client": {
+                "id": str(client["_id"]),
+                "business_name": client["business_name"],
+                "domain": client["domain"],
+                "status": client["status"],
+                "settings": client.get("settings", {})
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Client login error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Login failed: {str(e)}"
+        )
+
+# SUPER ADMIN AUTHENTICATION
+@app.post("/api/auth/super-admin-login")
+async def super_admin_login(request: SuperAdminLoginRequest):
+    """Super admin login endpoint"""
+    try:
+        # Find super admin by email
+        admin = await admin_db.super_admins.find_one({"email": request.email})
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if hash_password(request.password) != admin["password_hash"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Check if admin is active
+        if admin.get("status") != "active":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Account is not active"
+            )
+        
+        # Update login info
+        await admin_db.super_admins.update_one(
+            {"_id": admin["_id"]},
+            {
+                "$set": {"last_login": datetime.utcnow()},
+                "$inc": {"login_count": 1}
+            }
+        )
+        
+        # Generate JWT token
+        token_data = {
+            "user_id": str(admin["_id"]),
+            "email": admin["email"],
+            "role": "super_admin",
+            "type": "super_admin"
+        }
+        
+        access_token = create_access_token(token_data)
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": str(admin["_id"]),
+                "email": admin["email"],
+                "name": admin["name"],
+                "role": "super_admin"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Super admin login error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Super admin login failed: {str(e)}"
+        )
+
+# CLIENT REGISTRATION
+@app.post("/api/client-registration/register")
+async def register_new_client(request: ClientRegistrationRequest):
+    """Register a new automotive business client"""
+    global admin_db
+    try:
+        # Check if domain already exists
+        existing_client = await admin_db.clients.find_one({"domain": request.domain})
+        if existing_client:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Domain already registered"
+            )
+        
+        # Check if email already exists
+        existing_email = await admin_db.clients.find_one({"contact_email": request.contact_email})
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Generate API key
+        import secrets
+        api_key = f"cc_{secrets.token_urlsafe(32)}"
+        
+        # Create client document
+        client_data = {
+            "business_name": request.business_name,
+            "domain": request.domain,
+            "contact_email": request.contact_email,
+            "status": "pending",
+            "api_key": api_key,
+            "settings": {
+                "branding": {
+                    "company_name": request.business_name,
+                    "primary_color": "#4F46E5",
+                    "secondary_color": "#7C3AED",
+                    "logo_url": None
+                },
+                "features": {
+                    "coe_prices": True,
+                    "loan_calculator": True,
+                    "appointment_booking": True,
+                    "maintenance_tips": True,
+                    "vehicle_search": True,
+                    "contact_support": True,
+                    "business_hours": True
+                },
+                "contact_info": request.contact_info,
+                "business_hours": {
+                    "monday": "9:00 AM - 6:00 PM",
+                    "tuesday": "9:00 AM - 6:00 PM",
+                    "wednesday": "9:00 AM - 6:00 PM",
+                    "thursday": "9:00 AM - 6:00 PM",
+                    "friday": "9:00 AM - 6:00 PM",
+                    "saturday": "9:00 AM - 5:00 PM",
+                    "sunday": "Closed"
+                }
+            },
+            "subscription_plan": {
+                "plan_type": "premium",
+                "monthly_conversations": 5000,
+                "price_per_month": 299.0
+            },
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "current_month_conversations": 0,
+            "total_conversations": 0
+        }
+        
+        # Insert client
+        result = await admin_db.clients.insert_one(client_data)
+        client_id = str(result.inserted_id)
+        
+        # Create admin user for the client
+        admin_user_data = request.admin_user
+        user_data = {
+            "client_id": result.inserted_id,
+            "email": admin_user_data["email"],
+            "name": admin_user_data["name"],
+            "role": "admin",
+            "password_hash": hash_password(admin_user_data["password"]),
+            "status": "active",
+            "permissions": [
+                "view_analytics",
+                "edit_branding",
+                "manage_vehicles",
+                "edit_responses",
+                "view_conversations"
+            ],
+            "created_at": datetime.utcnow(),
+            "login_count": 0
+        }
+        
+        await admin_db.client_users.insert_one(user_data)
+        
+        return {
+            "success": True,
+            "client_id": client_id,
+            "message": "Account created successfully! Awaiting admin approval.",
+            "next_steps": [
+                "Your account has been created with 'pending' status",
+                "Our team will review and activate your account within 24 hours",
+                "You'll receive an email confirmation once approved",
+                "Then you can log in and configure your chatbot"
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Registration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
+
+# SUPER ADMIN ROUTES
+@app.get("/api/super-admin/clients")
+async def get_all_clients():
+    """Get all clients for super admin"""
+    global admin_db
+    try:
+        clients = []
+        async for client in admin_db.clients.find({}):
+            client["id"] = str(client["_id"])
+            del client["_id"]
+            clients.append(client)
+        
+        result = {"clients": clients, "total": len(clients)}
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] get_all_clients failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch clients: {str(e)}"
+        )
+
+@app.post("/api/super-admin/clients/{client_id}/approve")
+async def approve_client(client_id: str):
+    """Approve a pending client account"""
+    global admin_db
+    try:
+        from bson import ObjectId
+        
+        result = await admin_db.clients.update_one(
+            {"_id": ObjectId(client_id)},
+            {
+                "$set": {
+                    "status": "active",
+                    "activated_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client not found"
+            )
+        
+        return {
+            "success": True,
+            "message": f"Client {client_id} approved successfully",
+            "client_id": client_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to approve client: {str(e)}"
+        )
+
+@app.get("/api/super-admin/metrics")
+async def get_system_metrics():
+    """Get system-wide metrics"""
+    global admin_db
+    try:
+        # Count clients by status
+        total_clients = await admin_db.clients.count_documents({})
+        active_clients = await admin_db.clients.count_documents({"status": "active"})
+        pending_clients = await admin_db.clients.count_documents({"status": "pending"})
+        
+        # Count conversations today
+        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        conversations_today = await admin_db.conversations.count_documents({
+            "created_at": {"$gte": today}
+        })
+        
+        return {
+            "total_clients": total_clients,
+            "active_clients": active_clients,
+            "pending_approvals": pending_clients,
+            "total_conversations_today": conversations_today,
+            "revenue_this_month": active_clients * 299.0,  # Mock calculation
+            "system_uptime": 99.9
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch metrics: {str(e)}"
+        )
+
+# EXISTING FUNCTIONALITY - PRESERVED FOR BACKWARD COMPATIBILITY
+>>>>>>> Stashed changes
 
 # Essential boundaries for RASA actions
 vehicle_router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -400,4 +853,8 @@ app.include_router(rasa_proxy_router)
 
 if __name__ == "__main__":
     import uvicorn
+<<<<<<< Updated upstream
     uvicorn.run(app, host="localhost", port=8000)
+=======
+    uvicorn.run(app, host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("BACKEND_PORT", "8000")))
+>>>>>>> Stashed changes

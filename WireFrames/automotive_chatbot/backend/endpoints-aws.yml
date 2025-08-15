@@ -1,0 +1,39 @@
+# AWS-specific endpoints configuration for production deployment
+# This file is used when ENVIRONMENT=aws in start_rasa.py
+# Auto-generated for AWS deployment - DO NOT EDIT MANUALLY
+
+# Server where the models are pulled from.
+# https://rasa.com/docs/rasa/model-storage#fetching-models-from-a-server
+
+#models:
+#  url: http://my-server.com/models/default_core@latest
+#  wait_time_between_pulls:  10   # [optional](default: 100)
+
+# Server which runs your custom actions.
+# https://rasa.com/docs/rasa/custom-actions
+# AWS production endpoint
+action_endpoint:
+  url: "http://54.254.180.103:5055/webhook"
+
+# Tracker store which is used to store the conversations.
+# By default the conversations are stored in memory.
+# https://rasa.com/docs/rasa/tracker-stores
+
+#tracker_store:
+#    type: redis
+#    url: <host of the redis instance, e.g. localhost>
+#    port: <port of your redis instance, usually 6379>
+#    db: <number of your database within redis, e.g. 0>
+#    password: <password used for authentication>
+#    use_ssl: <whether or not the communication is encrypted, default false>
+
+#tracker_store:
+#    type: mongod
+#    url: <url to your mongo instance, e.g. mongodb://localhost:27017>
+#    db: <name of the db within your mongo instance, e.g. rasa>
+#    username: <username used for authentication>
+#    password: <password used for authentication>
+
+# Event broker which all conversation events should be streamed to.
+# https://rasa.com/docs/rasa/event-brokers
+# Note: Event logging is handled automatically by AutoLoggedAction base class
