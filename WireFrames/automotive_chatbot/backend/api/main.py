@@ -205,9 +205,6 @@ async def health_check():
         }
     }
 
-<<<<<<< Updated upstream
-from fastapi import APIRouter
-=======
 # Environment configuration endpoint
 @app.get("/api/config/env")
 async def get_environment_config():
@@ -658,7 +655,7 @@ async def get_system_metrics():
         )
 
 # EXISTING FUNCTIONALITY - PRESERVED FOR BACKWARD COMPATIBILITY
->>>>>>> Stashed changes
+from fastapi import APIRouter
 
 # Essential boundaries for RASA actions
 vehicle_router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -1089,8 +1086,4 @@ except Exception as e:
 
 if __name__ == "__main__":
     import uvicorn
-<<<<<<< Updated upstream
-    uvicorn.run(app, host="localhost", port=8000)
-=======
     uvicorn.run(app, host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("BACKEND_PORT", "8000")))
->>>>>>> Stashed changes

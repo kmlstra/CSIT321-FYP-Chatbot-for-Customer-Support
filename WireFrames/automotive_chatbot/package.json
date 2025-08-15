@@ -11,11 +11,7 @@
     "dev:core": "npm run show:core-message && concurrently --kill-others-on-fail -c \"bgBlue.bold,bgGreen.bold\" -n \"BACKEND,FRONTEND\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:static": "cd frontend && node static-server.js",
-<<<<<<< Updated upstream
-    "dev:backend": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m uvicorn api.main:app --reload --host localhost --port 8001",
-=======
     "dev:backend": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m uvicorn api.main:app --reload --host localhost --port 8000",
->>>>>>> Stashed changes
     "dev:rasa": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run --enable-api --cors \"*\" --port 5005 -i localhost --endpoints endpoints.yml",
     "dev:actions": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run actions --actions actions --port 5055",
     "clean-start": "powershell -Command \"Get-Process -Name python,node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3; echo 'Ports cleared, starting services...'\"; npm run dev:all",

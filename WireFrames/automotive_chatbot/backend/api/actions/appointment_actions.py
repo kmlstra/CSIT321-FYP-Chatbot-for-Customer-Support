@@ -16,8 +16,6 @@ from datetime import datetime, timedelta
 import pytz
 from bson import ObjectId
 import re
-<<<<<<< Updated upstream
-=======
 import os
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -148,7 +146,6 @@ def get_appointment_options_with_buttons():
         "text": "🚗 Welcome to our appointment booking system! 📋 Please select the type of service you'd like to book:",
         "buttons": buttons
     }
->>>>>>> Stashed changes
 
 
 class ActionValidateIntent(AutoLoggedAction):
@@ -418,17 +415,6 @@ class ActionBookAppointment(AutoLoggedAction):
             if not appointment_active:
                 logger.info("Setting appointment_active to True - starting booking flow")
                 
-<<<<<<< Updated upstream
-                # Send welcome message with appointment type selection buttons
-                service_options = self._get_service_options_message()
-                logger.info(f"Sending service options with {len(service_options['buttons'])} buttons: {service_options['buttons']}")
-                dispatcher.utter_message(
-                    text=service_options["text"],
-                    buttons=service_options["buttons"]
-                )
-                
-                # Return any extracted entities as slots along with appointment_active
-=======
                 # # Check if user provided date/time info in their initial request
                 # if appointment_date and appointment_time:
                 #     # User provided date/time, skip welcome and go to service selection
@@ -506,7 +492,6 @@ class ActionBookAppointment(AutoLoggedAction):
             elif appointment_active and appointment_date and appointment_time and service_type and (not customer_name or not customer_phone):
                 logger.info("User provided service type after date/time, proceeding to contact info collection")
                 # Preserve any extracted entities as slots
->>>>>>> Stashed changes
                 slot_updates = [SlotSet("appointment_active", True)]
                 if appointment_date:
                     slot_updates.append(SlotSet("appointment_date", appointment_date))

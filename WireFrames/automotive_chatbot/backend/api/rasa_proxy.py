@@ -105,15 +105,6 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
         
         for attempt in range(max_retries):
             try:
-<<<<<<< Updated upstream
-                response = await client.post(
-                    rasa_url,
-                    json=rasa_payload,
-                    timeout=3.0  # Reduced to 3s for faster response
-                )
-                response.raise_for_status()
-                rasa_responses = response.json()
-=======
                 async with httpx.AsyncClient() as client:
                     domain = os.getenv('DOMAIN', 'http://localhost')
                     rasa_port = os.getenv('RASA_PORT', '5005')
@@ -132,7 +123,6 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                     
             except (httpx.RequestError, httpx.HTTPStatusError, httpx.ReadTimeout) as e:
                 logger.warning(f"RASA connection attempt {attempt + 1} failed: {e}")
->>>>>>> Stashed changes
                 
                 if attempt == max_retries - 1:  # Last attempt failed
                     logger.error(f"All RASA connection attempts failed. Providing fallback response.")
@@ -208,11 +198,6 @@ async def rasa_status():
     """Check RASA service status with improved timeout and error handling."""
     try:
         async with httpx.AsyncClient() as client:
-<<<<<<< Updated upstream
-            response = await client.get(
-                "http://localhost:5005/status",
-                timeout=5.0
-=======
             domain = os.getenv('DOMAIN', 'http://localhost')
             rasa_port = os.getenv('RASA_PORT', '5005')
             rasa_status_url = f"{domain}:{rasa_port}/status"
@@ -221,7 +206,6 @@ async def rasa_status():
             response = await client.get(
                 rasa_status_url,
                 timeout=30.0  # Increased timeout to match chat endpoint
->>>>>>> Stashed changes
             )
             response.raise_for_status()
             logger.info("RASA service status check successful")

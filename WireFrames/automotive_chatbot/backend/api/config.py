@@ -39,17 +39,12 @@ class Settings(BaseSettings):
     CACHE_EXPIRY_MINUTES: int = 30      # Cache COE data for 30 minutes
 
     # Frontend URLs (for CORS)
-<<<<<<< Updated upstream
-    FRONTEND_URL: str = "http://localhost:3000"
-=======
     # URLs Configuration
     DOMAIN: str = "http://localhost"
     FRONTEND_URL: str = f"{DOMAIN}:3000"
     BACKEND_URL: str = f"{DOMAIN}:8000"
     RASA_URL: str = f"{DOMAIN}:5005"
     RASA_ACTIONS_URL: str = f"{DOMAIN}:5055"
->>>>>>> Stashed changes
-
     class Config:
         env_file = "backend/.env"
         case_sensitive = True
