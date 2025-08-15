@@ -95,7 +95,6 @@ const nextConfig = {
     }
     return config;
   },
->>>>>>> Stashed changes
 };
 
 module.exports = nextConfig;

@@ -368,6 +368,20 @@ class ActionBookAppointment(AutoLoggedAction):
                     service_type = service_mapping[user_message]
                     logger.info(f"Button payload detected: '{user_message}' -> service_type: '{service_type}'")
             
+            # CRITICAL FIX: Fallback for button payloads when service_type entity is not extracted
+            if not service_type:
+                user_message = tracker.latest_message.get('text', '').lower().strip()
+                # Map button payloads to service types
+                service_mapping = {
+                    'sales consultation': 'Sales Consultation',
+                    'test drive': 'Test Drive', 
+                    'trade-in evaluation': 'Trade-in Evaluation',
+                }
+                
+                if user_message in service_mapping:
+                    service_type = service_mapping[user_message]
+                    logger.info(f"Button payload detected: '{user_message}' -> service_type: '{service_type}'")
+            
             # Fallback phone number extraction if not detected as entity
             if not customer_phone:
                 user_message = tracker.latest_message.get('text', '')

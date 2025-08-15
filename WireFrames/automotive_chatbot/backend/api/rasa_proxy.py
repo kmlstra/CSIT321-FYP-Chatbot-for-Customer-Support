@@ -98,15 +98,6 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
         
         for attempt in range(max_retries):
             try:
-<<<<<<< Updated upstream
-                response = await client.post(
-                    "http://localhost:5005/webhooks/rest/webhook",
-                    json=rasa_payload,
-                    timeout=10.0  # Reduced from 30s to 10s for faster response
-                )
-                response.raise_for_status()
-                rasa_responses = response.json()
-=======
                 async with httpx.AsyncClient() as client:
                     domain = os.getenv('DOMAIN', 'http://localhost')
                     rasa_port = os.getenv('RASA_PORT', '5005')
@@ -125,7 +116,6 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                     
             except (httpx.RequestError, httpx.HTTPStatusError, httpx.ReadTimeout) as e:
                 logger.warning(f"RASA connection attempt {attempt + 1} failed: {e}")
->>>>>>> Stashed changes
                 
                 if attempt == max_retries - 1:  # Last attempt failed
                     logger.error(f"All RASA connection attempts failed. Providing fallback response.")

@@ -15,6 +15,9 @@ pipeline:
   model_confidence: softmax
   batch_size: 8
   learning_rate: 0.001
+  model_confidence: softmax
+  batch_size: 8
+  learning_rate: 0.001
 - name: EntitySynonymMapper
 - name: ResponseSelector
   epochs: 60  # Reduced from 150 for hardware efficiency

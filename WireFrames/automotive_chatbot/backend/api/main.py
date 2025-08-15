@@ -100,9 +100,11 @@ async def get_environment_config():
     return {
         "DOMAIN": os.getenv("DOMAIN", "http://localhost"),
         "BACKEND_URL": os.getenv("BACKEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000"),
+        "BACKEND_URL": os.getenv("BACKEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000"),
         "FRONTEND_URL": os.getenv("FRONTEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:3000"),
         "RASA_URL": os.getenv("RASA_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5005"),
         "RASA_ACTIONS_URL": os.getenv("RASA_ACTIONS_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5055"),
+        "PROFILE_PICTURE_URL": os.getenv("PROFILE_PICTURE_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000/static/boy.png")
         "PROFILE_PICTURE_URL": os.getenv("PROFILE_PICTURE_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000/static/boy.png")
     }
 
@@ -853,8 +855,4 @@ app.include_router(rasa_proxy_router)
 
 if __name__ == "__main__":
     import uvicorn
-<<<<<<< Updated upstream
-    uvicorn.run(app, host="localhost", port=8000)
-=======
     uvicorn.run(app, host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("BACKEND_PORT", "8000")))
->>>>>>> Stashed changes
