@@ -363,7 +363,8 @@ export default function SuperAdminDashboard() {
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">{selectedClient.business_name}</h4>
                       <div className="space-y-2 text-sm">
-                        <div><span className="font-medium">Status:</span> 
+                                                <div><span className="font-medium">Client ID:</span> {selectedClient.id}</div> 
+                        <div><span className="font-medium">Status:</span>
                           <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
                             selectedClient.status === 'active' ? 'bg-green-100 text-green-800' : 
                             selectedClient.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :

@@ -201,23 +201,24 @@ async def health_check():
             "api": "running",
             "information_service": "available",
             "coe_service": "available",
-            "rag_service": "available" if os.getenv("OPENAI_API_KEY") else "limited",
-            "multi_tenant": "enabled"
-        },
-        "timestamp": datetime.utcnow().isoformat()
+            "rag_service": "available" if os.getenv("OPENAI_API_KEY") else "limited"
+        }
     }
 
+<<<<<<< Updated upstream
+from fastapi import APIRouter
+=======
 # Environment configuration endpoint
 @app.get("/api/config/env")
 async def get_environment_config():
     """Serve environment configuration for frontend"""
     return {
         "DOMAIN": os.getenv("DOMAIN", "http://localhost"),
-        "BACKEND_URL": os.getenv("BACKEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8001"),
+        "BACKEND_URL": os.getenv("BACKEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000"),
         "FRONTEND_URL": os.getenv("FRONTEND_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:3000"),
         "RASA_URL": os.getenv("RASA_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5005"),
         "RASA_ACTIONS_URL": os.getenv("RASA_ACTIONS_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:5055"),
-        "PROFILE_PICTURE_URL": os.getenv("PROFILE_PICTURE_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8001/static/boy.png")
+        "PROFILE_PICTURE_URL": os.getenv("PROFILE_PICTURE_URL", f"{os.getenv('DOMAIN', 'http://localhost')}:8000/static/boy.png")
     }
 
 # Widget JavaScript file endpoint
@@ -657,6 +658,7 @@ async def get_system_metrics():
         )
 
 # EXISTING FUNCTIONALITY - PRESERVED FOR BACKWARD COMPATIBILITY
+>>>>>>> Stashed changes
 
 # Essential boundaries for RASA actions
 vehicle_router = APIRouter(prefix="/api/vehicles", tags=["vehicles"])
@@ -1087,4 +1089,8 @@ except Exception as e:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("BACKEND_PORT", "8001")))
+<<<<<<< Updated upstream
+    uvicorn.run(app, host="localhost", port=8000)
+=======
+    uvicorn.run(app, host=os.getenv("API_HOST", "0.0.0.0"), port=int(os.getenv("BACKEND_PORT", "8000")))
+>>>>>>> Stashed changes

@@ -1,4 +1,4 @@
-"""Database Configuration for Real MongoDB Connection"""
+"""Database Configuration for Real MongoDB api_urlConnection"""
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Optional
@@ -68,7 +68,7 @@ async def get_security_manager():
     """Get security manager instance"""
     # Import here to avoid circular imports
     from ..config.mongodb_security import get_security_manager as get_real_security_manager
-    return get_real_security_manager()
+    return await get_real_security_manager()
 
 class DatabaseContext:
     """Database context manager for both sync and async operations"""

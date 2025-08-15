@@ -154,6 +154,13 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Copy AWS-specific endpoints configuration
+scp -i $KeyPath backend/endpoints-aws.yml ubuntu@${EC2Host}:~/endpoints-aws.yml
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR" "Failed to copy endpoints-aws.yml file"
+    exit 1
+}
+
 # Copy image files if they exist
 if (Test-Path "frontend-image.tar.zip") {
     Write-Log "INFO" "Copying frontend image..."
@@ -185,7 +192,21 @@ if ! command -v unzip &> /dev/null; then
     sudo apt-get update && sudo apt-get install -y unzip
 fi
 
-echo "Loading Docker images..."
+echo "=== DOCKER CLEANUP AND CACHE CLEARING ==="
+echo "Stopping existing containers..."
+docker-compose down || true
+
+echo "Removing old containers and images..."
+docker container prune -f || true
+docker image prune -f || true
+
+echo "Clearing Docker build cache..."
+docker builder prune -f || true
+
+echo "Removing dangling volumes..."
+docker volume prune -f || true
+
+echo "=== LOADING NEW DOCKER IMAGES ==="
 if [ -f "frontend-image.tar.zip" ]; then
     echo "Loading frontend image..."
     unzip -p frontend-image.tar.zip | docker load
@@ -201,21 +222,33 @@ if [ -f "rasa-image.tar.zip" ]; then
     unzip -p rasa-image.tar.zip | docker load
 fi
 
-echo "Stopping existing containers..."
-docker-compose down || true
+echo "=== STARTING NEW CONTAINERS ==="
+echo "Starting new containers with fresh images..."
+docker-compose up -d --force-recreate --remove-orphans
 
-echo "Starting new containers..."
-docker-compose up -d
+echo "Waiting for containers to start..."
+sleep 30
 
 echo "Checking container status..."
 docker-compose ps
 
+echo "Checking container logs for errors..."
+docker-compose logs --tail=20 frontend || true
+docker-compose logs --tail=20 backend || true
+docker-compose logs --tail=20 rasa || true
+
+echo "=== FINAL CLEANUP ==="
 echo "Cleaning up image files..."
 rm -f frontend-image.tar.zip backend-image.tar.zip rasa-image.tar.zip
 
-echo "Deployment completed!"
+echo "Removing unused Docker resources..."
+docker system prune -f || true
+
+echo "=== DEPLOYMENT COMPLETED ==="
 echo "Application should be available at: http://54.254.180.103"
 echo "Test widget at: http://54.254.180.103/test-client-widget.html"
+echo "Backend API at: http://54.254.180.103:8000"
+echo "Rasa API at: http://54.254.180.103:5005"
 '@
 
 # Save deploy script to temp file with Unix line endings

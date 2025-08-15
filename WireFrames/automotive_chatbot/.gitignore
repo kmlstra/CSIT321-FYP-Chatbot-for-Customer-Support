@@ -177,3 +177,7 @@ data/db/
 .cursor-settings/
 cursor.db
 .cursor-session
+
+/*.tar
+/*.tar.gz
+/*.tar.zip

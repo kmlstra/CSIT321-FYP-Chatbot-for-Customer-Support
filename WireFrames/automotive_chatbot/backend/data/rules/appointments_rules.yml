@@ -74,17 +74,18 @@ rules:
   - action: action_book_appointment
   wait_for_user_input: false
 
-- rule: Handle appointment denial during booking
-  condition:
-  - active_loop: null
-  - slot_was_set:
-    - appointment_active: true
-    - appointment_date: true
-    - service_type: true
-    - customer_name: true
-    - customer_phone: false
-  steps:
-  - intent: deny
-  - action: utter_appointment_cancelled
-  - action: action_listen
-  wait_for_user_input: false
+# Removed rule that was causing split responses - appointment denial is now handled by action_cancel_appointment
+# - rule: Handle appointment denial during booking
+#   condition:
+#   - active_loop: null
+#   - slot_was_set:
+#     - appointment_active: true
+#     - appointment_date: true
+#     - service_type: true
+#     - customer_name: true
+#     - customer_phone: false
+#   steps:
+#   - intent: deny
+#   - action: utter_appointment_cancelled
+#   - action: action_listen
+#   wait_for_user_input: false

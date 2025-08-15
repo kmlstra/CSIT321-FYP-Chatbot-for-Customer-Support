@@ -11,9 +11,13 @@
     "dev:core": "npm run show:core-message && concurrently --kill-others-on-fail -c \"bgBlue.bold,bgGreen.bold\" -n \"BACKEND,FRONTEND\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:static": "cd frontend && node static-server.js",
+<<<<<<< Updated upstream
     "dev:backend": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m uvicorn api.main:app --reload --host localhost --port 8001",
-    "dev:rasa": "cd backend && \"../.venv/Scripts/python.exe\" start_rasa.py",
-    "dev:actions": "cd backend && \"../.venv/Scripts/python.exe\" start_rasa_actions.py",
+=======
+    "dev:backend": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m uvicorn api.main:app --reload --host localhost --port 8000",
+>>>>>>> Stashed changes
+    "dev:rasa": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run --enable-api --cors \"*\" --port 5005 -i localhost --endpoints endpoints.yml",
+    "dev:actions": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run actions --actions actions --port 5055",
     "clean-start": "powershell -Command \"Get-Process -Name python,node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3; echo 'Ports cleared, starting services...'\"; npm run dev:all",
     "kill-ports": "powershell -Command \"Get-Process -Name python,node -ErrorAction SilentlyContinue | Stop-Process -Force; echo 'All processes killed'\"",
     "show:startup-message": "powershell -Command \"& { . .\\load-env.ps1; Write-Host ''; Write-Host '🚀 STARTING AUTOMOTIVE CHATBOT PLATFORM...' -ForegroundColor Cyan; Write-Host ''; Write-Host \"📱 Frontend: $env:DOMAIN`:$env:FRONTEND_PORT (starting...)\" -ForegroundColor Green; Write-Host \"🔧 Backend API: $env:DOMAIN`:$env:BACKEND_PORT (starting...)\" -ForegroundColor Blue; Write-Host \"📚 API Docs: $env:DOMAIN`:$env:BACKEND_PORT/docs (starting...)\" -ForegroundColor Blue; Write-Host \"🤖 Rasa API: $env:DOMAIN`:$env:RASA_PORT (starting...)\" -ForegroundColor Magenta; Write-Host \"🎯 Rasa Actions: $env:DOMAIN`:$env:RASA_ACTIONS_PORT (starting...)\" -ForegroundColor Yellow; Write-Host \"💾 MongoDB: $env:MONGODB_URI\" -ForegroundColor Gray; Write-Host ''; Write-Host '⏳ Services are starting up...' -ForegroundColor Yellow; Write-Host '' }\"",

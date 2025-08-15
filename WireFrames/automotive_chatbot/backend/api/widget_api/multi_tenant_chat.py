@@ -321,8 +321,12 @@ async def chat_endpoint(
 ):
     """Main chat endpoint for multi-tenant widget"""
     
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
     # Check if database is available
-    if admin_db is None:
+    if db is None:
         raise HTTPException(
             status_code=503, 
             detail="Database not available. Please try again in a moment."
@@ -343,22 +347,26 @@ async def chat_endpoint(
             detail="Client domain or client_id required"
         )
     
-    handler = get_chat_handler(admin_db)
+    handler = get_chat_handler(db)
     return await handler.process_chat_request(request, client_domain)
 
 @router.get("/config/{client_id}")
 async def get_widget_config(client_id: str):
     """Get widget configuration for a specific client"""
     
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
     # Check if database is available
-    if admin_db is None:
+    if db is None:
         raise HTTPException(
             status_code=503, 
             detail="Database not available. Please try again in a moment."
         )
     
     try:
-        client_crud = ClientCRUD(admin_db)
+        client_crud = ClientCRUD(db)
         client = await client_crud.get_client(client_id)
         
         if not client or client.get("status") != "active":
@@ -440,14 +448,18 @@ async def get_widget_config(client_id: str):
 async def generate_embed_code(client_id: str):
     """Generate dynamic embed code for a client"""
     
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
     # Check if database is available
-    if admin_db is None:
+    if db is None:
         raise HTTPException(
             status_code=503, 
             detail="Database not available. Please try again in a moment."
         )
     
-    client_crud = ClientCRUD(admin_db)
+    client_crud = ClientCRUD(db)
     client = await client_crud.get_client(client_id)
     
     if not client or client["status"] != "active":

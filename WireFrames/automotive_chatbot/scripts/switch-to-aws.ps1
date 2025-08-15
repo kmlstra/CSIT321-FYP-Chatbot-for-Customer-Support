@@ -22,17 +22,17 @@ $updatedBackend = $backendContent | ForEach-Object {
     elseif ($_ -match "^NEXT_PUBLIC_DOMAIN=http://localhost") {
         "# NEXT_PUBLIC_DOMAIN=http://localhost"
     }
-    elseif ($_ -match "^BACKEND_PORT=8001") {
-        "BACKEND_PORT=8001"  # Fixed: Keep port as 8001 for consistency
+    elseif ($_ -match "^BACKEND_PORT=8000") {
+        "BACKEND_PORT=8000"  # Fixed: Use port 8000 for production consistency
     }
-    elseif ($_ -match "^NEXT_PUBLIC_BACKEND_PORT=8001") {
-        "NEXT_PUBLIC_BACKEND_PORT=8001"  # Fixed: Keep port as 8001 for consistency
+    elseif ($_ -match "^NEXT_PUBLIC_BACKEND_PORT=8000") {
+        "NEXT_PUBLIC_BACKEND_PORT=8000"  # Fixed: Use port 8000 for production consistency
     }
     elseif ($_ -match "^NEXT_PUBLIC_ENV=") {
         "NEXT_PUBLIC_ENV=production"
     }
     elseif ($_ -match "^PROFILE_PICTURE_URL=") {
-        "PROFILE_PICTURE_URL=http://54.254.180.103:8001/static/boy.png"
+        "PROFILE_PICTURE_URL=http://54.254.180.103:8000/static/boy.png"
     }
     elseif ($_ -match "^DEBUG=") {
         "DEBUG=false"
@@ -51,7 +51,7 @@ if (-not $hasNextPublicEnv) {
 }
 
 if (-not $hasProfilePictureUrl) {
-    $updatedBackend += "PROFILE_PICTURE_URL=http://54.254.180.103:8001/static/boy.png"
+    $updatedBackend += "PROFILE_PICTURE_URL=http://54.254.180.103:8000/static/boy.png"
 }
 
 $updatedBackend | Set-Content $BackendEnvPath
@@ -62,24 +62,24 @@ $frontendEnv = @"
 # AWS PRODUCTION ENVIRONMENT
 NODE_ENV=production
 NEXT_PUBLIC_DOMAIN=http://54.254.180.103
-NEXT_PUBLIC_API_URL=http://54.254.180.103:8001
+NEXT_PUBLIC_API_URL=http://54.254.180.103:8000
 NEXT_PUBLIC_RASA_URL=http://54.254.180.103:5005
 NEXT_PUBLIC_WIDGET_URL=http://54.254.180.103
 NEXT_PUBLIC_FRONTEND_URL=http://54.254.180.103
-NEXT_PUBLIC_BACKEND_URL=http://54.254.180.103:8001
+NEXT_PUBLIC_BACKEND_URL=http://54.254.180.103:8000
 NEXT_PUBLIC_FRONTEND_PORT=80
-NEXT_PUBLIC_BACKEND_PORT=8001
+NEXT_PUBLIC_BACKEND_PORT=8000
 NEXT_PUBLIC_RASA_PORT=5005
 NEXT_PUBLIC_DEBUG=false
 NEXT_PUBLIC_ENV=production
-PROFILE_PICTURE_URL=http://54.254.180.103:8001/static/boy.png
+PROFILE_PICTURE_URL=http://54.254.180.103:8000/static/boy.png
 "@
 
 $frontendEnv | Set-Content $FrontendEnvPath
 
 Write-Host "Successfully switched to AWS production environment!" -ForegroundColor Green
 Write-Host "Frontend: http://54.254.180.103" -ForegroundColor Cyan
-Write-Host "Backend API: http://54.254.180.103:8001" -ForegroundColor Cyan
+Write-Host "Backend API: http://54.254.180.103:8000" -ForegroundColor Cyan
 Write-Host "RASA API: http://54.254.180.103:5005" -ForegroundColor Cyan
-Write-Host "API Docs: http://54.254.180.103:8001/docs" -ForegroundColor Cyan
+Write-Host "API Docs: http://54.254.180.103:8000/docs" -ForegroundColor Cyan
 Write-Host "Test Widget: http://54.254.180.103/test-client-widget.html" -ForegroundColor Cyan

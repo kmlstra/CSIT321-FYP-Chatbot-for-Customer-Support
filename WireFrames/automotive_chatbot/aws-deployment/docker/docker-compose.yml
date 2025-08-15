@@ -88,10 +88,12 @@ services:
       - "5005:5005"
     environment:
       - RASA_MODEL_PATH=/app/models
-      - RASA_ENDPOINTS_PATH=/app/endpoints.yml
+      - RASA_ENDPOINTS_PATH=/app/endpoints-aws.yml
+      - ENVIRONMENT=aws
     volumes:
       - rasa_models:/app/models
       - rasa_logs:/app/logs
+      - ./endpoints-aws.yml:/app/endpoints-aws.yml:ro
     networks:
       - automotive-network
     restart: unless-stopped

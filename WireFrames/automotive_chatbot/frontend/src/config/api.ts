@@ -23,13 +23,13 @@ const getPorts = () => {
   if (isProduction || envType === 'production') {
     return {
       FRONTEND: process.env.NEXT_PUBLIC_FRONTEND_PORT || '80',
-      BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8001',
+      BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8000',
       RASA: process.env.NEXT_PUBLIC_RASA_PORT || '5005'
     };
   }
   return {
     FRONTEND: process.env.NEXT_PUBLIC_FRONTEND_PORT || '3000',
-    BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8001',
+    BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8000',
     RASA: process.env.NEXT_PUBLIC_RASA_PORT || '5005'
   };
 };

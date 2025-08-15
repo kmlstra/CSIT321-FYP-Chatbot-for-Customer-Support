@@ -21,6 +21,20 @@ policies:
 - name: MemoizationPolicy
 - name: RulePolicy
 - name: TEDPolicy
-  max_history: 2
-  epochs: 30
+  max_history: 5  # Reduced from 8 for memory efficiency
+  epochs: 60  # Reduced from 150 for hardware efficiency
+  constrain_similarities: true
+  model_confidence: softmax
+  loss_type: "cross_entropy"
+  ranking_length: 10
+  evaluate_every_number_of_epochs: 5  # More frequent evaluation
+  evaluate_on_number_of_examples: 50  # Reduced for efficiency
+  # Hardware efficiency settings
+  batch_size: 16  # Memory efficient batch size
+  learning_rate: 0.001  # Optimized learning rate
+  epochs_patience: 10  # Early stopping
+<<<<<<< Updated upstream
 assistant_id: 20250521-234810-damp-noir
+=======
+assistant_id: 20250521-234810-damp-noir
+>>>>>>> Stashed changes

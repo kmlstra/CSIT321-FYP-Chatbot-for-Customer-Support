@@ -99,7 +99,7 @@ Simple batch file for users who prefer traditional Windows batch scripts.
 ```
 Domain: http://localhost
 Frontend: http://localhost:3000
-Backend: http://localhost:8001
+Backend: http://localhost:8000
 RASA: http://localhost:5005
 RASA Actions: http://localhost:5055
 SSL: Disabled
@@ -111,7 +111,7 @@ SSL: Disabled
 ```
 Domain: http://54.254.180.103
 Frontend: http://54.254.180.103:3000
-Backend: http://54.254.180.103:8001
+Backend: http://54.254.180.103:8000
 RASA: http://54.254.180.103:5005
 RASA Actions: http://54.254.180.103:5055
 SSL: Disabled

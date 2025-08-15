@@ -50,7 +50,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/backend/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
     
@@ -58,7 +58,7 @@ jobs:
       working-directory: ./WireFrames/automotive_chatbot
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
         pip install pytest pytest-asyncio pytest-cov pytest-html pytest-json-report
         pip install pytest-xdist pytest-timeout pytest-mock
     
@@ -192,7 +192,7 @@ jobs:
       working-directory: ./WireFrames/automotive_chatbot
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
         pip install pytest pytest-asyncio pytest-cov pytest-html pytest-json-report
         npm ci
     

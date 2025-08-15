@@ -16,7 +16,7 @@ CONFIG_TEMPLATES = {
     "localhost": {
         "domain": "http://localhost",
         "frontend_port": "3000",
-        "backend_port": "8001",
+        "backend_port": "8000",
         "rasa_port": "5005",
         "rasa_actions_port": "5055",
         "ssl_enabled": False
@@ -24,7 +24,7 @@ CONFIG_TEMPLATES = {
     "ec2": {
         "domain": "http://54.254.180.103",
         "frontend_port": "3000",
-        "backend_port": "8001",
+        "backend_port": "8000",
         "rasa_port": "5005",
         "rasa_actions_port": "5055",
         "ssl_enabled": False

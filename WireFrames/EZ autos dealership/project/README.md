@@ -178,7 +178,7 @@ The application uses Django's session-based authentication:
 1. **Port already in use**
    ```bash
    # Backend (Django)
-   python manage.py runserver 8001
+   python manage.py runserver 8000
    
    # Frontend (Vite)
    npm run dev -- --port 5174

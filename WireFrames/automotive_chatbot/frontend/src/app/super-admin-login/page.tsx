@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { API_CONFIG } from '../../config/api';
 
 export default function SuperAdminLoginPage() {
@@ -112,9 +113,9 @@ export default function SuperAdminLoginPage() {
           <div className="mt-6 text-center">
             <p className="text-gray-600 text-sm">
               For client access, use{' '}
-              <a href="/" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              <Link href="/" className="text-indigo-600 hover:text-indigo-700 font-medium">
                 Client Login
-              </a>
+              </Link>
             </p>
             <p className="text-gray-500 text-xs mt-2">
               Default super admin credentials for development:

@@ -14,7 +14,8 @@ import logging
 # Configure logger
 logger = logging.getLogger(__name__)
 
-from .multi_tenant_chat import get_chat_handler, ChatRequest, admin_db
+from .multi_tenant_chat import get_chat_handler, ChatRequest
+from . import multi_tenant_chat
 
 router = APIRouter()
 
@@ -55,8 +56,12 @@ async def streaming_chat_endpoint(
 ):
     """Streaming chat endpoint with immediate acknowledgment and typing indicators"""
     
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
     # Check if database is available
-    if admin_db is None:
+    if db is None:
         raise HTTPException(
             status_code=503, 
             detail="Database not available. Please try again in a moment."
@@ -81,7 +86,7 @@ async def streaming_chat_endpoint(
         """Generate streaming response with immediate acknowledgment"""
         try:
             # Get chat handler
-            handler = get_chat_handler(admin_db)
+            handler = get_chat_handler(db)
             
             # Determine client context first for immediate acknowledgment
             client = await handler.get_client_context(request.client_id, client_domain)
@@ -174,7 +179,7 @@ async def streaming_chat_endpoint(
                 "session_id": request.session_id,
                 "client_id": client_id
             }
-            yield f"data: {completion_signal}\n\n"
+            yield f"data: {json.dumps(completion_signal)}\n\n"
             
         except Exception as e:
             logger.error(f"Critical error in streaming response: {e}")
@@ -206,8 +211,12 @@ async def quick_acknowledgment(
 ):
     """Provide immediate acknowledgment for chat messages"""
     
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
     # Check if database is available
-    if admin_db is None:
+    if db is None:
         raise HTTPException(
             status_code=503, 
             detail="Database not available. Please try again in a moment."
@@ -224,7 +233,7 @@ async def quick_acknowledgment(
     
     try:
         # Get client context for personalized acknowledgment
-        handler = get_chat_handler(admin_db)
+        handler = get_chat_handler(db)
         client = await handler.get_client_context(request.client_id, client_domain)
         
         if not client:

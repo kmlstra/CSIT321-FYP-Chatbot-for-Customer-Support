@@ -43,7 +43,7 @@ help:
 # Installation
 install:
 	@echo "📦 Installing dependencies..."
-	pip install -r ../requirements.txt
+	pip install -r requirements.txt
 	pip install pytest pytest-asyncio pytest-cov pytest-html pytest-json-report
 	pip install pytest-xdist pytest-timeout pytest-mock
 	pip install flake8 black isort bandit safety

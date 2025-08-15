@@ -150,10 +150,10 @@ cursor.db
 *.sqlite
 *.sqlite3
 
-# Rasa models (large files)
-backend/models/
+# Rasa models (large files) - COMMENTED OUT TO ALLOW MODEL DEPLOYMENT
+# backend/models/
 .rasa/
-*.tar.gz
+# *.tar.gz
 
 # Temporary files
 tmp/
@@ -176,7 +176,7 @@ docs/
 tsconfig.json
 jest.config.js
 
-# Deployment files
-Dockerfile*
-docker-compose*
-.dockerignore
+# Deployment files - COMMENTED OUT TO ALLOW NGINX.CONF AND DEPLOYMENT FILES
+# Dockerfile*
+# docker-compose*
+# .dockerignore

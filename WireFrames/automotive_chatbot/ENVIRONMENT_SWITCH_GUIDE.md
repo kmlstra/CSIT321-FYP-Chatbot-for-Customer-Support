@@ -25,7 +25,7 @@ The switch scripts automatically configure:
 ### Backend Configuration (`backend/.env`)
 - `DOMAIN` - Base domain for all services
 - `NEXT_PUBLIC_DOMAIN` - Frontend-accessible domain
-- `BACKEND_PORT` and `NEXT_PUBLIC_BACKEND_PORT` - Backend service port (8001)
+- `BACKEND_PORT` and `NEXT_PUBLIC_BACKEND_PORT` - Backend service port (8000)
 - `NEXT_PUBLIC_ENV` - Environment type (development/production)
 - `PROFILE_PICTURE_URL` - Profile picture URL with correct domain
 - `DEBUG` - Debug mode (true for local, false for production)
@@ -46,17 +46,17 @@ The switch scripts automatically configure:
 
 ### Local Development
 - **Domain:** `http://localhost`
-- **Backend Port:** `8001`
+- **Backend Port:** `8000`
 - **Environment:** `development`
 - **Debug:** `true`
-- **Profile Picture:** `http://localhost:8001/static/boy.png`
+- **Profile Picture:** `http://localhost:8000/static/boy.png`
 
 ### AWS Production
 - **Domain:** `http://54.254.180.103`
-- **Backend Port:** `8001`
+- **Backend Port:** `8000`
 - **Environment:** `production`
 - **Debug:** `false`
-- **Profile Picture:** `http://54.254.180.103:8001/static/boy.png`
+- **Profile Picture:** `http://54.254.180.103:8000/static/boy.png`
 
 ## Usage Workflow
 
@@ -78,7 +78,7 @@ The switch scripts automatically configure:
 ## Key Features
 
 - ✅ **Unified Configuration:** Single script handles both backend and frontend
-- ✅ **Port Consistency:** Maintains correct port 8001 for backend in both environments
+- ✅ **Port Consistency:** Maintains correct port 8000 for backend in both environments
 - ✅ **Complete Variable Set:** Includes all necessary environment variables
 - ✅ **Clear Feedback:** Displays access points and configuration summary
 - ✅ **Error Handling:** Provides clear error messages if issues occur

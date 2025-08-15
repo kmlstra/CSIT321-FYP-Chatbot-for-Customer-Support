@@ -4,7 +4,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # API Settings
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8001
+    API_PORT: int = 8000
     DEBUG: bool = True
 
     # Security
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # URLs Configuration
     DOMAIN: str = "http://localhost"
     FRONTEND_URL: str = f"{DOMAIN}:3000"
-    BACKEND_URL: str = f"{DOMAIN}:8001"
+    BACKEND_URL: str = f"{DOMAIN}:8000"
     RASA_URL: str = f"{DOMAIN}:5005"
     RASA_ACTIONS_URL: str = f"{DOMAIN}:5055"
 

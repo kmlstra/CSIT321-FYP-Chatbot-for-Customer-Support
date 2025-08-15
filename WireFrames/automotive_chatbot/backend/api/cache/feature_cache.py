@@ -74,7 +74,7 @@ class FeatureCache:
             # Default feature settings
             default_features = {
                 'live_support': True,
-                'appointment_booking': True,
+                'appointment_booking': False,  # Default to False, enable based on client configuration
                 'coe_queries': True,
                 'contact_support': True,
                 'cached_at': datetime.now().isoformat()
@@ -134,7 +134,7 @@ class FeatureCache:
             # Return defaults if fetch failed
             return {
                 'live_support': True,
-                'appointment_booking': True,
+                'appointment_booking': False,  # Default to False, enable based on client configuration
                 'coe_queries': True,
                 'contact_support': True
             }

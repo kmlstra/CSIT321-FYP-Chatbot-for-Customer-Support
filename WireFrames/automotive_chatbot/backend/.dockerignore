@@ -128,7 +128,7 @@ data/raw/
 
 # Large files and archives
 *.zip
-*.tar.gz
+# *.tar.gz
 *.rar
 *.7z
 *.iso

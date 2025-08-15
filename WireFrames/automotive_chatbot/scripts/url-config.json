@@ -3,12 +3,12 @@
     "domain": "http://localhost",
     "development": {
       "frontend_url": "${domain}:3000",
-      "backend_url": "${domain}:8001",
+      "backend_url": "${domain}:8000",
       "rasa_url": "${domain}:5005",
       "rasa_actions_url": "${domain}:5055",
       "mongodb_url": "mongodb://localhost:27017",
       "widget_url": "${domain}:3000",
-      "api_url": "${domain}:8001"
+      "api_url": "${domain}:8000"
     },
     "production": {
       "frontend_url": "https://mycompany.com",

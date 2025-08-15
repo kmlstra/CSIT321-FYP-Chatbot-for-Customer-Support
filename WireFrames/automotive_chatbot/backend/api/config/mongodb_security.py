@@ -83,15 +83,16 @@ class SecurityManager:
 # Global security manager instance
 _security_manager = None
 
-def get_security_manager():
+async def get_security_manager():
     """Get security manager instance"""
     global _security_manager
     if _security_manager is None:
-        # Import the global admin_db from main.py
+        # Use the new database connection method
         try:
-            from ..main import admin_db
-            if admin_db is not None:
-                _security_manager = SecurityManager(admin_db)
+            from .database import get_real_admin_db
+            db = await get_real_admin_db()
+            if db is not None:
+                _security_manager = SecurityManager(db)
             else:
                 # Fallback to creating a new connection
                 from motor.motor_asyncio import AsyncIOMotorClient
@@ -100,7 +101,7 @@ def get_security_manager():
                 client = AsyncIOMotorClient(ADMIN_CONNECTION)
                 db = client[DATABASE_NAME]
                 _security_manager = SecurityManager(db)
-        except ImportError:
+        except Exception as e:
             # Fallback to creating a new connection
             from motor.motor_asyncio import AsyncIOMotorClient
             ADMIN_CONNECTION = "mongodb+srv://darknesscrawler:P%40ssw0rd%211@aichatbot.ygakb6r.mongodb.net/?retryWrites=true&w=majority&appName=AiChatBot"

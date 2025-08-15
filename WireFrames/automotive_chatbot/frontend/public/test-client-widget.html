@@ -63,21 +63,26 @@
 <body>
 
 <!-- CleverCompanion Chatbot Widget -->
-<script async>window.CleverCompanionConfig = { clientId: '689c9761bc4138c381b17f66' };</script>
+<script async>window.CleverCompanionConfig = { clientId: '689c12fcdf830f867a329787' };</script>
 <script async>
-        window.DOMAIN = window.DOMAIN || 'http://localhost';
-        // Dynamically load scripts with domain configuration and cache-busting
-        const timestamp = Date.now();
-        const script1 = document.createElement('script');
-        script1.src = (window.DOMAIN || 'http://localhost') + ':8001/clevercompanion-widget.js?v=' + timestamp;
-        script1.async = true;
-        document.head.appendChild(script1);
-        
-        const script2 = document.createElement('script');
-        script2.src = (window.DOMAIN || 'http://localhost') + ':8001/page-interactions.js?v=' + timestamp;
-        script2.async = true;
-        document.head.appendChild(script2);
-    </script>
+    // Auto-detect environment: use current host if not localhost, otherwise default to AWS
+    const currentHost = window.location.hostname;
+    const isLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+    window.DOMAIN = isLocalhost ? 'http://localhost' : 'http://54.254.180.103';
+    
+    // Dynamically load scripts with domain configuration and cache-busting
+    const timestamp = Date.now();
+    const script1 = document.createElement('script');
+    script1.src = window.DOMAIN + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.async = true;
+    document.head.appendChild(script1);
+    
+    const script2 = document.createElement('script');
+    script2.src = window.DOMAIN + ':8000/page-interactions.js?v=' + timestamp;
+    script2.async = true;
+    document.head.appendChild(script2);
+</script>
+<!-- End CleverCompanion Widget -->
 
     <!-- CleverCompanion Chatbot Widget -->
         <!-- <script>
@@ -85,8 +90,8 @@
             clientId: '689c9761bc4138c381b17f66'
         };
         </script>
-        <script src="http://localhost:8001/clevercompanion-widget.js" async></script>
-        <script src="http://localhost:8001/page-interactions.js" async></script> -->
+        <script src="http://localhost:8000/clevercompanion-widget.js" async></script>
+        <script src="http://localhost:8000/page-interactions.js" async></script> -->
         <!-- End CleverCompanion Widget -->
 </body>
 </html>

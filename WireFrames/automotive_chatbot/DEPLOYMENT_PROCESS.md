@@ -99,6 +99,44 @@ The deployment uses production environment variables:
 - `NEXT_PUBLIC_RASA_URL=http://54.254.180.103:5005`
 - `NODE_ENV=production`
 
+### Endpoints Configuration
+
+#### AWS-Specific Endpoints
+The project includes separate endpoint configurations for different environments:
+
+**Local Development**: `backend/endpoints.yml` (auto-generated)
+- Action endpoint: `http://localhost:5055/webhook`
+- Used for local development and testing
+
+**AWS Production**: `backend/endpoints-aws.yml`
+- Action endpoint: `http://54.254.180.103:5055/webhook`
+- Pre-configured for AWS EC2 deployment
+- **Important**: This file is used automatically during AWS deployment
+
+#### Environment-Specific Configuration
+The system automatically selects the correct endpoints file based on the deployment environment:
+
+```yaml
+# Local Development (endpoints.yml)
+action_endpoint:
+  url: "http://localhost:5055/webhook"
+
+# AWS Production (endpoints-aws.yml)
+action_endpoint:
+  url: "http://54.254.180.103:5055/webhook"
+```
+
+#### Configuration Files Location
+```
+backend/
+├── endpoints.yml         # Auto-generated for local development
+├── endpoints-aws.yml     # Pre-configured for AWS deployment
+├── .env                  # Environment variables
+└── requirements.txt      # Python dependencies
+```
+
+**Note**: The `endpoints.yml` file is auto-generated and should not be manually edited. For AWS deployment, the system uses the pre-configured `endpoints-aws.yml` file.
+
 ### Docker Images Built
 1. **Frontend**: `csit321fyp/automotive-chatbot-frontend:latest`
 2. **Backend**: `csit321fyp/automotive-chatbot-backend:latest`

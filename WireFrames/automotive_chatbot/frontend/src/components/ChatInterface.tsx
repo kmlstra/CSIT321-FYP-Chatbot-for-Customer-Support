@@ -149,7 +149,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
     }
   };
 
-  const handleButtonClick = async (payload: string, title?: string) => {
+  const handleButtonClick = async (payload: string) => {
     await sendMessage(payload);
   };
 
@@ -278,7 +278,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ className = '' }) 
 // Message Bubble Component
 interface MessageBubbleProps {
   message: ChatMessage;
-  onButtonClick: (payload: string, title?: string) => void;
+  onButtonClick: (payload: string) => void;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onButtonClick }) => {
@@ -299,7 +299,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onButtonClick })
             {message.metadata.buttons.map((button, index) => (
               <button
                 key={index}
-                onClick={() => onButtonClick(button.payload, button.title)}
+                onClick={() => onButtonClick(button.payload)}
                 className="block w-full text-left px-3 py-1 bg-white text-gray-800 rounded border hover:bg-gray-100 transition-colors text-sm"
               >
                 {button.title}
@@ -314,7 +314,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onButtonClick })
             {message.metadata.quick_replies.map((reply, index) => (
               <button
                 key={index}
-                onClick={() => onButtonClick(reply.payload, reply.title)}
+                onClick={() => onButtonClick(reply.payload)}
                 className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs hover:bg-blue-200 transition-colors"
               >
                 {reply.title}

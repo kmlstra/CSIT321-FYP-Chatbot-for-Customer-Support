@@ -153,7 +153,7 @@ export default function ClientDashboard() {
   const [features, setFeatures] = useState({
     coe_prices: true,
     loan_calculator: true,
-    appointment_booking: true,
+    appointment_booking: false,  // Default to false, enable based on client configuration
     maintenance_tips: true,
     vehicle_search: true,
     live_support: true
@@ -239,8 +239,7 @@ export default function ClientDashboard() {
     duration?: number;
   }>>([]);
 
-  // Active sessions count from backend API
-  const [activeSessionsCount, setActiveSessionsCount] = useState<number>(0);
+  // Removed activeSessionsCount - no longer needed
 
   // Cancel appointment confirmation modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -379,13 +378,12 @@ export default function ClientDashboard() {
         fetchDatabaseStatus(),
         fetchVehicles(),
         fetchAppointments(),
-        fetchOperatingHours(),
-        fetchActiveSessionsCount()
+        fetchOperatingHours()
       ]).then((results) => {
         // Log any failed requests for debugging
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            const functionNames = ['fetchClientInfo', 'fetchDatabaseStatus', 'fetchVehicles', 'fetchAppointments', 'fetchOperatingHours', 'fetchActiveSessionsCount'];
+            const functionNames = ['fetchClientInfo', 'fetchDatabaseStatus', 'fetchVehicles', 'fetchAppointments', 'fetchOperatingHours'];
             console.warn(`${functionNames[index]} failed:`, result.reason);
           }
         });
@@ -425,11 +423,10 @@ export default function ClientDashboard() {
     }
   };
 
-  // Fetch chat history and active sessions when authenticated
+  // Fetch chat history when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       fetchChatHistory();
-      fetchActiveSessionsCount();
     }
   }, [isAuthenticated, fetchChatHistory]);
 
@@ -545,26 +542,7 @@ export default function ClientDashboard() {
   };
 
   // Fetch active sessions count from backend API
-  const fetchActiveSessionsCount = async () => {
-    try {
-      const token = localStorage.getItem('client_token');
-      if (!token) {
-        return;
-      }
-      
-      const response = await fetch(API_ENDPOINTS.CONVERSATION_STATS, {
-        headers: getAuthHeaders()
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setActiveSessionsCount(data.active_sessions || 0);
-      } else {
-        console.error('Failed to fetch active sessions count:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('Failed to fetch active sessions count:', error);
-    }
-  };
+  // Removed fetchActiveSessionsCount function - no longer needed
 
   const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
     try {
@@ -969,17 +947,25 @@ export default function ClientDashboard() {
     }
     
     const embedCode = `<!-- CleverCompanion Chatbot Widget -->
-<script>
-  window.CleverCompanionConfig = {
-    clientId: '${clientId}'
-  };
+<script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
+<script async>
+    window.DOMAIN = window.DOMAIN || 'http://localhost';
+    // Dynamically load scripts with domain configuration and cache-busting
+    const timestamp = Date.now();
+    const script1 = document.createElement('script');
+    script1.src = (window.DOMAIN || 'http://localhost') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.async = true;
+    document.head.appendChild(script1);
+    
+    const script2 = document.createElement('script');
+    script2.src = (window.DOMAIN || 'http://localhost') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.async = true;
+    document.head.appendChild(script2);
 </script>
-<script src="${API_CONFIG.API_URL}/clevercompanion-widget.js" async></script>
-<script src="${API_CONFIG.API_URL}/page-interactions.js" async></script>
 <!-- End CleverCompanion Widget -->`;
 
     navigator.clipboard.writeText(embedCode).then(() => {
-      showAlert('Simplified embed code copied to clipboard! The widget will automatically load your branding and settings from the database.', 'success');
+      showAlert('Updated embed code copied to clipboard! The widget will automatically load your branding and settings with dynamic domain configuration.', 'success');
     }).catch(() => {
       showAlert('Failed to copy embed code', 'error');
     });
@@ -1120,40 +1106,7 @@ export default function ClientDashboard() {
     return data;
   };
 
-  const getActiveUsersData = () => {
-    // Calculate active users based on real conversation data from chatHistory
-    const now = new Date();
-    const activeUsers = [];
-    
-    // Daily active users (last 24 hours) - count unique conversations
-    const dailyUsers = chatHistory.filter(conv => {
-      const convDate = new Date(conv.created_at || conv.timestamp || new Date());
-      const timeDiff = now.getTime() - convDate.getTime();
-      return timeDiff <= 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    }).length;
-    activeUsers.push({ name: 'Daily Active', value: dailyUsers });
-    
-    // Weekly active users (last 7 days) - count unique conversations
-    const weeklyUsers = chatHistory.filter(conv => {
-      const convDate = new Date(conv.created_at || conv.timestamp || new Date());
-      const timeDiff = now.getTime() - convDate.getTime();
-      return timeDiff <= 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-    }).length;
-    activeUsers.push({ name: 'Weekly Active', value: weeklyUsers });
-    
-    // Monthly active users (last 30 days) - count unique conversations
-    const monthlyUsers = chatHistory.filter(conv => {
-      const convDate = new Date(conv.created_at || conv.timestamp || new Date());
-      const timeDiff = now.getTime() - convDate.getTime();
-      return timeDiff <= 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
-    }).length;
-    activeUsers.push({ name: 'Monthly Active', value: monthlyUsers });
-    
-    // Currently Active Users - users with active sessions (from backend API)
-    activeUsers.push({ name: 'Currently Active', value: activeSessionsCount });
-    
-    return activeUsers;
-  };
+  // Removed getActiveUsersData function as requested - Active Users graph no longer needed
 
   // Calculate analytics from real data
   const availableVehicles = vehicles.filter(v => 
@@ -1359,33 +1312,7 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Active Users Chart - Moved to second position */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-4">
-                    Active Users - {analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)}
-                  </h4>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={getActiveUsersData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {getActiveUsersData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                {/* Active Users Chart removed as requested */}
 
                 {/* Conversations Chart - Moved to third position */}
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -2629,9 +2556,22 @@ export default function ClientDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Embed Code</label>
                   <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-x-auto">
                     <pre>{`<!-- CleverCompanion Chatbot Widget -->
-<script>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
-<script src="${API_CONFIG.API_URL}/clevercompanion-widget.js" async></script>
-<script src="${API_CONFIG.API_URL}/page-interactions.js" async></script>`}</pre>
+<script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
+<script async>
+    window.DOMAIN = window.DOMAIN || 'http://localhost';
+    // Dynamically load scripts with domain configuration and cache-busting
+    const timestamp = Date.now();
+    const script1 = document.createElement('script');
+    script1.src = (window.DOMAIN || 'http://localhost') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.async = true;
+    document.head.appendChild(script1);
+    
+    const script2 = document.createElement('script');
+    script2.src = (window.DOMAIN || 'http://localhost') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.async = true;
+    document.head.appendChild(script2);
+</script>
+<!-- End CleverCompanion Widget -->`}</pre>
                   </div>
                   <button
                     onClick={copyEmbedCode}

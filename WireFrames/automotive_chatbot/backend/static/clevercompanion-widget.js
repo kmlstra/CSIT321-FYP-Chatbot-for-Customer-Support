@@ -12,7 +12,7 @@
             // Simplified configuration - only requires client_id
             this.config = window.CleverCompanionConfig || {};
             this.clientId = this.config.clientId || this.detectClientId();
-            this.apiUrl = this.config.apiUrl || (window.CLEVERCOMPANION_BACKEND_URL || window.BACKEND_URL || window.DOMAIN + ':8001' || 'http://localhost:8001') + '/api/widget';
+            this.apiUrl = this.config.apiUrl || (window.CLEVERCOMPANION_BACKEND_URL || window.BACKEND_URL || window.DOMAIN + ':8000' || 'http://localhost:8000') + '/api/widget';
             this.sessionId = this.generateSessionId();
             this.isOpen = false;
             this.messages = [];
@@ -224,9 +224,9 @@
                 const logoUrl = this.clientConfig.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
                 titleElement.innerHTML = `
                     <span class="cc-logo">
-                        <img src="${logoUrl}" alt="${this.clientConfig.branding?.company_name || 'CleverCompanion'}" />
+                        <img src="${logoUrl}" alt="CleverCompanion" />
                     </span>
-                    ${this.clientConfig.branding?.company_name || 'CleverCompanion'}
+                    CleverCompanion
                 `;
             }
             
@@ -234,7 +234,7 @@
             logoElements.forEach(img => {
                 const logoUrl = this.clientConfig.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
                 img.src = logoUrl;
-                img.alt = this.clientConfig.branding?.company_name || 'CleverCompanion';
+                img.alt = 'CleverCompanion';
             });
             
             // Update menu items
@@ -367,7 +367,7 @@
             return `
                 <!-- Toggle Button -->
                 <button id="cc-toggle" aria-label="Open chat">
-                    <img src="${logoUrl}" alt="${config.branding?.company_name || 'CleverCompanion'}" />
+                    <img src="${logoUrl}" alt="CleverCompanion" />
                 </button>
 
                 <!-- Close Button -->
@@ -383,9 +383,9 @@
                     <div class="cc-header">
                         <h3 id="cc-title">
                             <span class="cc-logo">
-                                <img src="${logoUrl}" alt="${config.branding?.company_name || 'CleverCompanion'}" />
+                                <img src="${logoUrl}" alt="CleverCompanion" />
                             </span>
-                            ${config.branding?.company_name || 'CleverCompanion'}
+                            CleverCompanion
                         </h3>
                         <p id="cc-subtitle">How can I help you today?</p>
                     </div>
@@ -432,12 +432,12 @@
             const menuOptions = [
                 { icon: '💰', text: 'Latest COE Prices', action: 'what are the current coe prices', enabled: this.clientConfig.features?.coe_prices },
                 // { icon: '🚗', text: 'Search Vehicle', action: 'Help me search for vehicles by budget, type and brand preferences', enabled: true },
-                { icon: '📅', text: 'Appointment Booking', action: 'I want to book an appointment', enabled: true },
+                { icon: '📅', text: 'Appointment Booking', action: 'I want to book an appointment', enabled: this.clientConfig.features?.appointment_booking },
                 // { icon: '🔧', text: 'Maintenance Tips', action: 'Provide vehicle maintenance guidance and service center recommendations', enabled: true },
                 { icon: '💳', text: 'Loan Calculator', action: 'Calculate car loan with current interest rates and financing options', enabled: this.clientConfig.features?.loan_calculator },
                 { icon: '📞', text: 'Contact Us', action: 'Show me contact information and ways to reach us', enabled: this.clientConfig.features?.contact_info },
                 // { icon: '📝', text: 'Feedback', action: 'I want to provide feedback about the service and suggest improvements', enabled: true },
-                { icon: '💬', text: 'Live Support', action: 'I need live support assistance', enabled: true }
+                { icon: '💬', text: 'Live Support', action: 'I need live support assistance', enabled: this.clientConfig.features?.live_support }
             ];
 
             return menuOptions
@@ -2414,6 +2414,80 @@
             box-shadow: none;
         }
 
+        /* Enhanced appointment booking buttons */
+        .cc-buttons {
+            margin: 16px 0 8px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .cc-button {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+            text-align: center;
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+        
+        .cc-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .cc-button:hover::before {
+            left: 100%;
+        }
+        
+        .cc-button:hover {
+            background: linear-gradient(135deg, #3730A3 0%, #6D28D9 100%);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .cc-button:active {
+            transform: translateY(-1px) scale(0.98);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+        
+        .cc-button:focus {
+            outline: none;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .cc-button:disabled {
+            background: linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-color: transparent;
+        }
+        
+        .cc-button:disabled::before {
+            display: none;
+        }
+
         /* Responsive contact layout */
         @media (max-width: 480px) {
             .cc-contact-grid {
@@ -2988,10 +3062,16 @@
                                         } else if (data.type === 'response') {
                                             // Hide typing indicator and show response
                                             this.hideTypingIndicator();
-                                            this.addMessage(data.content, 'bot');
+                                            this.addMessage(data.response, 'bot'); // Fixed: use data.response instead of data.content
                                         } else if (data.type === 'error') {
                                             this.hideTypingIndicator();
-                                            this.addMessage('I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
+                                            this.addMessage(data.message || 'I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
+                                        } else if (data.type === 'acknowledgment') {
+                                            // Handle acknowledgment messages
+                                            continue;
+                                        } else if (data.type === 'complete') {
+                                            // Handle completion signal
+                                            continue;
                                         }
                                     } catch (parseError) {
                                         console.warn('Failed to parse streaming data:', parseError);
@@ -3082,7 +3162,7 @@
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
                 // Set default fallback URL
-                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8001'}/static/boy.png`;
+                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
                 
                 // Fetch environment config asynchronously and cache the result (non-blocking)
                 fetch(`${this.apiUrl.replace('/api/widget', '/api/config/env')}`)
@@ -3137,7 +3217,7 @@
             
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
-                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8001'}/static/boy.png`;
+                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
             }
             
             const avatar = sender === 'bot' ? `<img src="${logoUrl}" alt="Bot" />` : `<img src="${this.cachedUserAvatarUrl}" alt="User" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" />`;
@@ -3180,24 +3260,29 @@
             // Add user message showing the selected option
             this.addMessage(payload, 'user');
             
-            // Send the payload to Rasa directly
+            // Send the payload to Rasa through proxy
             this.sendMessageToRasa(payload);
         }
 
-        // Send message directly to Rasa webhook
+        // Send message through proxy to Rasa
         sendMessageToRasa(text) {
             this.showTypingIndicator();
             
-            const rasaUrl = 'http://localhost:5005/webhooks/rest/webhook';
+            // Use the proxy endpoint instead of direct RASA connection
+            const proxyUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/api/rasa/chat`;
             
-            fetch(rasaUrl, {
+            fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     sender: this.sessionId,
-                    message: text
+                    message: text,
+                    metadata: {
+                        timestamp: new Date().toISOString(),
+                        source: 'web_widget'
+                    }
                 })
             })
             .then(response => {
@@ -3210,26 +3295,58 @@
             .then(data => {
                 this.hideTypingIndicator();
                 
-                // Process Rasa response format
-                if (data && Array.isArray(data)) {
-                    data.forEach(item => {
-                        if (item.text) {
-                            if (item.buttons && item.buttons.length > 0) {
-                                // Message with buttons
-                                this.addMessageWithButtons(item.text, 'bot', item.buttons);
-                            } else {
-                                // Regular message
-                                this.addMessage(item.text, 'bot');
+                console.log('Proxy response:', data); // Debug logging
+                
+                // Process proxy response format
+                if (data && data.success) {
+                    // Handle new bot_messages format (array of message objects)
+                    if (data.bot_responses && Array.isArray(data.bot_responses)) {
+                        data.bot_responses.forEach(messageObj => {
+                            console.log('Processing message object:', messageObj); // Debug logging
+                            
+                            if (typeof messageObj === 'string') {
+                                // Old format - just text
+                                this.addMessage(messageObj, 'bot');
+                            } else if (typeof messageObj === 'object') {
+                                // New format - object with text and buttons
+                                const text = messageObj.text || '';
+                                const buttons = messageObj.buttons || [];
+                                
+                                console.log('Message text:', text, 'Buttons:', buttons); // Debug logging
+                                
+                                if (buttons.length > 0) {
+                                    // Message with buttons
+                                    this.addMessageWithButtons(text, 'bot', buttons);
+                                } else if (text) {
+                                    // Regular message
+                                    this.addMessage(text, 'bot');
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+                    // Fallback to raw_rasa_response for backward compatibility
+                    else if (data.raw_rasa_response && Array.isArray(data.raw_rasa_response)) {
+                        data.raw_rasa_response.forEach(item => {
+                            if (item.text) {
+                                if (item.buttons && item.buttons.length > 0) {
+                                    // Message with buttons
+                                    this.addMessageWithButtons(item.text, 'bot', item.buttons);
+                                } else {
+                                    // Regular message
+                                    this.addMessage(item.text, 'bot');
+                                }
+                            }
+                        });
+                    } else {
+                        this.addMessage('I apologize, but I\'m having trouble understanding your request. Could you please try rephrasing?', 'bot');
+                    }
                 } else {
                     this.addMessage('I apologize, but I\'m having trouble understanding your request. Could you please try rephrasing?', 'bot');
                 }
             })
             .catch(error => {
                 this.hideTypingIndicator();
-                console.error('Error communicating with Rasa:', error);
+                console.error('Error communicating with proxy:', error);
                 this.addMessage('I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
             });
         }
@@ -3483,9 +3600,9 @@
     // Initialize widget when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            new MultiTenantChatWidget();
+            window.cleverCompanionWidget = new MultiTenantChatWidget();
         });
     } else {
-        new MultiTenantChatWidget();
+        window.cleverCompanionWidget = new MultiTenantChatWidget();
     }
 })();

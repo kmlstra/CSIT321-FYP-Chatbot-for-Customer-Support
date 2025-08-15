@@ -25,15 +25,13 @@ class ActionDefaultFallback(AutoLoggedAction):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
-        response = """🤔 **I'm not sure I understand that request.**
+        response = """🤔 I'm not sure I understand that request.
 
         I can help you with:
-        • 🚗 **Vehicle Information** - Car details, specifications, availability
-        • 💰 **COE Prices** - Current prices, predictions, category explanations
-        • 🏦 **Loan Calculations** - Monthly payments, interest rates, requirements
-        • 🔧 **Maintenance** - Service schedules, repair guidance, booking appointments
-        • 📞 **Contact Information** - Phone, email, location, operating hours
-        • 🛞 **Test Drives** - Schedule test drives for available vehicles
+        • 💰 COE Prices - Current prices, predictions, category explanations
+        • 🏦 Loan Calculations - Monthly payments, interest rates, requirements
+        • 📅 Appointment Booking - Test Drive, Sales Consultation, Trade-in Evaluation
+        • 📞 Contact Information - Phone, email, location, operating hours
 
         Could you please rephrase your question or choose one of the topics above? 😊"""
         
@@ -58,12 +56,9 @@ class ActionCapabilityConfirm(AutoLoggedAction):
         elif any(word in user_text for word in ['coe', 'price', 'predict']):
             capability = "COE price information and predictions"
             details = "I can provide current COE prices, historical trends, and forecasts for different categories."
-        elif any(word in user_text for word in ['maintenance', 'service', 'repair']):
-            capability = "maintenance guidance"
-            details = "I can provide maintenance schedules, service recommendations, and help you book appointments."
-        elif any(word in user_text for word in ['vehicle', 'car', 'recommend']):
-            capability = "vehicle recommendations"
-            details = "I can suggest vehicles based on your budget, preferences, and requirements."
+        elif any(word in user_text for word in ['appointment', 'booking', 'schedule']):
+            capability = "appointment booking"
+            details = "I can help you book appointments for Test Drive, Sales Consultation, or Trade-in Evaluation."
         else:
             capability = "automotive assistance"
             details = "I can help with COE prices, loan calculations, vehicle information, maintenance guidance, and more."
@@ -86,29 +81,26 @@ class ActionProvideHelp(AutoLoggedAction):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
-        response = """🚗 **Hi! I'm CleverCompanion, your Singapore automotive assistant!**
+        response = """🚗 Hi! I'm CleverCompanion, your Singapore automotive assistant!
 
-**Here's what I can help you with:**
+Here's what I can help you with:
 
-🏷️ **COE Information:**
+🏷️ COE Information:
 • Current COE prices for all categories
 • COE trends and predictions
 • Category explanations (A, B, C, D, E)
 • Bidding process guidance
 • Renewal assistance
 
-📊 **Vehicle Services:**
-• Vehicle information and specifications
+📊 Vehicle Services:
 • Loan calculations and financing options
-• Maintenance scheduling and guidance
-• Test drive bookings
+• Appointment booking (Test Drive, Sales Consultation, Trade-in Evaluation)
 
-📞 **Contact & Support:**
+📞 Contact & Support:
 • Contact information and locations
 • Business hours and availability
-• General automotive guidance
 
-**How can I assist you today?** Just ask me about any of these topics, and I'll provide detailed information! 😊"""
+How can I assist you today? Just ask me about any of these topics, and I'll provide detailed information! 😊"""
         
         dispatcher.utter_message(text=response)
         return []
@@ -132,23 +124,21 @@ class ActionProvideClarification(AutoLoggedAction):
                 last_bot_message = text[:100] + "..." if len(text) > 100 else text
                 break
         
-        response = f"""🤔 **Let me clarify that for you!**
+        response = f"""🤔 Let me clarify that for you!
 
 I understand you'd like more explanation about {last_bot_message if last_bot_message != "my previous response" else "my previous response"}.
 
-**I can help explain:**
+I can help explain:
 • COE prices and categories in simple terms
 • How loan calculations work
-• Vehicle specifications and features
-• Maintenance requirements and schedules
-• Any automotive terms or processes
+• Appointment booking process and available services
 
-**What specifically would you like me to explain in more detail?** 
+What specifically would you like me to explain in more detail?
 
 Feel free to ask me to:
 • "Explain COE categories"
 • "How does loan calculation work?"
-• "What does this technical term mean?"
+• "What appointment types are available?"
 • Or any other question you have!
 
 I'm here to make everything clear and easy to understand! 😊"""
