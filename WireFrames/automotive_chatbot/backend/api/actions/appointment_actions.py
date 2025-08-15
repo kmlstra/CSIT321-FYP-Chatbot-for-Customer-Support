@@ -368,20 +368,6 @@ class ActionBookAppointment(AutoLoggedAction):
                     service_type = service_mapping[user_message]
                     logger.info(f"Button payload detected: '{user_message}' -> service_type: '{service_type}'")
             
-            # CRITICAL FIX: Fallback for button payloads when service_type entity is not extracted
-            if not service_type:
-                user_message = tracker.latest_message.get('text', '').lower().strip()
-                # Map button payloads to service types
-                service_mapping = {
-                    'sales consultation': 'Sales Consultation',
-                    'test drive': 'Test Drive', 
-                    'trade-in evaluation': 'Trade-in Evaluation',
-                }
-                
-                if user_message in service_mapping:
-                    service_type = service_mapping[user_message]
-                    logger.info(f"Button payload detected: '{user_message}' -> service_type: '{service_type}'")
-            
             # Fallback phone number extraction if not detected as entity
             if not customer_phone:
                 user_message = tracker.latest_message.get('text', '')
@@ -403,16 +389,6 @@ class ActionBookAppointment(AutoLoggedAction):
             if not appointment_active:
                 logger.info("Setting appointment_active to True - starting booking flow")
                 
-<<<<<<< Updated upstream
-                # Send welcome message with appointment type selection buttons
-                service_options = self._get_service_options_message()
-                dispatcher.utter_message(
-                    text=service_options["text"],
-                    buttons=service_options["buttons"]
-                )
-                
-                # Return any extracted entities as slots along with appointment_active
-=======
                 # # Check if user provided date/time info in their initial request
                 # if appointment_date and appointment_time:
                 #     # User provided date/time, skip welcome and go to service selection

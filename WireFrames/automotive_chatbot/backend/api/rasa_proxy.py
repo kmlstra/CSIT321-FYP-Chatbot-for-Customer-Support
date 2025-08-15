@@ -204,7 +204,6 @@ async def rasa_status():
             response = await client.get(
                 rasa_status_url,
                 timeout=30.0  # Increased timeout to match chat endpoint
->>>>>>> Stashed changes
             )
             response.raise_for_status()
             logger.info("RASA service status check successful")

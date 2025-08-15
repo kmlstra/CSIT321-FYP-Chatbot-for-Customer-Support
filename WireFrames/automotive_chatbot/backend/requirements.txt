@@ -4,11 +4,7 @@
 # CRITICAL: After installation, run:
 # pip install packaging==20.9 --force-reinstall --no-deps
 
-<<<<<<< Updated upstream
-# RASA CORE (ALREADY INSTALLED IN SETUP.PY)
-=======
 # RASA CORE (ESSENTIAL FOR CHATBOT)
->>>>>>> Stashed changes
 rasa==3.6.4
 rasa-sdk==3.6.1
 
@@ -24,36 +20,6 @@ scipy>=1.7.0,<1.12.0
 # DATABASE SUPPORT
 pymongo>=3.12,<4.0
 motor>=2.5.0,<3.0.0
-<<<<<<< Updated upstream
-certifi>=2023.0.0  # SSL certificate verification for MongoDB Atlas
-
-# SQL DATABASE
-SQLAlchemy==1.4.53
-
-# WEB FRAMEWORK
-fastapi==0.104.1
-uvicorn>=0.23.0,<0.24.0
-
-# WEBSOCKETS (RASA COMPATIBLE - RESEARCH BASED)
-websockets==10.0
-
-# NLP CORE (ESSENTIAL ONLY)
-transformers>=4.21.0,<4.25.0
-numpy>=1.19.2,<1.25.0
-
-# BASIC RAG (NO PROBLEMATIC PACKAGES)
-langchain>=0.0.300,<0.0.360
-
-# VECTOR SEARCH (SIMPLE FAISS ONLY)
-faiss-cpu>=1.7.4,<1.8.0
-
-# FILE PROCESSING (BASIC ONLY)
-pypdf>=3.15.0,<4.0.0
-openpyxl>=3.1.0,<4.0.0
-
-# HTTP UTILITIES
-requests>=2.31.0,<3.0.0
-=======
 SQLAlchemy==1.4.53
 
 # WEB FRAMEWORK
@@ -83,15 +49,11 @@ httpx>=0.25.0,<0.26.0
 
 # Environment Variables
 python-dotenv>=1.0.0,<2.0.0
->>>>>>> Stashed changes
 
 # JWT AUTHENTICATION
 python-jose[cryptography]>=3.3.0,<4.0.0
 passlib[bcrypt]>=1.7.4,<2.0.0
-<<<<<<< Updated upstream
-=======
 PyJWT>=2.8.0,<3.0.0
->>>>>>> Stashed changes
 
 # EMAIL VALIDATION
 email-validator>=2.0.0,<3.0.0
@@ -101,25 +63,6 @@ python-multipart>=0.0.20,<1.0.0
 
 # DATA ANALYTICS
 pandas>=1.5.0,<2.0.0
-<<<<<<< Updated upstream
-matplotlib>=3.5.0,<3.8.0
-
-# SYSTEM MONITORING
-psutil>=5.8.0,<6.0.0
-
-# ENVIRONMENT VARIABLES
-python-dotenv>=1.0.0,<2.0.0
-
-# TIMEZONE SUPPORT
-pytz>=2019.1,<2023.0
-
-# EMAIL NOTIFICATIONS & SCHEDULING
-schedule>=1.2.0,<2.0.0
-
-# WINDOWS SERVICE SUPPORT (OPTIONAL - only needed for Windows service installation)
-# Install separately if needed: pip install pywin32
-# pywin32>=306
-=======
 
 # ENCRYPTION FOR DATABASE PASSWORDS
 cryptography>=41.0.0,<42.0.0
@@ -180,4 +123,3 @@ loguru>=0.7.0,<1.0.0
 
 # FILE HANDLING
 aiofiles>=23.2.0,<24.0.0
->>>>>>> Stashed changes
