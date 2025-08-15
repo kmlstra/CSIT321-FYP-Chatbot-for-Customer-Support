@@ -126,14 +126,6 @@ def notify_rasa_server_down():
 
 def notify_backend_server_down():
     """Alert when FastAPI backend server is down"""
-<<<<<<< Updated upstream
-=======
-    import os
-    # Use unified domain:port approach
-    domain = os.getenv('DOMAIN', 'http://localhost')
-    backend_port = os.getenv('BACKEND_PORT', '8000')
-    backend_url = f"{domain}:{backend_port}"
->>>>>>> Stashed changes
     return notify_server_down(
         "FastAPI Backend", 
         "http://localhost:8000", 

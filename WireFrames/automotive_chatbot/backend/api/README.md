@@ -538,7 +538,7 @@ async def example_endpoint():
 ### Development Server
 ```bash
 # Start development server
-uvicorn api.main:app --reload --host localhost --port 8000
+uvicorn api.main:app --reload --host localhost --port 8001
 
 # With environment variables
 DEBUG=true uvicorn api.main:app --reload
@@ -547,10 +547,10 @@ DEBUG=true uvicorn api.main:app --reload
 ### Production Deployment
 ```bash
 # Production server with Gunicorn
-gunicorn api.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+gunicorn api.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001
 
 # Docker deployment
-docker run -p 8000:8000 -e DEBUG=false automotive-chatbot-api
+docker run -p 8001:8001 -e DEBUG=false automotive-chatbot-api
 ```
 
 ---

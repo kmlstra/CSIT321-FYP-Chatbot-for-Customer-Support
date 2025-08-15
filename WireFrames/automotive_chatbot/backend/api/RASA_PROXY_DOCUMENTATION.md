@@ -329,10 +329,10 @@ class ActionGetHistory(Action):
 rasa run --enable-api --cors "*" --port 5005
 
 # Start API server
-uvicorn api.main:app --reload --port 8000
+uvicorn api.main:app --reload --port 8001
 
 # Test proxy endpoint
-curl -X POST "http://localhost:8000/api/rasa/chat" \
+curl -X POST "http://localhost:8001/api/rasa/chat" \
      -H "Content-Type: application/json" \
      -d '{"message": "Hello", "sender": "test_user"}'
 ```

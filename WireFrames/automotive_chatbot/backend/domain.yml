@@ -131,9 +131,8 @@ responses:
   - text: "🎯 **All sorted!** Your appointment has been cancelled as requested.\n\n⭐ **Planning ahead?** Feel free to reach out when you're ready to book again - I'll be happy to help you find the perfect time slot!\n\n🤝 **What can I help you with next?** I'm here for all your automotive needs!"
   - text: "✨ **Done!** Your appointment cancellation is complete.\n\n🔄 **Change of plans happens!** When you're ready to reschedule or book a new service, just let me know and I'll take care of everything.\n\n💡 **Anything else on your mind?** I'm here to help with vehicles, financing, COE information, and more!"
 
-  # utter_appointment_booking_started:
-  # - text: "📅 **Great! Let's get your appointment scheduled.**\n\n🔧 **I'll help you book the perfect time slot for your automotive service.**\n\n💬 **What type of service would you like to schedule today?**"
-  # Commented out to prevent split responses - now handled by action_book_appointment with clickable buttons
+  utter_appointment_booking_started:
+  - text: "📅 **Great! Let's get your appointment scheduled.**\n\n🔧 **I'll help you book the perfect time slot for your automotive service.**\n\n💬 **What type of service would you like to schedule today?**"
 
   # utter_appointment_booking_started:
   # Removed static responses - now handled by action_book_appointment with clickable buttons
@@ -184,7 +183,7 @@ actions:
   - utter_out_of_scope
   - utter_default
   - utter_appointment_cancelled
-  # - utter_appointment_booking_started  # Commented out - handled by action_book_appointment
+  - utter_appointment_booking_started
   # - utter_appointment_help
   # - utter_appointment_confirmation_reminder
   # - utter_appointment_rescheduling_help
