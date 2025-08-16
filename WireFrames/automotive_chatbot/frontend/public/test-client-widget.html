@@ -7,9 +7,15 @@
     <!-- Cache Busting: Press Ctrl+F5 or Ctrl+Shift+R to force refresh if widget doesn't load -->
     <style>
         body {
+            margin: 0;
+            padding: 0;
             font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
+            background-image: url('media/images/ezdealer.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
         }
         .test-container {
             max-width: 800px;
@@ -63,7 +69,7 @@
 <body>
 
 <!-- CleverCompanion Chatbot Widget -->
-<script async>window.CleverCompanionConfig = { clientId: '689c12fcdf830f867a329787' };</script>
+<script async>window.CleverCompanionConfig = { clientId: '689c9761bc4138c381b17f66' };</script>
 <script async>
     // Auto-detect environment: use current host if not localhost, otherwise default to AWS
     const currentHost = window.location.hostname;
@@ -83,15 +89,5 @@
     document.head.appendChild(script2);
 </script>
 <!-- End CleverCompanion Widget -->
-
-    <!-- CleverCompanion Chatbot Widget -->
-        <!-- <script>
-        window.CleverCompanionConfig = {
-            clientId: '689c9761bc4138c381b17f66'
-        };
-        </script>
-        <script src="http://localhost:8000/clevercompanion-widget.js" async></script>
-        <script src="http://localhost:8000/page-interactions.js" async></script> -->
-        <!-- End CleverCompanion Widget -->
 </body>
 </html>

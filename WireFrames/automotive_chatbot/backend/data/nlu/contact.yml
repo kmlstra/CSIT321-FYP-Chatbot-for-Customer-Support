@@ -95,8 +95,7 @@ nlu:
     - when are you open
     - hours of operation
     - shop hours
-    - timings
-    - schedule
+    - business timings
     - when do you operate
     - operation timings
     - store hours
@@ -107,7 +106,6 @@ nlu:
     - office hours
     - working hours
     - when do you work
-    - work schedule
     - office timings
     - business timings
     - company hours
@@ -138,17 +136,5 @@ nlu:
     - deepavali opening
     - hari raya opening
 
-- intent: confirm_schedule_visit
-  examples: |
-    - schedule visit
-    - I want to visit
-    - book a visit
-    - I want to schedule
-    - please schedule
-    - ok, schedule
-    - yes, please book
-    - book me in
-    - set up a visit
-    - arrange a visit
-    - I'd like to schedule
-    - please book me
+# Removed confirm_schedule_visit intent - conflicts with appointment booking
+# Users should use book_appointment intent for scheduling visits/appointments

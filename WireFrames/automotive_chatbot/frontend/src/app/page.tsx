@@ -119,34 +119,34 @@ export default function ClientLoginPage() {
             </p>
           </div>
 
-          <div className="mt-4 text-center">
+          {/* <div className="mt-4 text-center">
             <p className="text-gray-500 text-xs">
               Need help? Contact support at{' '}
               <a href="mailto:support@clevercompanion.com" className="text-indigo-600">
                 support@clevercompanion.com
               </a>
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Test Credentials */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        {/* <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-800 mb-2">Test Credentials</h3>
           <div className="text-blue-700 text-sm space-y-1">
             <p><strong>Email:</strong> admin@abcmotors.com.sg</p>
             <p><strong>Password:</strong> password123</p>
           </div>
-        </div>
+        </div> */}
 
         {/* Super Admin Access */}
-        <div className="mt-4 text-center">
+        {/* <div className="mt-4 text-center">
           <a 
             href="/super-admin-login" 
             className="text-xs text-gray-500 hover:text-gray-700"
           >
             Super Admin Access
           </a>
-        </div>
+        </div> */}
       </div>
     </div>
   );

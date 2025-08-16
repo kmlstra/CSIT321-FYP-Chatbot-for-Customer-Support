@@ -12,10 +12,12 @@ from api.services.email_service import send_appointment_confirmation_email, send
 from api.utils.cache import appointment_cache, client_cache
 from api.cache.feature_cache_manager import check_appointment_feature_enabled
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import pytz
 from bson import ObjectId
 import re
+from dateutil import parser
+from dateutil.relativedelta import relativedelta
 import os
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -29,7 +31,20 @@ load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
 MONGODB_URL = os.getenv('MONGODB_URL')
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'automotive_chatbot_saas')
 
-logger = logging.getLogger(__name__)
+# Configure detailed logging for appointment actions
+logger = logging.getLogger('api.actions.appointment_actions')
+logger.setLevel(logging.DEBUG)
+
+# Create console handler with detailed formatting
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
+    )
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.propagate = False
 
 # MongoDB connection helper
 async def get_mongodb_client():
@@ -61,7 +76,6 @@ async def get_client_data_from_db(client_id: str):
                 pass
         
         if not client:
-            logger.warning(f"No client found for ID: {client_id}")
             return None
             
         return client
@@ -170,20 +184,26 @@ class ActionValidateIntent(AutoLoggedAction):
             # Store tracker for use in helper methods
             self.tracker = tracker
             
+            # Extract session and client information for logging
+            session_id = tracker.sender_id
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            
             # Get current intent and conversation context
             current_intent = tracker.latest_message.get('intent', {}).get('name')
             user_message = tracker.latest_message.get('text', '').lower()
             appointment_active = tracker.get_slot("appointment_active")
             confidence = tracker.latest_message.get('intent', {}).get('confidence', 0)
             
-            logger.info(f"Validating intent: {current_intent} with confidence: {confidence}")
-            logger.info(f"User message: {user_message}")
-            logger.info(f"Appointment active: {appointment_active}")
+            logger.debug(f"ActionValidateIntent START - Session: {session_id}, Client: {client_id}")
+            logger.debug(f"Intent: {current_intent}, Confidence: {confidence:.3f}, Text: '{user_message}'")
+            logger.debug(f"Appointment Active: {appointment_active}")
             
             # Check if user is in middle of booking process
             if appointment_active:
+                logger.debug(f"User in booking process, checking intent compatibility")
                 # If user is booking and says something unrelated, guide them back
                 if current_intent not in ['book_appointment', 'provide_info', 'affirm', 'deny']:
+                    logger.debug(f"Unrelated intent {current_intent} during booking, resetting appointment_active")
                     dispatcher.utter_message(
                         text="I notice you're in the middle of booking an appointment. Would you like to continue with the booking or start something else? Just let me know!"
                     )
@@ -191,25 +211,28 @@ class ActionValidateIntent(AutoLoggedAction):
             
             # Check for low confidence predictions
             if confidence < 0.7:
-                logger.warning(f"Low confidence intent prediction: {current_intent} ({confidence})")
+                logger.debug(f"Low confidence ({confidence:.3f}) for intent {current_intent}, handling unclear intent")
                 return self._handle_unclear_intent(dispatcher, user_message)
             
             # Validate appointment-related intents have required context
             validation_result = self._validate_intent_context(current_intent, user_message, tracker)
             if validation_result:
+                logger.debug(f"Intent validation failed for {current_intent}: {validation_result}")
                 dispatcher.utter_message(text=validation_result)
                 return []
             
             # Check for potential misclassified intents
             misclassification_result = self._check_misclassification(current_intent, user_message, dispatcher)
             if misclassification_result:
+                logger.debug(f"Misclassification detected for intent {current_intent}")
                 return misclassification_result
             
             # Intent is valid for current context
+            logger.debug(f"Intent {current_intent} validated successfully")
             return []
             
         except Exception as e:
-            logger.error(f"Error in ActionValidateIntent: {e}")
+            logger.error(f"Error in ActionValidateIntent: {e}", exc_info=True)
             return []
     
 
@@ -315,15 +338,365 @@ class ActionValidateIntent(AutoLoggedAction):
         return []
 
 
-class ActionBookAppointment(AutoLoggedAction):
-    """Book a new appointment for automotive services
+class ActionAppointmentCalculator(AutoLoggedAction):
+    """Enhanced appointment booking system following loan calculator format"""
     
-    Features:
-    - Collects appointment details (date, time, service type, contact info)
-    - Validates appointment slots
-    - Stores appointment in database
-    - Provides confirmation with appointment ID
-    """
+    def name(self) -> Text:
+        return "action_appointment_calculator"
+    
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        try:
+            # Check if appointment booking feature is enabled for this client
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            if client_id:
+                if not check_appointment_feature_enabled(client_id):
+                    dispatcher.utter_message(
+                        text="I'm sorry, but appointment booking is currently not available. Please contact our support team for assistance."
+                    )
+                    return []
+            
+            user_message = tracker.latest_message.get('text', '').strip().lower()
+            
+            # Check if this is a welcome/help request
+            if self._is_welcome_request(user_message):
+                self._show_appointment_help(dispatcher, client_id)
+                return []
+            
+            # Try to extract appointment parameters
+            appointment_params = self._extract_appointment_parameters(user_message)
+            
+            if appointment_params:
+                # All parameters found, proceed with booking
+                return self._process_appointment_booking(dispatcher, appointment_params, client_id)
+            else:
+                # Show input format requirements
+                self._show_input_format(dispatcher, client_id)
+                return []
+                
+        except Exception as e:
+            logger.error(f"[APPOINTMENT_CALCULATOR] Error: {e}", exc_info=True)
+            dispatcher.utter_message(text="❌ Sorry, there was an error processing your request. Please try again.")
+            return []
+    
+    def _is_welcome_request(self, text: str) -> bool:
+        """Check if this is a general appointment booking request without specific parameters"""
+        welcome_phrases = [
+            'book appointment',
+            'schedule appointment',
+            'appointment booking',
+            'i want to book',
+            'make appointment',
+            'schedule service'
+        ]
+        # Check if it's a general request without specific details
+        is_general_request = any(phrase in text for phrase in welcome_phrases)
+        has_specific_details = any(keyword in text for keyword in ['test drive', 'sales', 'trade', 'tomorrow', 'today', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) or bool(re.search(r'\d{1,2}\s*(am|pm)', text))
+        return is_general_request and not has_specific_details
+    
+    def _show_appointment_help(self, dispatcher: CollectingDispatcher, client_id: str) -> None:
+        """Show appointment booking help information with operating hours and services"""
+        # Get client data for business hours and services
+        client_data = get_client_data(client_id) if client_id else {}
+        
+        # Format business hours
+        business_hours_text = self._format_business_hours(client_data.get('business_hours', {}))
+        
+        # Get available services
+        services_text = self._format_available_services()
+        
+        response = f"""📅 **Appointment Booking System**
+
+I can help you schedule your service appointment!
+
+🕒 **Our Operating Hours:**
+{business_hours_text}
+
+🔧 **Available Services:**
+{services_text}
+
+📝 **How to book:**
+Provide these 5 details in any order:
+• Service type (Test Drive, Sales Consultation, Trade-in Evaluation)
+• Your name
+• Phone number
+• Date (today, tomorrow, Monday, etc.)
+• Time (2pm, 10:30am, etc.)
+
+💡 **Example:**
+"Book test drive for John Smith, 91234567, tomorrow 2pm"
+
+🔢 **Simple format:**
+"Test Drive, John Smith, 91234567, tomorrow, 2pm"
+
+Try it now! 🚗📞"""
+        
+        dispatcher.utter_message(text=response)
+    
+    def _format_business_hours(self, business_hours: Dict[str, Any]) -> str:
+        """Format business hours for display"""
+        if not business_hours:
+            return "Mon-Fri: 9:00 AM - 6:00 PM\nSat: 9:00 AM - 5:00 PM\nSun: Closed"
+        
+        days_order = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        day_names = {'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed', 'thursday': 'Thu', 
+                    'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun'}
+        
+        formatted_hours = []
+        for day in days_order:
+            if day in business_hours:
+                hours = business_hours[day]
+                if isinstance(hours, str):
+                    formatted_hours.append(f"{day_names[day]}: {hours}")
+                else:
+                    formatted_hours.append(f"{day_names[day]}: 9:00 AM - 6:00 PM")
+            else:
+                formatted_hours.append(f"{day_names[day]}: 9:00 AM - 6:00 PM")
+        
+        return "\n".join(formatted_hours)
+    
+    def _format_available_services(self) -> str:
+        """Format available services for display"""
+        appointment_types = get_appointment_types()
+        services = []
+        
+        for service in appointment_types:
+            name = service['name']
+            duration = service['duration']
+            description = service.get('description', '')
+            services.append(f"• **{name}** ({duration} min) - {description}")
+        
+        return "\n".join(services)
+    
+    def _extract_appointment_parameters(self, text: str) -> Optional[Dict[str, str]]:
+        """Extract appointment parameters from user input"""
+        # Try simple comma-separated format first
+        parts = [part.strip() for part in text.split(',')]
+        
+        if len(parts) >= 5:
+            try:
+                return {
+                    'service_type': parts[0].title(),
+                    'customer_name': parts[1].title(),
+                    'customer_phone': self._clean_phone_number(parts[2]),
+                    'appointment_date': parts[3].lower(),
+                    'appointment_time': parts[4].lower()
+                }
+            except (ValueError, IndexError):
+                pass
+        
+        # Try extracting from natural language
+        service_type = self._extract_service_type(text)
+        customer_name = self._extract_customer_name(text)
+        customer_phone = self._extract_phone_number(text)
+        appointment_date = self._extract_date(text)
+        appointment_time = self._extract_time(text)
+        
+        # Only return if all parameters are found
+        if all(param is not None for param in [service_type, customer_name, customer_phone, appointment_date, appointment_time]):
+            return {
+                'service_type': service_type,
+                'customer_name': customer_name,
+                'customer_phone': customer_phone,
+                'appointment_date': appointment_date,
+                'appointment_time': appointment_time
+            }
+        
+        return None
+    
+    def _extract_service_type(self, text: str) -> Optional[str]:
+        """Extract service type from text"""
+        text_lower = text.lower()
+        if 'test drive' in text_lower:
+            return 'Test Drive'
+        elif 'sales' in text_lower or 'consultation' in text_lower:
+            return 'Sales Consultation'
+        elif 'trade' in text_lower or 'evaluation' in text_lower:
+            return 'Trade-in Evaluation'
+        return None
+    
+    def _extract_customer_name(self, text: str) -> Optional[str]:
+        """Extract customer name from text"""
+        # Look for name patterns
+        name_patterns = [
+            r'for\s+([A-Za-z]+\s+[A-Za-z]+)',
+            r'name\s+([A-Za-z]+\s+[A-Za-z]+)',
+            r'([A-Za-z]+\s+[A-Za-z]+)\s*,\s*\d{8}',
+        ]
+        
+        for pattern in name_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                name = match.group(1).strip().title()
+                # Validate it's not a service type or common word
+                if name.lower() not in ['test drive', 'sales consultation', 'trade evaluation']:
+                    return name
+        
+        return None
+    
+    def _extract_date(self, text: str) -> Optional[str]:
+        """Extract date from text"""
+        text_lower = text.lower()
+        date_keywords = ['today', 'tomorrow', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        
+        for keyword in date_keywords:
+            if keyword in text_lower:
+                return keyword
+        
+        return None
+    
+    def _extract_time(self, text: str) -> Optional[str]:
+        """Extract time from text"""
+        time_patterns = [
+            r'(\d{1,2})\s*(am|pm)',
+            r'(\d{1,2}):(\d{2})\s*(am|pm)',
+            r'(\d{1,2})\.(\d{2})\s*(am|pm)'
+        ]
+        
+        for pattern in time_patterns:
+            match = re.search(pattern, text.lower())
+            if match:
+                if len(match.groups()) == 2:  # Simple format like "2pm"
+                    return f"{match.group(1)}{match.group(2)}"
+                else:  # Format with minutes like "2:30pm"
+                    return f"{match.group(1)}:{match.group(2)}{match.group(3)}"
+        
+        return None
+    
+    def _clean_phone_number(self, phone: str) -> str:
+        """Clean and validate phone number"""
+        # Remove all non-digits
+        cleaned = re.sub(r'\D', '', phone)
+        
+        # Handle Singapore format
+        if len(cleaned) == 10 and cleaned.startswith('65'):
+            cleaned = cleaned[2:]  # Remove country code
+        
+        return cleaned
+    
+    def _process_appointment_booking(self, dispatcher: CollectingDispatcher, params: Dict[str, str], client_id: str) -> List[Dict[Text, Any]]:
+        """Process the appointment booking with confirmation"""
+        try:
+            # Validate parameters
+            validation_result = self._validate_appointment_parameters(params)
+            if not validation_result['valid']:
+                dispatcher.utter_message(text=f"❌ {validation_result['error']}")
+                self._show_input_format(dispatcher, client_id)
+                return []
+            
+            # Create appointment datetime
+            appointment_datetime = self._create_appointment_datetime(params['appointment_date'], params['appointment_time'])
+            
+            # Create appointment data
+            appointment_data = {
+                'service_type': params['service_type'],
+                'customer_name': params['customer_name'],
+                'customer_phone': params['customer_phone'],
+                'appointment_date': params['appointment_date'],
+                'appointment_time': params['appointment_time'],
+                'appointment_datetime': appointment_datetime,
+                'customer_email': '',
+                'status': 'confirmed',
+                'client_id': client_id,
+                'appointment_id': str(ObjectId()),
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            }
+            
+            # Save appointment
+            if self._save_appointment(appointment_data):
+                self._display_booking_confirmation(dispatcher, params, appointment_datetime)
+            else:
+                dispatcher.utter_message(text="❌ Sorry, there was an error booking your appointment. Please try again.")
+            
+            return []
+            
+        except Exception as e:
+            logger.error(f"[APPOINTMENT_CALCULATOR] Error processing booking: {e}", exc_info=True)
+            dispatcher.utter_message(text="❌ Sorry, there was an error processing your booking. Please try again.")
+            return []
+    
+    def _validate_appointment_parameters(self, params: Dict[str, str]) -> Dict[str, Any]:
+        """Validate appointment parameters"""
+        # Validate service type
+        valid_services = ['Test Drive', 'Sales Consultation', 'Trade-in Evaluation']
+        if params['service_type'] not in valid_services:
+            return {'valid': False, 'error': f"Invalid service type. Available services: {', '.join(valid_services)}"}
+        
+        # Validate phone number
+        phone = params['customer_phone']
+        if not phone or len(phone) != 8 or not phone.isdigit() or phone[0] not in '689':
+            return {'valid': False, 'error': "Invalid phone number. Please provide a valid 8-digit Singapore number starting with 6, 8, or 9."}
+        
+        # Validate name
+        name = params['customer_name']
+        if not name or len(name.split()) < 2:
+            return {'valid': False, 'error': "Please provide your full name (first and last name)."}
+        
+        return {'valid': True}
+    
+    def _display_booking_confirmation(self, dispatcher: CollectingDispatcher, params: Dict[str, str], appointment_datetime: datetime) -> None:
+        """Display appointment booking confirmation"""
+        formatted_date = appointment_datetime.strftime('%B %d, %Y')
+        formatted_time = appointment_datetime.strftime('%I:%M %p')
+        
+        response = f"""✅ **Appointment Booking Confirmed!**
+
+📅 **Appointment Details:**
+• Service: {params['service_type']}
+• Customer: {params['customer_name']}
+• Phone: {params['customer_phone']}
+• Date: {formatted_date}
+• Time: {formatted_time}
+
+📧 **Confirmation sent to your contact details!**
+⏰ **We'll send you a reminder 24 hours before your appointment.**
+
+💬 **Need to reschedule or cancel?**
+Just send us a message with your phone number!
+
+🚗 **Thank you for choosing our services!**"""
+        
+        dispatcher.utter_message(text=response)
+    
+    def _show_input_format(self, dispatcher: CollectingDispatcher, client_id: str) -> None:
+        """Show input format when parameters cannot be extracted"""
+        # Get available services for display
+        services_text = self._format_available_services()
+        
+        response = f"""❌ **I couldn't understand your appointment details**
+
+Please provide all 5 details:
+
+🔧 **Available Services:**
+{services_text}
+
+🔢 **Simple format:**
+"Service, Full Name, Phone, Date, Time"
+
+💡 **Examples:**
+• "Test Drive, John Smith, 91234567, tomorrow, 2pm"
+• "Sales Consultation, Mary Tan, 98765432, Monday, 10:30am"
+
+💬 **Natural format:**
+"Book test drive for John Smith, phone 91234567, tomorrow at 2pm"
+
+📝 **Required details:**
+• Service type (Test Drive, Sales Consultation, Trade-in Evaluation)
+• Full name (first and last)
+• 8-digit phone number (starting with 6, 8, or 9)
+• Date (today, tomorrow, or day of week)
+• Time (with am/pm)
+
+Try again with all 5 details! 🚗📞"""
+        
+        dispatcher.utter_message(text=response)
+
+
+class ActionBookAppointment(AutoLoggedAction):
+    """Simplified appointment booking - just collect basic info and save to database"""
     
     def name(self) -> Text:
         return "action_book_appointment"
@@ -333,822 +706,325 @@ class ActionBookAppointment(AutoLoggedAction):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         try:
-            # Extract slots
-            appointment_date = tracker.get_slot("appointment_date")
-            appointment_time = tracker.get_slot("appointment_time")
+            # Get basic info from user message
+            user_message = tracker.latest_message.get('text', '').strip()
+            client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            
+            # Get current slots
             service_type = tracker.get_slot("service_type")
             customer_name = tracker.get_slot("customer_name")
             customer_phone = tracker.get_slot("customer_phone")
             customer_email = tracker.get_slot("customer_email")
-            appointment_active = tracker.get_slot("appointment_active")
+            appointment_date = tracker.get_slot("appointment_date")
+            appointment_time = tracker.get_slot("appointment_time")
             
-            # Extract entities from current message to supplement slots
-            latest_message = tracker.latest_message
-            if not isinstance(latest_message, dict):
-                logger.warning(f"Latest message is not a dict: {type(latest_message)}")
-                entities = []
-            else:
-                entities = latest_message.get('entities', [])
-                if not isinstance(entities, list):
-                    logger.warning(f"Entities is not a list: {type(entities)}")
-                    entities = []
-            
-            # Update slots with entities from current message if slots are empty
-            for entity in entities:
-                # Ensure entity is a dictionary before accessing its properties
-                if not isinstance(entity, dict):
-                    logger.warning(f"Skipping non-dict entity: {entity}")
-                    continue
-                    
-                entity_name = entity.get('entity')
-                entity_value = entity.get('value')
-                
-                # Validate entity data
-                if not entity_name or not entity_value:
-                    continue
-                
-                if entity_name == 'appointment_date' and not appointment_date:
-                    appointment_date = entity_value
-                elif entity_name == 'appointment_time' and not appointment_time:
-                    appointment_time = entity_value
-                elif entity_name == 'service_type' and not service_type:
-                    service_type = entity_value
-                elif entity_name == 'customer_name' and not customer_name:
-                    customer_name = entity_value
-                elif entity_name == 'customer_phone' and not customer_phone:
-                    customer_phone = entity_value
-                elif entity_name == 'customer_email' and not customer_email:
-                    customer_email = entity_value
-            
-            # CRITICAL FIX: Fallback for button payloads when service_type entity is not extracted
+            # Enhanced service type detection - check both slots and current message
             if not service_type:
-                user_message = tracker.latest_message.get('text', '').lower().strip()
-                # Map button payloads to service types
-                service_mapping = {
-                    'sales consultation': 'Sales Consultation',
-                    'test drive': 'Test Drive', 
-                    'trade-in evaluation': 'Trade-in Evaluation',
-                }
+                # Check if service_type entity was extracted from current message
+                entities = tracker.latest_message.get('entities', [])
+                for entity in entities:
+                    if entity.get('entity') == 'service_type':
+                        service_type = entity.get('value', '').title()
+                        break
                 
-                if user_message in service_mapping:
-                    service_type = service_mapping[user_message]
-                    logger.info(f"Button payload detected: '{user_message}' -> service_type: '{service_type}'")
+                # Fallback to text-based detection if no entity found
+                if not service_type:
+                    user_message_lower = user_message.lower()
+                    if 'test drive' in user_message_lower:
+                        service_type = 'Test Drive'
+                    elif 'sales' in user_message_lower or 'consultation' in user_message_lower:
+                        service_type = 'Sales Consultation'
+                    elif 'trade' in user_message_lower or 'evaluation' in user_message_lower:
+                        service_type = 'Trade-in Evaluation'
             
-            # Fallback phone number extraction if not detected as entity
+            # Log current slot values for debugging
+            logger.debug(f"[APPOINTMENT_BOOKING] Current slots - service_type: {service_type}, customer_name: {customer_name}, customer_phone: {customer_phone}")
+            logger.debug(f"[APPOINTMENT_BOOKING] User message: {user_message}")
+            
+            # Simple phone extraction
             if not customer_phone:
-                user_message = tracker.latest_message.get('text', '')
-                extracted_phone = self._extract_phone_number(user_message)
-                if extracted_phone:
-                    customer_phone = extracted_phone
+                phone_match = re.search(r'\b([689]\d{7})\b', user_message)
+                if phone_match:
+                    customer_phone = phone_match.group(1)
             
-            # Fallback for combined date-time inputs like "wednesday 2pm"
+            # Simple name extraction
+            if not customer_name:
+                words = user_message.split()
+                for word in words:
+                    if word.isalpha() and len(word) > 2 and word.lower() not in ['test', 'drive', 'sales', 'consultation', 'trade', 'appointment', 'book', 'schedule']:
+                        customer_name = word.title()
+                        break
+            
+            # Enhanced date/time extraction - handle combined inputs like 'monday 1pm'
             if not appointment_date or not appointment_time:
-                user_message = tracker.latest_message.get('text', '').lower()
-                parsed_datetime = self._parse_combined_datetime(user_message)
-                if parsed_datetime:
-                    if not appointment_date and parsed_datetime.get('date'):
-                        appointment_date = parsed_datetime['date']
-                    if not appointment_time and parsed_datetime.get('time'):
-                        appointment_time = parsed_datetime['time']
-            
-            # Set appointment_active to true when booking starts
-            if not appointment_active:
-                logger.info("Setting appointment_active to True - starting booking flow")
+                # Extract both date and time from combined inputs
+                extracted_date, extracted_time = self._extract_date_time_from_message(user_message)
                 
-                # # Check if user provided date/time info in their initial request
-                # if appointment_date and appointment_time:
-                #     # User provided date/time, skip welcome and go to service selection
-                #     logger.info("User provided date/time info, proceeding to service selection")
-                #     service_options = self._get_service_options_message()
-                #     dispatcher.utter_message(
-                #         text=f"📅 **Great! I have {appointment_date} at {appointment_time}.**\n\n{service_options['text']}",
-                #         buttons=service_options["buttons"]
-                #     )
-                #     # Return early to prevent continuing to step-by-step flow
-                #     slot_updates = [SlotSet("appointment_active", True)]
-                #     if appointment_date:
-                #         slot_updates.append(SlotSet("appointment_date", appointment_date))
-                #     if appointment_time:
-                #         slot_updates.append(SlotSet("appointment_time", appointment_time))
-                #     if service_type:
-                #         slot_updates.append(SlotSet("service_type", service_type))
-                #     if customer_name:
-                #         slot_updates.append(SlotSet("customer_name", customer_name))
-                #     if customer_phone:
-                #         slot_updates.append(SlotSet("customer_phone", customer_phone))
-                #     if customer_email:
-                #         slot_updates.append(SlotSet("customer_email", customer_email))
-                #     return slot_updates
-                if appointment_date or appointment_time:
-                    # User provided partial date/time info
-                    logger.info("User provided partial date/time info, proceeding to service selection")
-                    service_options = self._get_service_options_message()
-                    partial_info = appointment_date or appointment_time
-                    dispatcher.utter_message(
-                        text=f"📅 **Perfect! I have {partial_info} noted.**\n\n{service_options['text']}",
-                        buttons=service_options["buttons"]
-                    )
-                    # Return early to prevent continuing to step-by-step flow
-                    slot_updates = [SlotSet("appointment_active", True)]
-                    if appointment_date:
-                        slot_updates.append(SlotSet("appointment_date", appointment_date))
-                    if appointment_time:
-                        slot_updates.append(SlotSet("appointment_time", appointment_time))
-                    if service_type:
-                        slot_updates.append(SlotSet("service_type", service_type))
-                    if customer_name:
-                        slot_updates.append(SlotSet("customer_name", customer_name))
-                    if customer_phone:
-                        slot_updates.append(SlotSet("customer_phone", customer_phone))
-                    if customer_email:
-                        slot_updates.append(SlotSet("customer_email", customer_email))
-                    return slot_updates
-                else:
-                    # Standard welcome message with service selection
-                    service_options = self._get_service_options_message()
-                    logger.info(f"Sending service options with {len(service_options['buttons'])} buttons: {service_options['buttons']}")
-                    dispatcher.utter_message(
-                        text=service_options["text"],
-                        buttons=service_options["buttons"]
-                    )
-                    # Return early to prevent continuing to step-by-step flow
-                    slot_updates = [SlotSet("appointment_active", True)]
-                    if appointment_date:
-                        slot_updates.append(SlotSet("appointment_date", appointment_date))
-                    if appointment_time:
-                        slot_updates.append(SlotSet("appointment_time", appointment_time))
-                    if service_type:
-                        slot_updates.append(SlotSet("service_type", service_type))
-                    if customer_name:
-                        slot_updates.append(SlotSet("customer_name", customer_name))
-                    if customer_phone:
-                        slot_updates.append(SlotSet("customer_phone", customer_phone))
-                    if customer_email:
-                        slot_updates.append(SlotSet("customer_email", customer_email))
-                    return slot_updates
+                if not appointment_date and extracted_date:
+                    appointment_date = extracted_date
+                    
+                if not appointment_time and extracted_time:
+                    appointment_time = extracted_time
             
-            # Special handling: If appointment is active and user already provided date/time,
-            # and now they're providing service type, proceed to contact info collection
-            elif appointment_active and appointment_date and appointment_time and service_type and (not customer_name or not customer_phone):
-                logger.info("User provided service type after date/time, proceeding to contact info collection")
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if appointment_date:
-                    slot_updates.append(SlotSet("appointment_date", appointment_date))
-                if appointment_time:
-                    slot_updates.append(SlotSet("appointment_time", appointment_time))
-                if service_type:
-                    slot_updates.append(SlotSet("service_type", service_type))
-                if customer_name:
-                    slot_updates.append(SlotSet("customer_name", customer_name))
-                if customer_phone:
-                    slot_updates.append(SlotSet("customer_phone", customer_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for contact information directly
-                contact_message = self._generate_contact_request_message(customer_name, customer_phone)
-                dispatcher.utter_message(text=contact_message)
-                return slot_updates
-            
-            # Additional check: If user just provided service type and we have date/time from slots, proceed to contact info
-            elif appointment_active and service_type and tracker.get_slot("appointment_date") and tracker.get_slot("appointment_time") and (not customer_name or not customer_phone):
-                logger.info("Service type provided, date/time already in slots, proceeding to contact info")
-                # Use slot values for date/time if not in current entities
-                slot_date = tracker.get_slot("appointment_date") if not appointment_date else appointment_date
-                slot_time = tracker.get_slot("appointment_time") if not appointment_time else appointment_time
-                
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                slot_updates.append(SlotSet("appointment_date", slot_date))
-                slot_updates.append(SlotSet("appointment_time", slot_time))
-                slot_updates.append(SlotSet("service_type", service_type))
-                if customer_name:
-                    slot_updates.append(SlotSet("customer_name", customer_name))
-                if customer_phone:
-                    slot_updates.append(SlotSet("customer_phone", customer_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for contact information directly
-                contact_message = self._generate_contact_request_message(customer_name, customer_phone)
-                dispatcher.utter_message(text=contact_message)
-                return slot_updates
-            
-            # Debug: Log current slot values
-            logger.info(f"Current entities - Date: {appointment_date}, Time: {appointment_time}, Service: {service_type}, Name: {customer_name}, Phone: {customer_phone}, Email: {customer_email}")
-            
-            # Step-by-step information collection - improved flow logic
-            # Priority 1: If appointment is active and service type is provided, proceed to date/time
-            # Priority 2: If date/time provided but no service type, ask for service type
-            # Priority 3: If service type provided but no date/time, ask for date/time  
-            # Priority 4: If both provided but no contact info, ask for contact info
-            
-            # Check what's missing and prioritize based on what user provided
-            # Also check slot values to get complete picture
-            slot_service = tracker.get_slot("service_type")
-            slot_date = tracker.get_slot("appointment_date")
-            slot_time = tracker.get_slot("appointment_time")
-            slot_name = tracker.get_slot("customer_name")
-            slot_phone = tracker.get_slot("customer_phone")
-            
-            # Use current entities or fall back to slot values
-            current_service = service_type or slot_service
-            current_date = appointment_date or slot_date
-            current_time = appointment_time or slot_time
-            current_name = customer_name or slot_name
-            current_phone = customer_phone or slot_phone
-            
-            missing_service = not current_service
-            missing_datetime = not current_date or not current_time
-            missing_contact = not current_name or not current_phone
-            
-            logger.info(f"Flow check - Service: {current_service} (entity: {service_type}, slot: {slot_service}), Date: {current_date}, Time: {current_time}, Name: {current_name}, Phone: {current_phone}")
-            logger.info(f"Missing flags - Service: {missing_service}, DateTime: {missing_datetime}, Contact: {missing_contact}")
-            
-            # CRITICAL FIX: If appointment is active and user just provided a service type, proceed to date/time
-            if appointment_active and service_type and missing_datetime:
-                logger.info("Service type provided after initial options, proceeding to date/time request")
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if service_type:  # Use the newly provided service type
-                    slot_updates.append(SlotSet("service_type", service_type))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for date and time
-                datetime_message = self._generate_datetime_request_message(service_type, current_date, current_time)
-                dispatcher.utter_message(text=datetime_message)
-                return slot_updates
-            
-            # If user provided date/time first but no service type, ask for service type
-            if missing_service and not missing_datetime:
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for service type selection with clickable buttons
-                service_options = self._get_service_options_message()
+            # Check if we have minimum required info
+            # Only ask for service type if it's truly not set and user hasn't provided other details
+            if not service_type and not (customer_name or customer_phone):
                 dispatcher.utter_message(
-                    text=service_options["text"],
-                    buttons=service_options["buttons"]
+                    text="What service would you like to book?",
+                    buttons=[
+                        {"title": "Test Drive", "payload": "test drive"},
+                        {"title": "Sales Consultation", "payload": "sales consultation"},
+                        {"title": "Trade-in Evaluation", "payload": "trade-in evaluation"}
+                    ]
                 )
-                return slot_updates
+                return [SlotSet("appointment_active", True)]
             
-            # If user provided service type first but no date/time, ask for date/time
-            elif missing_datetime and not missing_service:
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if current_service:
-                    slot_updates.append(SlotSet("service_type", current_service))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for date and time
-                datetime_message = self._generate_datetime_request_message(current_service, current_date, current_time)
-                dispatcher.utter_message(text=datetime_message)
-                return slot_updates
-            
-            # If both service and datetime missing, ask for service type first (default flow)
-            elif missing_service and missing_datetime:
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for service type selection with clickable buttons
-                service_options = self._get_service_options_message()
+            # If service_type is missing but user provided details, ask specifically for service type
+            if not service_type and (customer_name or customer_phone):
                 dispatcher.utter_message(
-                    text=service_options["text"],
-                    buttons=service_options["buttons"]
+                    text="I have your details! What service would you like to book?",
+                    buttons=[
+                        {"title": "Test Drive", "payload": "test drive"},
+                        {"title": "Sales Consultation", "payload": "sales consultation"},
+                        {"title": "Trade-in Evaluation", "payload": "trade-in evaluation"}
+                    ]
                 )
-                return slot_updates
+                return [
+                    SlotSet("customer_name", customer_name),
+                    SlotSet("customer_phone", customer_phone),
+                    SlotSet("appointment_active", True)
+                ]
             
-            # If service type is already in slots but datetime is missing, ask for datetime
-            elif not missing_service and missing_datetime:
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if current_service:
-                    slot_updates.append(SlotSet("service_type", current_service))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for date and time
-                datetime_message = self._generate_datetime_request_message(current_service, current_date, current_time)
-                dispatcher.utter_message(text=datetime_message)
-                return slot_updates
+            # If we have service_type but missing customer details, ask for them
+            if service_type and (not customer_name or not customer_phone):
+                dispatcher.utter_message(text="Great! I'll help you book a {} appointment. Please provide your name and phone number to continue.".format(service_type))
+                return [
+                    SlotSet("service_type", service_type),
+                    SlotSet("appointment_active", True)
+                ]
             
-            # Contact information collection (after both service and datetime are set)
-            elif not current_name or not current_phone:
-                # Preserve any extracted entities as slots
-                slot_updates = [SlotSet("appointment_active", True)]
-                if current_date:
-                    slot_updates.append(SlotSet("appointment_date", current_date))
-                if current_time:
-                    slot_updates.append(SlotSet("appointment_time", current_time))
-                if current_service:
-                    slot_updates.append(SlotSet("service_type", current_service))
-                if current_name:
-                    slot_updates.append(SlotSet("customer_name", current_name))
-                if current_phone:
-                    slot_updates.append(SlotSet("customer_phone", current_phone))
-                if customer_email:
-                    slot_updates.append(SlotSet("customer_email", customer_email))
-                
-                # Ask for contact information
-                contact_message = self._generate_contact_request_message(current_name, current_phone)
-                dispatcher.utter_message(text=contact_message)
-                return slot_updates
+            if not appointment_date or not appointment_time:
+                dispatcher.utter_message(text="When would you like to schedule your appointment? (e.g., 'tomorrow 2pm')")
+                return [
+                    SlotSet("service_type", service_type),
+                    SlotSet("customer_name", customer_name),
+                    SlotSet("customer_phone", customer_phone),
+                    SlotSet("appointment_active", True)
+                ]
             
-            # Validate and parse appointment date/time
-            # Ensure current_date and current_time are strings before parsing
-            if not isinstance(current_date, str) or not isinstance(current_time, str):
-                error_message = self._generate_datetime_error_message()
-                dispatcher.utter_message(text=error_message)
-                return []
+            # Create appointment data with confirmed status
+            # All appointments are automatically confirmed upon booking
             
-            appointment_datetime = self._parse_appointment_datetime(current_date, current_time)
-            if not appointment_datetime:
-                error_message = self._generate_datetime_error_message()
-                dispatcher.utter_message(text=error_message)
-                return []
+            # Create proper datetime field from separate date/time strings
+            appointment_datetime = self._create_appointment_datetime(appointment_date, appointment_time)
             
-            # Check if appointment slot is available
-            if not self._is_slot_available(appointment_datetime):
-                unavailable_message = self._generate_slot_unavailable_message(appointment_datetime)
-                dispatcher.utter_message(text=unavailable_message)
-                return []
-            
-            # Get client_id from tracker metadata
-            client_id = None
-            if isinstance(tracker.latest_message, dict):
-                metadata = tracker.latest_message.get('metadata', {})
-                if isinstance(metadata, dict):
-                    client_id = metadata.get('client_id')
-            
-            # Check if appointment booking feature is enabled for this client
-            if client_id:
-                try:
-                    client_data = get_client_data_from_db(client_id)
-                    if client_data:
-                        features = client_data.get('features', {})
-                        appointment_booking_enabled = features.get('appointment_booking', False)
-                        
-                        if not appointment_booking_enabled:
-                            dispatcher.utter_message(
-                                text="I'm sorry, but appointment booking is not available at the moment. "
-                                     "Please contact us directly for assistance with scheduling appointments."
-                            )
-                            return [
-                                SlotSet("appointment_date", None),
-                                SlotSet("appointment_time", None),
-                                SlotSet("service_type", None),
-                                SlotSet("customer_name", None),
-                                SlotSet("customer_phone", None),
-                                SlotSet("customer_email", None),
-                                SlotSet("appointment_active", None)
-                            ]
-                except Exception as e:
-                    logger.error(f"Error checking client features: {e}")
-                    # Continue with booking if feature check fails to avoid blocking legitimate users
-            
-            # Create appointment record
             appointment_data = {
-                "appointment_id": str(ObjectId()),
-                "customer_name": current_name,
-                "customer_phone": current_phone,
-                "customer_email": customer_email or "",
-                "service_type": current_service,
-                "appointment_datetime": appointment_datetime,
-                "status": "confirmed",
-                "created_at": datetime.utcnow(),
-                "notes": "",
-                "conversation_id": tracker.sender_id,
-                "client_id": client_id
+                'service_type': service_type,
+                'customer_name': customer_name,
+                'customer_phone': customer_phone,
+                'appointment_date': appointment_date,  # Keep for backward compatibility
+                'appointment_time': appointment_time,  # Keep for backward compatibility
+                'appointment_datetime': appointment_datetime,  # New unified datetime field
+                'customer_email': customer_email or '',
+                'status': 'confirmed',  # Changed from 'pending' to 'confirmed' as requested
+                'client_id': client_id,  # Current client ID for multi-tenant support
+                'appointment_id': str(ObjectId()),
+                'created_at': datetime.now()
             }
             
-            # Save to database
-            success = self._save_appointment(appointment_data)
-            if success:
+            # Save appointment to database
+            if self._save_appointment(appointment_data):
                 confirmation_message = self._generate_confirmation_message(appointment_data)
                 dispatcher.utter_message(text=confirmation_message)
-                
-                # Send email confirmation if enabled and email provided
-                try:
-                    if is_email_enabled() and customer_email:
-                        # Prepare email data with formatted date/time
-                        email_data = appointment_data.copy()
-                        email_data['appointment_date'] = appointment_datetime.strftime('%B %d, %Y')
-                        email_data['appointment_time'] = appointment_datetime.strftime('%I:%M %p')
-                        
-                        email_sent = send_appointment_confirmation_email(email_data)
-                        if email_sent:
-                            logger.info(f"Email confirmation sent for appointment {appointment_data['appointment_id'][:8]}")
-                        else:
-                            logger.warning(f"Failed to send email confirmation for appointment {appointment_data['appointment_id'][:8]}")
-                    elif not customer_email:
-                        logger.info("No email address provided - skipping email confirmation")
-                    else:
-                        logger.info("Email service not enabled - skipping email confirmation")
-                except Exception as email_error:
-                    logger.error(f"Error sending email confirmation: {email_error}")
-                    # Don't fail the booking if email fails
-                
-                # Clear appointment slots - removed FollowupAction to fix response display
-                return [
-                    SlotSet("appointment_date", None),
-                    SlotSet("appointment_time", None),
-                    SlotSet("service_type", None),
-                    SlotSet("customer_name", None),
-                    SlotSet("customer_phone", None),
-                    SlotSet("customer_email", None),
-                    SlotSet("appointment_active", None)
-                ]
             else:
-                dispatcher.utter_message(
-                    text="⚠️ **Oops! Something went wrong while booking your appointment.**\n\n🔄 **Please try again in a moment, or:**\n• 📞 **Call us directly** for immediate assistance\n• 💬 **Use Live Support** for real-time help\n• 📧 **Email us** with your preferred appointment details\n\n🙏 **We apologize for the inconvenience and are here to help!**"
-                )
-                return []
+                dispatcher.utter_message(text="❌ Sorry, there was an error booking your appointment. Please try again.")
+            
+            return self._clear_appointment_slots()
                 
         except Exception as e:
-            logger.error(f"Error in ActionBookAppointment: {e}")
-            dispatcher.utter_message(
-                text="🚨 **Technical Difficulties Encountered!**\n\n😔 **We're experiencing some technical issues while processing your appointment request.**\n\n🛠️ **What you can do:**\n• 🔄 **Try again** in a few minutes\n• 📞 **Call us directly** - we're here to help!\n• 💬 **Use Live Support** for immediate assistance\n• 📧 **Email your request** and we'll get back to you quickly\n\n✨ **Thank you for your patience - we'll get this sorted out!**"
-            )
-            return []
+            logger.error(f"[APPOINTMENT_BOOKING] CRITICAL ERROR in ActionBookAppointment: {e}", exc_info=True)
+            dispatcher.utter_message(text="❌ Sorry, there was an error processing your request. Please try again.")
+            return self._clear_appointment_slots()
     
-    def _parse_appointment_datetime(self, date_str: str, time_str: str) -> Optional[datetime]:
-        """Parse appointment date and time strings into datetime object"""
+    def _extract_date_time_from_message(self, message):
+        """Extract date and time from combined inputs like 'monday 1pm'"""
         try:
-            sg_tz = pytz.timezone('Asia/Singapore')
-            now = datetime.now(sg_tz)
-            
-            # Parse date
-            date_str = date_str.lower().strip()
-            if date_str in ['today']:
-                target_date = now.date()
-            elif date_str in ['tomorrow']:
-                target_date = (now + timedelta(days=1)).date()
-            elif date_str in ['day after tomorrow', 'day after']:
-                target_date = (now + timedelta(days=2)).date()
-            else:
-                # Try to parse date formats like "2024-01-15", "Jan 15", "15 Jan"
-                try:
-                    # Try ISO format first
-                    target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                except ValueError:
-                    try:
-                        # Try "Jan 15" format
-                        target_date = datetime.strptime(f"{date_str} {now.year}", '%b %d %Y').date()
-                    except ValueError:
-                        try:
-                            # Try "15 Jan" format
-                            target_date = datetime.strptime(f"{date_str} {now.year}", '%d %b %Y').date()
-                        except ValueError:
-                            return None
-            
-            # Parse time
-            time_str = time_str.lower().strip()
-            # Handle various time formats with improved regex patterns
-            time_patterns = [
-                (r'(\d{1,2}):(\d{2})\s*(am|pm)', 'time_with_minutes_ampm'),  # 2:30 PM, 2:30pm
-                (r'(\d{1,2})\s*(am|pm)', 'time_ampm'),                      # 2 PM, 2 pm
-                (r'(\d{1,2})(am|pm)', 'time_ampm_no_space'),               # 2pm, 2am (no space)
-                (r'(\d{1,2}):(\d{2})', 'time_24h_with_minutes'),          # 14:30
-                (r'^(\d{1,2})$', 'time_24h_hour_only'),                   # 14 (hour only)
-            ]
-            
-            target_time = None
-            hour = 0
-            minute = 0
-            
-            for pattern, pattern_type in time_patterns:
-                match = re.search(pattern, time_str)
-                if match:
-                    if pattern_type == 'time_with_minutes_ampm':
-                        # Format: 2:30 PM, 2:30pm
-                        hour = int(match.group(1))
-                        minute = int(match.group(2))
-                        
-                        # Validate 12-hour format values
-                        if not (1 <= hour <= 12) or not (0 <= minute <= 59):
-                            continue
-                            
-                        if 'pm' in time_str and hour != 12:
-                            hour += 12
-                        elif 'am' in time_str and hour == 12:
-                            hour = 0
-                            
-                    elif pattern_type in ['time_ampm', 'time_ampm_no_space']:
-                        # Format: 2 PM, 2 pm, 2pm, 2am
-                        hour = int(match.group(1))
-                        minute = 0
-                        
-                        # Validate 12-hour format values
-                        if not (1 <= hour <= 12):
-                            continue
-                            
-                        if 'pm' in time_str and hour != 12:
-                            hour += 12
-                        elif 'am' in time_str and hour == 12:
-                            hour = 0
-                            
-                    elif pattern_type == 'time_24h_with_minutes':
-                        # Format: 14:30
-                        hour = int(match.group(1))
-                        minute = int(match.group(2))
-                        
-                    elif pattern_type == 'time_24h_hour_only':
-                        # Format: 14
-                        hour = int(match.group(1))
-                        minute = 0
-                    
-                    # Validate hour and minute values
-                    if not (0 <= hour <= 23) or not (0 <= minute <= 59):
-                        continue
-                    
-                    target_time = datetime(2000, 1, 1, hour, minute).time()
-                    break
-            
-            if not target_time:
-                return None
-            
-            # Combine date and time
-            appointment_datetime = sg_tz.localize(datetime.combine(target_date, target_time))
-            
-            # Check if appointment is in the future
-            if appointment_datetime <= now:
-                return None
-            
-            return appointment_datetime
-            
-        except Exception as e:
-            logger.error(f"Error parsing appointment datetime: {e}")
-            return None
-    
-    def _parse_combined_datetime(self, user_message: str) -> Optional[Dict[str, str]]:
-        """Parse combined date-time inputs like 'wednesday 2pm', 'tomorrow at 3:30pm', etc."""
-        try:
-            import re
-            from datetime import datetime, timedelta
-            import pytz
-            
-            sg_tz = pytz.timezone('Asia/Singapore')
-            now = datetime.now(sg_tz)
-            
-            # Common day patterns
-            day_patterns = {
-                r'\b(today)\b': 0,
-                r'\b(tomorrow)\b': 1,
-                r'\b(monday|mon)\b': None,
-                r'\b(tuesday|tue)\b': None,
-                r'\b(wednesday|wed)\b': None,
-                r'\b(thursday|thu)\b': None,
-                r'\b(friday|fri)\b': None,
-                r'\b(saturday|sat)\b': None,
-                r'\b(sunday|sun)\b': None,
-                r'\b(next week)\b': 7,
-                r'\b(next monday)\b': None,
-                r'\b(next tuesday)\b': None,
-                r'\b(next wednesday)\b': None,
-                r'\b(next thursday)\b': None,
-                r'\b(next friday)\b': None,
-                r'\b(next saturday)\b': None,
-                r'\b(next sunday)\b': None,
-            }
-            
-            # Time patterns
-            time_patterns = [
-                r'\b(\d{1,2}):(\d{2})\s*(am|pm)\b',  # 2:30 PM
-                r'\b(\d{1,2})\s*(am|pm)\b',          # 2 PM
-                r'\b(\d{1,2})(am|pm)\b',             # 2pm
-                r'\b(\d{1,2}):(\d{2})\b',            # 14:30
-                r'\b(morning)\b',                     # morning
-                r'\b(afternoon)\b',                   # afternoon
-                r'\b(evening)\b',                     # evening
-            ]
-            
+            message_lower = message.lower()
             extracted_date = None
             extracted_time = None
             
+            # Days of the week mapping
+            days_of_week = {
+                'monday': 'monday', 'mon': 'monday',
+                'tuesday': 'tuesday', 'tue': 'tuesday', 'tues': 'tuesday',
+                'wednesday': 'wednesday', 'wed': 'wednesday',
+                'thursday': 'thursday', 'thu': 'thursday', 'thur': 'thursday', 'thurs': 'thursday',
+                'friday': 'friday', 'fri': 'friday',
+                'saturday': 'saturday', 'sat': 'saturday',
+                'sunday': 'sunday', 'sun': 'sunday'
+            }
+            
             # Extract date
-            for pattern, days_offset in day_patterns.items():
-                match = re.search(pattern, user_message, re.IGNORECASE)
-                if match:
-                    day_name = match.group(1).lower()
-                    
-                    if days_offset is not None:
-                        # Fixed offset days (today, tomorrow, next week)
-                        target_date = now + timedelta(days=days_offset)
-                        extracted_date = target_date.strftime('%Y-%m-%d')
-                    else:
-                        # Weekday names - improved logic
-                        weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-                        clean_day = day_name.replace('next ', '')
-                        
-                        if clean_day in weekdays:
-                            target_weekday = weekdays.index(clean_day)
-                            current_weekday = now.weekday()
-                            days_ahead = target_weekday - current_weekday
-                            
-                            # If it's the same day or past, get next week's occurrence
-                            # Also handle 'next' prefix explicitly
-                            if days_ahead <= 0 or day_name.startswith('next '):
-                                days_ahead += 7
-                            
-                            target_date = now + timedelta(days=days_ahead)
-                            extracted_date = target_date.strftime('%Y-%m-%d')
-                            logger.info(f"Parsed weekday '{day_name}' -> date: {extracted_date}")
-                    break
+            if 'today' in message_lower:
+                extracted_date = 'today'
+            elif 'tomorrow' in message_lower:
+                extracted_date = 'tomorrow'
+            else:
+                # Check for days of the week
+                for day_variant, day_name in days_of_week.items():
+                    if day_variant in message_lower:
+                        extracted_date = day_name
+                        break
             
-            # Extract time - improved parsing
+            # Extract time - handle various formats
+            time_patterns = [
+                r'(\d{1,2})\s*(am|pm)',  # 1pm, 2 am
+                r'(\d{1,2}):(\d{2})\s*(am|pm)',  # 1:30pm, 2:00 am
+                r'(\d{1,2})\.(\d{2})\s*(am|pm)',  # 1.30pm
+            ]
+            
             for pattern in time_patterns:
-                match = re.search(pattern, user_message, re.IGNORECASE)
-                if match:
-                    if 'morning' in match.group(0).lower():
-                        extracted_time = '9:00 AM'
-                    elif 'afternoon' in match.group(0).lower():
-                        extracted_time = '2:00 PM'
-                    elif 'evening' in match.group(0).lower():
-                        extracted_time = '6:00 PM'
-                    else:
-                        # Extract actual time with proper parsing
-                        groups = match.groups()
-                        
-                        if len(groups) >= 3 and groups[2]:  # Has AM/PM with minutes
-                            hour = int(groups[0])
-                            minute = int(groups[1]) if groups[1] else 0
-                            am_pm = groups[2].upper()
-                            extracted_time = f"{hour}:{minute:02d} {am_pm}"
-                        elif len(groups) >= 2 and groups[1] and groups[1].lower() in ['am', 'pm']:  # Has AM/PM without minutes
-                            hour = int(groups[0])
-                            am_pm = groups[1].upper()
-                            extracted_time = f"{hour}:00 {am_pm}"
-                        elif len(groups) >= 2 and groups[1] and groups[1].isdigit():  # 24-hour format
-                            hour = int(groups[0])
-                            minute = int(groups[1])
-                            extracted_time = f"{hour:02d}:{minute:02d}"
-                        else:
-                            # Fallback: normalize the matched text
-                            time_match = match.group(0)
-                            if re.match(r'\d{1,2}(am|pm)', time_match, re.IGNORECASE):
-                                time_match = re.sub(r'(\d)(am|pm)', r'\1 \2', time_match, flags=re.IGNORECASE)
-                            extracted_time = time_match.upper()
-                        
-                        logger.info(f"Parsed time '{match.group(0)}' -> time: {extracted_time}")
+                time_match = re.search(pattern, message_lower)
+                if time_match:
+                    if len(time_match.groups()) == 2:  # Simple format like "1pm"
+                        hour = time_match.group(1)
+                        period = time_match.group(2).upper()
+                        extracted_time = f"{hour}{period}"
+                    elif len(time_match.groups()) == 3:  # Format with minutes like "1:30pm"
+                        hour = time_match.group(1)
+                        minutes = time_match.group(2)
+                        period = time_match.group(3).upper()
+                        extracted_time = f"{hour}:{minutes}{period}"
                     break
             
-            # Return extracted components if at least one is found
-            if extracted_date or extracted_time:
-                result = {}
-                if extracted_date:
-                    result['date'] = extracted_date
-                if extracted_time:
-                    result['time'] = extracted_time
-                return result
-            
-            return None
+            return extracted_date, extracted_time
             
         except Exception as e:
-            logger.error(f"Error parsing combined datetime: {e}")
-            return None
+            print(f"Error extracting date/time: {e}")
+            return None, None
     
-    def _get_service_options_message(self) -> Dict[str, Any]:
-        """Generate service options message with clickable buttons for appointment booking"""
-        return get_appointment_options_with_buttons()
-    
-    def _generate_datetime_request_message(self, service_type: str, appointment_date: Optional[str], appointment_time: Optional[str]) -> str:
-        """Generate step-by-step date and time request message"""
-        service_name = service_type.title() if service_type else "your service"
+    def _create_appointment_datetime(self, appointment_date: str, appointment_time: str) -> datetime:
+        """Create a proper datetime object from separate date and time strings
         
-        if not appointment_date and not appointment_time:
-            return f"📅 Perfect! You've selected {service_name}. ⏰ When would you like to schedule your appointment? Please provide date and time (e.g., 'Tomorrow at 2pm' or 'Next Monday morning')."
-        elif appointment_date and not appointment_time:
-            return f"📅 Great! I have your date as {appointment_date}. ⏰ What time would you prefer for your {service_name}? Time examples: '2pm', '10:30 AM', '14:00', 'morning', 'afternoon'. Just tell me your preferred time!"
-        elif not appointment_date and appointment_time:
-            return f"⏰ Perfect! I have your time as {appointment_time}. 📅 What date would you like for your {service_name}? Date examples: 'tomorrow', 'next Monday', 'December 15th', '2024-01-20'. Which date works best for you?"
-        else:
-            return f"📅 Excellent! I have {appointment_date} at {appointment_time} for your {service_name}. 👤 Now I need your contact information to complete the booking."
-    
-    def _generate_contact_request_message(self, customer_name: Optional[str], customer_phone: Optional[str]) -> str:
-        """Generate step-by-step contact information request message"""
-        if not customer_name and not customer_phone:
-            return "👤 Almost done! I just need your contact information. Please provide your full name (e.g., 'John Smith'), phone number (e.g., '91234567', '+65 8765 4321'), and email address (optional). Example: My name is John Smith, phone 91234567, email john@email.com"
-        elif customer_name and not customer_phone:
-            return f"👤 Thank you, {customer_name}! 📱 I just need your phone number to complete the booking. Phone examples: '91234567', '+65 8765 4321', '9876-5432'. What's your phone number?"
-        elif not customer_name and customer_phone:
-            return f"📱 Great! I have your phone number as {customer_phone}. 👤 What's your full name for the appointment? Example: 'John Smith'. Please provide your name to complete the booking."
-        else:
-            return f"✅ Perfect! I have all your details: Name: {customer_name}, Phone: {customer_phone}. 📧 Would you like to provide an email address for confirmation? (Optional) You can provide your email or say 'no email' to proceed with the booking."
-    
-    def _generate_missing_info_message(self, missing_info: List[str]) -> str:
-        """Generate beautified missing information message with examples"""
-        info_text = ", ".join(missing_info)
-        return f"📋 Almost there! I need a few more details to book your appointment: {info_text}. Please provide the missing information and I'll complete your booking!"
-    
-    def _generate_datetime_error_message(self) -> str:
-        """Generate user-friendly datetime error message with examples"""
-        return "❌ I couldn't understand the date and time format. Date examples: 'tomorrow', 'next Monday', 'December 15th', '2024-01-20'. Time examples: '2pm', '2:00 PM', '10:30 AM', '14:00', 'morning', 'afternoon'. Please try again with a clear date and time!"
-    
-    def _generate_slot_unavailable_message(self, appointment_datetime: datetime) -> str:
-        """Generate user-friendly slot unavailable message with alternatives"""
-        formatted_datetime = appointment_datetime.strftime('%B %d, %Y at %I:%M %p')
-        
-        # Generate alternative time suggestions
-        alternative_times = []
-        
-        # Suggest same day different times
-        for hour_offset in [1, 2, -1, -2]:
-            alt_time = appointment_datetime + timedelta(hours=hour_offset)
-            if alt_time.hour >= 9 and alt_time.hour <= 17:  # Business hours
-                alternative_times.append(alt_time.strftime('%I:%M %p'))
-        
-        # Suggest next day same time
-        next_day = appointment_datetime + timedelta(days=1)
-        alternative_times.append(f"{next_day.strftime('%B %d')} at {appointment_datetime.strftime('%I:%M %p')}")
-        
-        alt_text = ", ".join(alternative_times[:3])
-        return f"⚠️ Sorry, the slot on {formatted_datetime} is not available. Alternative times: {alt_text}. Please choose one of these times or suggest a different time that works for you!"
-    
-    def _is_slot_available(self, appointment_datetime: datetime) -> bool:
-        """Check if the appointment slot is available"""
+        Args:
+            appointment_date: Date string (e.g., "Monday", "tomorrow", "2024-01-15")
+            appointment_time: Time string (e.g., "2pm", "14:00", "2:00 PM")
+            
+        Returns:
+            datetime: Combined datetime object in Singapore timezone
+        """
         try:
-            with DatabaseContext('appointments') as collection:
-                if not collection:
-                    return True  # If database is not available, assume slot is available
-                
-                # Check for existing appointments within 30 minutes
-                start_time = appointment_datetime - timedelta(minutes=30)
-                end_time = appointment_datetime + timedelta(minutes=30)
-                
-                existing_appointment = collection.find_one({
-                    "appointment_datetime": {
-                        "$gte": start_time,
-                        "$lte": end_time
-                    },
-                    "status": {"$in": ["confirmed", "pending"]}
-                })
-                
-                return existing_appointment is None
-                
+            import pytz
+            from dateutil import parser
+            from dateutil.relativedelta import relativedelta
+            
+            sg_tz = pytz.timezone('Asia/Singapore')
+            now = datetime.now(sg_tz)
+            
+            # Parse date part
+            date_obj = None
+            appointment_date_lower = appointment_date.lower().strip()
+            
+            if appointment_date_lower in ['today']:
+                date_obj = now.date()
+            elif appointment_date_lower in ['tomorrow']:
+                date_obj = (now + relativedelta(days=1)).date()
+            elif appointment_date_lower in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
+                # Find next occurrence of this weekday
+                weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                target_weekday = weekdays.index(appointment_date_lower)
+                days_ahead = target_weekday - now.weekday()
+                if days_ahead <= 0:  # Target day already happened this week
+                    days_ahead += 7
+                date_obj = (now + relativedelta(days=days_ahead)).date()
+            else:
+                # Try to parse as a specific date
+                try:
+                    parsed_date = parser.parse(appointment_date, default=now)
+                    date_obj = parsed_date.date()
+                except:
+                    # Fallback to tomorrow if parsing fails
+                    date_obj = (now + relativedelta(days=1)).date()
+            
+            # Parse time part
+            time_obj = None
+            appointment_time_clean = appointment_time.lower().strip()
+            
+            # Handle common time formats
+            time_patterns = [
+                (r'(\d{1,2})\s*pm', lambda m: datetime.strptime(f"{int(m.group(1)) + (0 if int(m.group(1)) == 12 else 12)}:00", "%H:%M").time()),
+                (r'(\d{1,2})\s*am', lambda m: datetime.strptime(f"{int(m.group(1)) if int(m.group(1)) != 12 else 0}:00", "%H:%M").time()),
+                (r'(\d{1,2}):(\d{2})\s*pm', lambda m: datetime.strptime(f"{int(m.group(1)) + (0 if int(m.group(1)) == 12 else 12)}:{m.group(2)}", "%H:%M").time()),
+                (r'(\d{1,2}):(\d{2})\s*am', lambda m: datetime.strptime(f"{int(m.group(1)) if int(m.group(1)) != 12 else 0}:{m.group(2)}", "%H:%M").time()),
+                (r'(\d{1,2}):(\d{2})', lambda m: datetime.strptime(f"{m.group(1)}:{m.group(2)}", "%H:%M").time()),
+            ]
+            
+            import re
+            for pattern, converter in time_patterns:
+                match = re.search(pattern, appointment_time_clean)
+                if match:
+                    time_obj = converter(match)
+                    break
+            
+            if not time_obj:
+                # Fallback to 2 PM if parsing fails
+                time_obj = datetime.strptime("14:00", "%H:%M").time()
+            
+            # Combine date and time
+            combined_datetime = datetime.combine(date_obj, time_obj)
+            
+            # Localize to Singapore timezone
+            localized_datetime = sg_tz.localize(combined_datetime)
+            
+            return localized_datetime
+            
         except Exception as e:
-            logger.error(f"Error checking slot availability: {e}")
-            return True  # If error, assume slot is available
+            logger.error(f"Error creating appointment datetime: {e}")
+            # Fallback to tomorrow 2 PM
+            import pytz
+            sg_tz = pytz.timezone('Asia/Singapore')
+            now = datetime.now(sg_tz)
+            fallback = now.replace(hour=14, minute=0, second=0, microsecond=0) + relativedelta(days=1)
+            return fallback
+    
+    def _clear_appointment_slots(self) -> List[SlotSet]:
+        """Clear all appointment-related slots after booking completion or cancellation"""
+        return [
+            SlotSet("appointment_active", False),
+            SlotSet("service_type", None),
+            SlotSet("appointment_date", None),
+            SlotSet("appointment_time", None),
+            SlotSet("customer_name", None),
+            SlotSet("customer_phone", None),
+            SlotSet("customer_email", None),
+            SlotSet("appointment_id", None)
+        ]
     
     def _save_appointment(self, appointment_data: Dict[str, Any]) -> bool:
         """Save appointment to database"""
         try:
+            logger.info(f"[APPOINTMENT_BOOKING] Attempting to save appointment to MongoDB")
+            logger.debug(f"[APPOINTMENT_BOOKING] Appointment data to save: {appointment_data}")
+            
             with DatabaseContext('appointments') as collection:
                 if not collection:
-                    logger.warning("Database not available, cannot save appointment")
+                    logger.error(f"[APPOINTMENT_BOOKING] CRITICAL: Failed to get database collection for appointments")
                     return False
                 
+                logger.info(f"[APPOINTMENT_BOOKING] Database collection obtained successfully")
                 result = collection.insert_one(appointment_data)
-                return result.inserted_id is not None
+                
+                if result.inserted_id is not None:
+                    logger.info(f"[APPOINTMENT_BOOKING] SUCCESS: Appointment saved to MongoDB with ID: {result.inserted_id}")
+                    logger.debug(f"[APPOINTMENT_BOOKING] Insert result details: {result}")
+                    return True
+                else:
+                    logger.error(f"[APPOINTMENT_BOOKING] CRITICAL: Failed to insert appointment - no ID returned")
+                    return False
                 
         except Exception as e:
-            logger.error(f"Error saving appointment: {e}")
+            logger.error(f"[APPOINTMENT_BOOKING] CRITICAL: Error saving appointment to MongoDB: {e}", exc_info=True)
+            logger.error(f"[APPOINTMENT_BOOKING] Failed appointment data: {appointment_data}")
             return False
     
     def _extract_phone_number(self, text: str) -> Optional[str]:
@@ -1229,6 +1105,16 @@ class ActionViewAppointments(AutoLoggedAction):
             
             # Get customer phone number to find appointments
             customer_phone = tracker.get_slot("customer_phone")
+            
+            # If no phone in slot, check if current message contains phone entity
+            if not customer_phone:
+                entities = tracker.latest_message.get('entities', [])
+                phone_entities = [e for e in entities if e.get('entity') == 'customer_phone']
+                if phone_entities:
+                    customer_phone = phone_entities[0].get('value')
+                    # Set the slot for future use
+                    return [SlotSet("customer_phone", customer_phone)]
+            
             if not customer_phone:
                 dispatcher.utter_message(
                     text="📱 **Let me help you check your appointments!**\n\nTo view your booking history and upcoming appointments, I'll need your phone number. Please provide the number you used when making your bookings."
@@ -1270,11 +1156,46 @@ class ActionViewAppointments(AutoLoggedAction):
                 if not collection:
                     return []
                 
+                # Get appointments and sort by appointment_date, then appointment_time
+                # Since we now store appointment_datetime field, we can sort by that
                 appointments = list(collection.find({
                     "customer_phone": customer_phone
-                }).sort("appointment_datetime", -1))
+                }).sort("appointment_date", -1))
                 
-                return appointments
+                # Convert appointments to include appointment_datetime for compatibility
+                processed_appointments = []
+                for apt in appointments:
+                    # If appointment_datetime doesn't exist, create it from date and time
+                    if 'appointment_datetime' not in apt:
+                        try:
+                            # Parse the stored date and time strings
+                            date_str = apt.get('appointment_date', '')
+                            time_str = apt.get('appointment_time', '')
+                            
+                            # Create datetime object
+                            if date_str and time_str:
+                                # Combine date and time strings
+                                datetime_str = f"{date_str} {time_str}"
+                                # Try to parse the combined string
+                                apt_datetime = parser.parse(datetime_str)
+                                # Localize to Singapore timezone
+                                sg_tz = pytz.timezone('Asia/Singapore')
+                                if apt_datetime.tzinfo is None:
+                                    apt_datetime = sg_tz.localize(apt_datetime)
+                                apt['appointment_datetime'] = apt_datetime
+                            else:
+                                # Skip appointments without proper date/time
+                                continue
+                        except Exception as e:
+                            logger.error(f"Error parsing appointment datetime: {e}")
+                            continue
+                    
+                    processed_appointments.append(apt)
+                
+                # Sort by appointment_datetime
+                processed_appointments.sort(key=lambda x: x['appointment_datetime'], reverse=True)
+                
+                return processed_appointments
                 
         except Exception as e:
             logger.error(f"Error getting customer appointments: {e}")
@@ -1406,24 +1327,27 @@ class ActionCancelAppointment(AutoLoggedAction):
                 try:
                     if is_email_enabled() and cancelled_appointment and cancelled_appointment.get('customer_email'):
                         # Prepare email data with formatted date/time
+                        # Handle both new appointments (with appointment_datetime) and old ones (with separate fields)
+                        if 'appointment_datetime' in cancelled_appointment:
+                            appointment_date = cancelled_appointment['appointment_datetime'].strftime('%B %d, %Y')
+                            appointment_time = cancelled_appointment['appointment_datetime'].strftime('%I:%M %p')
+                        else:
+                            # Fallback to separate date and time fields
+                            appointment_date = cancelled_appointment.get('appointment_date', 'Unknown Date')
+                            appointment_time = cancelled_appointment.get('appointment_time', 'Unknown Time')
+                        
                         email_data = {
                             'customer_name': cancelled_appointment.get('customer_name', 'Customer'),
                             'customer_email': cancelled_appointment['customer_email'],
                             'appointment_id': cancelled_appointment['appointment_id'],
-                            'appointment_date': cancelled_appointment['appointment_datetime'].strftime('%B %d, %Y'),
-                            'appointment_time': cancelled_appointment['appointment_datetime'].strftime('%I:%M %p'),
+                            'appointment_date': appointment_date,
+                            'appointment_time': appointment_time,
                             'service_type': cancelled_appointment['service_type']
                         }
                         
                         email_sent = send_appointment_cancellation_email(email_data)
-                        if email_sent:
-                            logger.info(f"Email cancellation notification sent for appointment {appointment_id[:8]}")
-                        else:
-                            logger.warning(f"Failed to send email cancellation notification for appointment {appointment_id[:8]}")
-                    elif not cancelled_appointment or not cancelled_appointment.get('customer_email'):
-                        logger.info("No email address available - skipping email cancellation notification")
-                    else:
-                        logger.info("Email service not enabled - skipping email cancellation notification")
+
+
                 except Exception as email_error:
                     logger.error(f"Error sending email cancellation notification: {email_error}")
                     # Don't fail the cancellation if email fails
@@ -1458,7 +1382,8 @@ class ActionCancelAppointment(AutoLoggedAction):
                 if not appointment:
                     return False, None
                 
-                # Update the appointment status
+                # Update the appointment status with timestamp
+                current_time = datetime.now(pytz.timezone('Asia/Singapore'))
                 result = collection.update_one(
                     {
                         "appointment_id": appointment_id,
@@ -1468,7 +1393,8 @@ class ActionCancelAppointment(AutoLoggedAction):
                     {
                         "$set": {
                             "status": "cancelled",
-                            "cancelled_at": datetime.utcnow()
+                            "cancelled_time": current_time,
+                            "updated_at": current_time
                         }
                     }
                 )

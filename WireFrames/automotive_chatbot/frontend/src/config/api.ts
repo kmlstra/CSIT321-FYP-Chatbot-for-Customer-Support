@@ -62,16 +62,8 @@ export const API_CONFIG = {
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || `${DOMAIN}:${PORTS.BACKEND}`,
 };
 
-// Debug logging for development
-if (isDevelopment) {
-  console.log('🔧 API Configuration:', {
-    Environment: API_CONFIG.ENVIRONMENT,
-    Domain: API_CONFIG.DOMAIN,
-    'API URL': API_CONFIG.API_URL,
-    'RASA URL': API_CONFIG.RASA_URL,
-    'Frontend URL': API_CONFIG.FRONTEND_URL
-  });
-}
+// Debug logging for development removed
+// API Configuration available in API_CONFIG object
 
 // API Endpoints
 export const API_ENDPOINTS = {

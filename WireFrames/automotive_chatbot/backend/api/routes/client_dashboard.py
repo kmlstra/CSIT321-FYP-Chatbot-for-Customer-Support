@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from datetime import datetime
+import pytz
 from bson import ObjectId
 
 from ..auth.client_auth import (
@@ -158,7 +159,7 @@ async def get_client_conversations(
                 "customer_name": conv.get("customer_name") or conv.get("user_name") or f"Customer {str(conv.get('_id', ''))[:8]}",
                 "messages": conv.get("total_messages") or len(conv.get("messages", [])),
                 "status": conv.get("status") or "completed",
-                "created_at": conv.get("created_at", datetime.utcnow()).isoformat() if isinstance(conv.get("created_at"), datetime) else str(conv.get("created_at", "")),
+                "created_at": conv.get("created_at", datetime.now(pytz.timezone('Asia/Singapore'))).isoformat() if isinstance(conv.get("created_at"), datetime) else str(conv.get("created_at", "")),
                 "last_message": ""
             }
             
@@ -247,7 +248,7 @@ async def update_branding_config(
             {
                 "$set": {
                     "settings.branding": branding.dict(),
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -291,7 +292,7 @@ async def update_contact_info(
             {
                 "$set": {
                     "settings.contact_info": contact_info.dict(),
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -420,7 +421,7 @@ async def update_operating_hours(
             {
                 "$set": {
                     "settings.business_hours": business_hours,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -449,7 +450,7 @@ async def update_business_hours(
             {
                 "$set": {
                     "settings.business_hours": business_hours.dict(),
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -487,7 +488,7 @@ async def update_features_config(
             {
                 "$set": {
                     "settings.features": features.dict(),
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -534,8 +535,8 @@ async def create_vehicle(
     
     try:
         vehicle_data = vehicle.dict()
-        vehicle_data["created_at"] = datetime.utcnow()
-        vehicle_data["updated_at"] = datetime.utcnow()
+        vehicle_data["created_at"] = datetime.now(pytz.timezone('Asia/Singapore'))
+        vehicle_data["updated_at"] = datetime.now(pytz.timezone('Asia/Singapore'))
         
         vehicle_id = await security_manager.insert_client_data(
             client_id, "client_vehicles", vehicle_data
@@ -562,7 +563,7 @@ async def update_vehicle(
     
     try:
         update_data = {k: v for k, v in vehicle.dict().items() if v is not None}
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(pytz.timezone('Asia/Singapore'))
         
         success = await security_manager.update_client_specific_data(
             client_id, "client_vehicles", vehicle_id, update_data

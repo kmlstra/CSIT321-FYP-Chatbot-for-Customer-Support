@@ -42,7 +42,5 @@ rules:
   - intent: ask_public_holiday_hours
   - action: action_smart_contact
 
-- rule: Handle schedule visit requests
-  steps:
-  - intent: confirm_schedule_visit
-  - action: action_smart_contact
+# Removed confirm_schedule_visit rule as it conflicts with appointment booking
+# Users should use book_appointment intent for scheduling visits

@@ -14,21 +14,27 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import pytz
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-
+# Import conversation storage
 try:
     from api.services.conversation_storage import ConversationStorage
     conversation_storage = ConversationStorage()
+    print("ConversationStorage imported successfully")
 except ImportError as e:
     print(f"Import error: {e}")
-    # Fallback if import fails
-    class MockConversationStorage:
-        def store_message(self, **kwargs):
-            print(f"Mock storage: {kwargs}")
-    
-    conversation_storage = MockConversationStorage()
+    # Try alternative import path
+    try:
+        from services.conversation_storage import ConversationStorage
+        conversation_storage = ConversationStorage()
+        print("ConversationStorage imported successfully (alternative path)")
+    except ImportError as e2:
+        print(f"Alternative import also failed: {e2}")
+        # Fallback if import fails
+        class MockConversationStorage:
+            def store_message(self, **kwargs):
+                print(f"Mock storage: {kwargs}")
+        
+        conversation_storage = MockConversationStorage()
+        print("Using MockConversationStorage as fallback")
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +88,23 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
             sender_id = f"fallback_session_{datetime.now().timestamp()}_{hash(user_message) % 10000}"
             logger.warning(f"Invalid sender_id received, using fallback: {sender_id}")
         
+        # CRITICAL FIX: Use sender_id directly as session_id for conversation storage
+        # This ensures consistency with the composite format used in multi_tenant_chat.py
+        # The sender_id from multi_tenant_chat.py is already in format: {client_id}_{session_id}
+        session_id = sender_id
+        logger.info(f"Using session_id for conversation storage: {session_id}")
+        
         logger.info(f"Chat request from {sender_id}: {user_message}")
+        
+        # Extract client_id from request metadata for proper conversation tagging
+        client_id = None
+        if chat_request.metadata:
+            client_id = chat_request.metadata.get('client_id') or chat_request.metadata.get('clientId')
+            # Also check for client_id in nested metadata
+            if not client_id and 'metadata' in chat_request.metadata:
+                nested_metadata = chat_request.metadata['metadata']
+                if isinstance(nested_metadata, dict):
+                    client_id = nested_metadata.get('client_id') or nested_metadata.get('clientId')
         
         # FIX 2: Store user message asynchronously in background (non-blocking)
         user_metadata = {
@@ -90,7 +112,12 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
             'source': 'api_proxy',
             **chat_request.metadata
         }
-        background_tasks.add_task(store_user_message_async, sender_id, user_message, user_metadata)
+        
+        # Ensure client_id is included in metadata for conversation storage
+        if client_id:
+            user_metadata['client_id'] = client_id
+            
+        background_tasks.add_task(store_user_message_async, session_id, user_message, user_metadata)
         
         # Forward request to RASA
         rasa_payload = {
@@ -139,7 +166,12 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                         'reason': 'rasa_connection_failed',
                         'has_buttons': False
                     }
-                    background_tasks.add_task(store_bot_message_async, sender_id, fallback_response['text'], bot_metadata)
+                    
+                    # Include client_id in fallback response metadata
+                    if client_id:
+                        bot_metadata['client_id'] = client_id
+                        
+                    background_tasks.add_task(store_bot_message_async, session_id, fallback_response['text'], bot_metadata)
                     
                     return JSONResponse(content={
                         "success": True,
@@ -179,7 +211,12 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                         'action_name': bot_response.get('custom', {}).get('action_name'),
                         'has_buttons': len(bot_buttons) > 0
                     }
-                    background_tasks.add_task(store_bot_message_async, sender_id, bot_text, bot_metadata)
+                    
+                    # Include client_id in bot response metadata
+                    if client_id:
+                        bot_metadata['client_id'] = client_id
+                        
+                    background_tasks.add_task(store_bot_message_async, session_id, bot_text, bot_metadata)
         
         return JSONResponse(content={
             "success": True,

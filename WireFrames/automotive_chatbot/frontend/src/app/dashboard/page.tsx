@@ -129,7 +129,7 @@ export default function ClientDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [appointmentSearchTerm, setAppointmentSearchTerm] = useState('');
-  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState('');
+
   const [updatingAppointmentStatus, setUpdatingAppointmentStatus] = useState<string | null>(null);
   
   // Loading states for different sections
@@ -446,12 +446,8 @@ export default function ClientDashboard() {
   }, [searchTerm, chatHistory]);
 
   useEffect(() => {
-    // Filter appointments based on search term and status
+    // Filter appointments based on search term
     let filtered = appointments;
-    
-    if (appointmentStatusFilter) {
-      filtered = filtered.filter(apt => apt.status === appointmentStatusFilter);
-    }
     
     if (appointmentSearchTerm.trim() !== '') {
       filtered = filtered.filter(apt => 
@@ -463,7 +459,7 @@ export default function ClientDashboard() {
     }
     
     setFilteredAppointments(filtered);
-  }, [appointmentSearchTerm, appointmentStatusFilter, appointments]);
+  }, [appointmentSearchTerm, appointments]);
 
   const fetchDatabaseStatus = async () => {
     try {
@@ -528,8 +524,24 @@ export default function ClientDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        setAppointments(data.appointments || []);
-        setFilteredAppointments(data.appointments || []);
+        console.log('Raw appointment data from backend:', data.appointments);
+        
+        // Process appointments to ensure consistent field naming
+        const processedAppointments = (data.appointments || []).map((appointment: any) => {
+          // Debug log each appointment structure
+          console.log('Individual appointment:', appointment);
+          
+          // Ensure appointment_id is available - use _id as fallback if appointment_id is missing
+          if (!appointment.appointment_id && appointment._id) {
+            appointment.appointment_id = appointment._id;
+          }
+          
+          return appointment;
+        });
+        
+        console.log('Processed appointments:', processedAppointments);
+        setAppointments(processedAppointments);
+        setFilteredAppointments(processedAppointments);
 
       } else {
         console.error('Failed to fetch appointments:', response.status, response.statusText);
@@ -1472,7 +1484,7 @@ export default function ClientDashboard() {
                       {appointments.filter(apt => {
                         const now = new Date();
                         const aptDate = new Date(apt.appointment_datetime);
-                        return aptDate > now && (apt.status === 'pending' || apt.status === 'confirmed');
+                        return aptDate > now && apt.status === 'confirmed';
                       }).length}
                     </p>
                   </div>
@@ -1811,18 +1823,6 @@ export default function ClientDashboard() {
                       }}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     />
-                    <select
-                      value={appointmentStatusFilter}
-                      onChange={(e) => {
-                        setAppointmentStatusFilter(e.target.value);
-                        setAppointmentCurrentPage(1); // Reset to first page when filtering
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">All Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                    </select>
                     <span className="text-sm text-gray-600">
                       {filteredAppointments.filter(apt => apt.status !== 'completed' && apt.status !== 'cancelled').length} active appointments
                     </span>
@@ -1866,28 +1866,28 @@ export default function ClientDashboard() {
                         <div className="flex space-x-2">
                           {appointment.status === 'pending' && (
                             <button
-                              onClick={() => updateAppointmentStatus(appointment.appointment_id, 'cancelled')}
-                              disabled={updatingAppointmentStatus === appointment.appointment_id}
+                              onClick={() => updateAppointmentStatus(appointment.appointment_id || appointment._id, 'cancelled')}
+                              disabled={updatingAppointmentStatus === (appointment.appointment_id || appointment._id)}
                               className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm disabled:opacity-50"
                             >
-                              {updatingAppointmentStatus === appointment.appointment_id ? 'Updating...' : 'Cancel'}
+                              {updatingAppointmentStatus === (appointment.appointment_id || appointment._id) ? 'Updating...' : 'Cancel'}
                             </button>
                           )}
                           {appointment.status === 'confirmed' && (
                             <>
                               <button
-                                onClick={() => handleCancelAppointment(appointment.appointment_id)}
-                                disabled={updatingAppointmentStatus === appointment.appointment_id}
+                                onClick={() => handleCancelAppointment(appointment.appointment_id || appointment._id)}
+                                disabled={updatingAppointmentStatus === (appointment.appointment_id || appointment._id)}
                                 className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm disabled:opacity-50"
                               >
-                                {updatingAppointmentStatus === appointment.appointment_id ? 'Updating...' : 'Cancel'}
+                                {updatingAppointmentStatus === (appointment.appointment_id || appointment._id) ? 'Updating...' : 'Cancel'}
                               </button>
                               <button
-                                onClick={() => updateAppointmentStatus(appointment.appointment_id, 'completed')}
-                                disabled={updatingAppointmentStatus === appointment.appointment_id}
+                                onClick={() => updateAppointmentStatus(appointment.appointment_id || appointment._id, 'completed')}
+                                disabled={updatingAppointmentStatus === (appointment.appointment_id || appointment._id)}
                                 className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm disabled:opacity-50"
                               >
-                                {updatingAppointmentStatus === appointment.appointment_id ? 'Updating...' : 'Complete'}
+                                {updatingAppointmentStatus === (appointment.appointment_id || appointment._id) ? 'Updating...' : 'Complete'}
                               </button>
                             </>
                           )}
@@ -1968,18 +1968,6 @@ export default function ClientDashboard() {
                       }}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     />
-                    <select
-                      value={appointmentStatusFilter}
-                      onChange={(e) => {
-                        setAppointmentStatusFilter(e.target.value);
-                        setAppointmentCurrentPage(1);
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="">All Status</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
                     <span className="text-sm text-gray-600">
                       {filteredAppointments.filter(apt => apt.status === 'completed' || apt.status === 'cancelled').length} historical appointments
                     </span>
@@ -2008,6 +1996,17 @@ export default function ClientDashboard() {
                           <p className="text-sm text-gray-600">
                             Time: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleTimeString() : 'N/A'}
                           </p>
+                          {/* Display status timestamp for cancelled or completed appointments */}
+                          {appointment.status === 'cancelled' && appointment.cancelled_time && (
+                            <p className="text-sm text-red-600">
+                              Cancelled: {new Date(appointment.cancelled_time).toLocaleDateString()} at {new Date(appointment.cancelled_time).toLocaleTimeString()}
+                            </p>
+                          )}
+                          {appointment.status === 'completed' && appointment.completed_time && (
+                            <p className="text-sm text-blue-600">
+                              Completed: {new Date(appointment.completed_time).toLocaleDateString()} at {new Date(appointment.completed_time).toLocaleTimeString()}
+                            </p>
+                          )}
                           <div className="flex items-center space-x-2 mt-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               appointment.status === 'completed' ? 'bg-blue-100 text-blue-800' :

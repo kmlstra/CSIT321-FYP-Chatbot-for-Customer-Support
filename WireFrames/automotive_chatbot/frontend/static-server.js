@@ -5,8 +5,8 @@ const path = require('path');
 const PORT = 8080;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-console.log('🚀 Starting CleverCompanion Static Server...');
-console.log(`📁 Serving from: ${PUBLIC_DIR}`);
+// Starting CleverCompanion Static Server
+// Serving from public directory
 
 // MIME types for proper content serving
 const mimeTypes = {
@@ -26,7 +26,7 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    // Request logging removed
     
     // Enable CORS for all requests
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -112,7 +112,7 @@ const server = http.createServer((req, res) => {
                 }
             } else {
                 // Server error
-                console.error('Server error:', error);
+                // Server error
                 res.writeHead(500, { 'Content-Type': 'text/plain' });
                 res.end('500 Internal Server Error: ' + error.code);
             }
@@ -126,49 +126,39 @@ const server = http.createServer((req, res) => {
 
 // Start the server
 server.listen(PORT, '0.0.0.0', () => {
-    console.log('');
-    console.log('🎉 CleverCompanion Static Server is running!');
-    console.log('');
-    console.log('📱 Access Points:');
-    // Use unified domain:port approach
-    const domain = process.env.DOMAIN || 'http://localhost';
-    const frontendPort = process.env.FRONTEND_PORT || PORT;
-    console.log(`   🌐 Main Page:    ${domain}:${frontendPort}/`);
-    console.log(`   🌐 Main Page:    ${domain}:${frontendPort}/clevercompanion.html`);
-    console.log(`   📊 Dashboard:    ${domain}:${frontendPort}/dashboard.html`);
-    console.log(`   🔧 Widget JS:    ${domain}:${frontendPort}/clevercompanion-widget.js`);
-    console.log(`   🎨 Widget CSS:   Embedded in JavaScript files`);
-    console.log('');
-    console.log('✅ Server ready to accept connections!');
-    console.log('');
+    // Server started successfully
+    // Access points available:
+    // - Main Page: http://localhost:PORT/
+    // - Dashboard: http://localhost:PORT/dashboard.html
+    // - Widget JS: http://localhost:PORT/clevercompanion-widget.js
 });
 
 // Handle server errors
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use!`);
-        console.error('   Try killing existing processes:');
-        console.error('   npm run kill-ports');
-        console.error('   Or use a different port.');
+        // Port is already in use
+        // Try killing existing processes:
+        // npm run kill-ports
+        // Or use a different port.
     } else {
-        console.error('❌ Server error:', err);
+        // Server error
     }
     process.exit(1);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down server...');
+    // Shutting down server
     server.close(() => {
-        console.log('✅ Server closed successfully');
+        // Server closed successfully
         process.exit(0);
     });
 });
 
 process.on('SIGTERM', () => {
-    console.log('\n🛑 Received SIGTERM, shutting down...');
+    // Received SIGTERM, shutting down
     server.close(() => {
-        console.log('✅ Server closed successfully');
+        // Server closed successfully
         process.exit(0);
     });
 });

@@ -4,6 +4,7 @@ JWT Token Handler for Client Authentication
 
 import jwt
 import hashlib
+import pytz
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
@@ -11,11 +12,16 @@ from typing import Dict, Any, Optional
 JWT_SECRET = "your-super-secret-jwt-key-change-in-production"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
+SINGAPORE_TZ = pytz.timezone('Asia/Singapore')
+
+def get_singapore_time():
+    """Get current time in Singapore timezone"""
+    return datetime.now(SINGAPORE_TZ)
 
 def create_access_token(data: Dict[str, Any]) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    expire = get_singapore_time() + timedelta(hours=JWT_EXPIRATION_HOURS)
     to_encode.update({"exp": expire})
     
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)

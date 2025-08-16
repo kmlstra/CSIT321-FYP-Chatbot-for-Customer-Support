@@ -10,6 +10,19 @@ nlu:
     - Schedule an appointment for me
     - I need to book a service appointment
     - Can you help me schedule a visit?
+    - book appointment
+    - schedule appointment
+    - make appointment
+    - book an appointment
+    - schedule an appointment
+    - make an appointment
+    - appointment booking
+    - appointment scheduling
+    - test drive
+    - I want test drive
+    - need test drive
+    - book test drive
+    - schedule test drive
     - I want to book a [test drive](service_type) appointment
     - Schedule a [maintenance](service_type) appointment
     - Book an appointment for [car inspection](service_type)
@@ -192,22 +205,9 @@ nlu:
     - Phone: [+65 8765 4321](customer_phone)
     - You can reach me at [94471414](customer_phone)
     - My email is [john@email.com](customer_email)
-    - Email: [sarah.johnson@gmail.com](customer_email)
-    - Contact me at [mike.wilson@company.com](customer_email)
-    - My phone number is [91234567](customer_phone)
-    - Call me at [8765-4321](customer_phone)
-    - Contact number: [9876 5432](customer_phone)
-    - Phone number [+65 9123 4567](customer_phone)
-    - My number is [87654321](customer_phone)
-    - Reach me at [9245-5124](customer_phone)
-    - Contact: [+65-8888-9999](customer_phone)
-    - Phone: [6123 4567](customer_phone)
-    - My contact is [9111-2222](customer_phone)
-    - Call [8333-4444](customer_phone)
-    - Number: [9555-6666](customer_phone)
-    - [9245512447](customer_phone)
-    - my phone number is [9245512447](customer_phone)
-    - [92455124](customer_phone)
+    - Email: [sarah.johnson@email.com](customer_email)
+    - Contact me at [mike.wilson@gmail.com](customer_email)
+    - name [John Smith](customer_name)
     - phone [92455124](customer_phone)
     - contact [92455124](customer_phone)
     - [81234567](customer_phone)
@@ -215,53 +215,153 @@ nlu:
     - my number [9245512447](customer_phone)
     - call me [9245512447](customer_phone)
     - phone number [9245512447](customer_phone)
-    - I want to book for [2024-01-15](appointment_date)
-    - Schedule it for [next Monday](appointment_date)
-    - How about [tomorrow](appointment_date)?
-    - At [2:00 PM](appointment_time)
-    - Around [10:30 AM](appointment_time)
-    - I prefer [3:15 PM](appointment_time)
-    - [6pm](appointment_time)
-    - [6:00 PM](appointment_time)
-    - [7pm](appointment_time)
-    - [8:00 PM](appointment_time)
-    - [5pm](appointment_time)
-    - [4:30 PM](appointment_time)
-    - [6:30 PM](appointment_time)
-    - [7:30 PM](appointment_time)
-    - [8:30 PM](appointment_time)
-    - [5:30 PM](appointment_time)
-    - I can do [6pm](appointment_time)
-    - How about [6:00 PM](appointment_time)
-    - I'm free at [7pm](appointment_time)
-    - Available [8:00 PM](appointment_time)
-    - I prefer [5pm](appointment_time)
-    - Can we do [6:30 PM](appointment_time)
-    - [John Smith](customer_name) [89876543](customer_phone)
-    - [Sarah Johnson](customer_name) [sarah@email.com](customer_email)
-    - [Mike Wilson](customer_name) [+65 8765 4321](customer_phone) [mike@company.com](customer_email)
-    - Book for [2024-01-20](appointment_date) at [11:00 AM](appointment_time)
-    - [Test Drive](service_type) on [Friday](appointment_date)
-    - [Sales Consultation](service_type) [next week](appointment_date) [2:00 PM](appointment_time)
-    - [monday](appointment_date) [2pm](appointment_time)
-    - [tuesday](appointment_date) [3pm](appointment_time)
-    - [wednesday](appointment_date) [2pm](appointment_time)
-    - [thursday](appointment_date) [4pm](appointment_time)
-    - [friday](appointment_date) [5pm](appointment_time)
-    - [saturday](appointment_date) [10am](appointment_time)
-    - [sunday](appointment_date) [11am](appointment_time)
-    - [tomorrow](appointment_date) [2pm](appointment_time)
-    - [next monday](appointment_date) [3pm](appointment_time)
-    - [next week](appointment_date) [10am](appointment_time)
-    - Book me for [monday](appointment_date) at [2pm](appointment_time)
-    - Schedule for [tuesday](appointment_date) [3:00 PM](appointment_time)
-    - I want [wednesday](appointment_date) [2pm](appointment_time)
-    - Can I get [thursday](appointment_date) [4:30 PM](appointment_time)
-    - How about [friday](appointment_date) [5pm](appointment_time)
-    - [tomorrow](appointment_date) [morning](appointment_time)
-    - [next week](appointment_date) [afternoon](appointment_time)
-    - [december 15th](appointment_date) [2pm](appointment_time)
-    - [january 20th](appointment_date) [10:30 AM](appointment_time)
+    - tomorrow 2pm
+    - tomorrow at 2pm
+    - tomorrow 3pm
+    - tomorrow at 3pm
+    - tomorrow morning
+    - tomorrow afternoon
+    - tomorrow evening
+    - today 2pm
+    - today at 2pm
+    - today 3pm
+    - today at 3pm
+    - monday 2pm
+    - monday at 2pm
+    - tuesday 3pm
+    - tuesday at 3pm
+    - Date: tomorrow, Time: 2pm, Name: John Doe, Phone: 91234567
+    - tomorrow 2pm John Doe 91234567
+    - My name is John Doe, phone 91234567, I want the appointment tomorrow at 2pm
+    - John Doe 91234567 tomorrow 2pm
+    - Name: John Doe, Phone: 91234567, Date: tomorrow, Time: 2pm
+    - tomorrow at 2pm for John Doe phone 91234567
+    - book for tomorrow 2pm name John phone 91234567
+    - appointment tomorrow 2pm John 91234567
+    - schedule tomorrow at 2pm John Doe 91234567
+    - I want tomorrow 2pm appointment
+    - book me tomorrow 2pm
+    - schedule tomorrow 2pm
+    - tomorrow 2pm please
+    - can I get tomorrow 2pm
+    - available tomorrow 2pm
+    - tomorrow at 2pm works
+    - tomorrow 2pm is good
+    - I prefer tomorrow 2pm
+    - how about tomorrow 2pm
+    - tomorrow 2pm slot
+    - book tomorrow 2pm appointment
+    - schedule for tomorrow 2pm
+    - appointment for tomorrow 2pm
+    - I need tomorrow 2pm
+    - tomorrow 2pm booking
+    - reserve tomorrow 2pm
+    - set appointment tomorrow 2pm
+    - tomorrow 2pm time slot
+    - I'll take tomorrow 2pm
+    - confirm tomorrow 2pm
+    - yes tomorrow 2pm
+    - tomorrow 2pm works for me
+    - perfect tomorrow 2pm
+    - tomorrow 2pm is fine
+    - book it tomorrow 2pm
+    - schedule it tomorrow 2pm
+    - tomorrow 2pm appointment please
+    - I want appointment tomorrow 2pm
+    - can you book tomorrow 2pm
+    - please schedule tomorrow 2pm
+    - tomorrow 2pm would be great
+    - I'd like tomorrow 2pm
+    - tomorrow 2pm if possible
+    - is tomorrow 2pm available
+    - tomorrow 2pm appointment slot
+    - book me for tomorrow 2pm
+    - I need booking tomorrow 2pm
+    - appointment booking tomorrow 2pm
+    - schedule appointment tomorrow 2pm
+    - book appointment tomorrow 2pm
+    - tomorrow 2pm for appointment
+    - appointment time tomorrow 2pm
+    - I choose tomorrow 2pm
+    - select tomorrow 2pm
+    - tomorrow 2pm selection
+    - go with tomorrow 2pm
+    - tomorrow 2pm option
+    - pick tomorrow 2pm
+    - tomorrow 2pm choice
+    - decide on tomorrow 2pm
+    - tomorrow 2pm decision
+    - tomorrow 2pm final
+    - monday 2pm Albert Poh 83475923
+    - tuesday 3pm John Smith 91234567
+    - wednesday 10am Sarah Lee 98765432
+    - thursday 4pm Michael Chen 87654321
+    - friday 11am Lisa Wong 96543210
+    - monday 9am David Tan 85432109
+    - tuesday 1pm Rachel Lim 94321098
+    - wednesday 5pm Kevin Ng 83210987
+    - thursday 2pm Amy Teo 92109876
+    - friday 3pm James Koh 81098765
+    - monday at 2pm Albert Poh 83475923
+    - tuesday at 3pm John Smith 91234567
+    - wednesday at 10am Sarah Lee 98765432
+    - thursday at 4pm Michael Chen 87654321
+    - friday at 11am Lisa Wong 96543210
+    - book monday 2pm Albert Poh 83475923
+    - schedule tuesday 3pm John Smith 91234567
+    - appointment wednesday 10am Sarah Lee 98765432
+    - I want monday 2pm Albert Poh 83475923
+    - book me tuesday 3pm John Smith 91234567
+    - schedule wednesday 10am Sarah Lee 98765432
+    - appointment for monday 2pm Albert Poh 83475923
+    - booking tuesday 3pm John Smith 91234567
+    - reserve wednesday 10am Sarah Lee 98765432
+    - set appointment monday 2pm Albert Poh 83475923
+    - book appointment tuesday 3pm John Smith 91234567
+    - schedule appointment wednesday 10am Sarah Lee 98765432
+    - I need appointment monday 2pm Albert Poh 83475923
+    - can you book tuesday 3pm John Smith 91234567
+    - please schedule wednesday 10am Sarah Lee 98765432
+    - monday 2pm for Albert Poh phone 83475923
+    - tuesday 3pm for John Smith phone 91234567
+    - wednesday 10am for Sarah Lee phone 98765432
+    - Name: Albert Poh, Phone: 83475923, Date: monday, Time: 2pm
+    - Name: John Smith, Phone: 91234567, Date: tuesday, Time: 3pm
+    - Name: Sarah Lee, Phone: 98765432, Date: wednesday, Time: 10am
+    - Albert Poh 83475923 monday 2pm
+    - John Smith 91234567 tuesday 3pm
+    - Sarah Lee 98765432 wednesday 10am
+    - book for Albert Poh 83475923 monday 2pm
+    - schedule for John Smith 91234567 tuesday 3pm
+    - appointment for Sarah Lee 98765432 wednesday 10am
+    - monday, 2pm, Albert Poh, 83475923
+    - tuesday, 3pm, John Smith, 91234567
+    - wednesday, 10am, Sarah Lee, 98765432
+    - thursday, 4pm, Michael Chen, 87654321
+    - friday, 11am, Lisa Wong, 96543210
+    - monday, 2pm, Ah boy, 93859342
+    - tuesday, 3pm, Ah girl, 91234567
+    - wednesday, 10am, Xiao Ming, 98765432
+    - thursday, 4pm, Xiao Li, 87654321
+    - friday, 11am, Ah Seng, 96543210
+    - tomorrow, 2pm, John Doe, 91234567
+    - next monday, 3pm, Jane Smith, 98765432
+    - next week, 10am, Bob Wilson, 87654321
+    - Date: monday, Time: 2pm, Name: Albert, Phone: 83475923
+    - Date: tuesday, Time: 3pm, Name: John, Phone: 91234567
+    - monday 2pm, Albert Poh, 83475923
+    - tuesday 3pm, John Smith, 91234567
+    - wednesday 10am, Sarah Lee, 98765432
+    - Albert Poh, 83475923, monday, 2pm
+    - John Smith, 91234567, tuesday, 3pm
+    - Sarah Lee, 98765432, wednesday, 10am
+    - 83475923, Albert Poh, monday, 2pm
+    - 91234567, John Smith, tuesday, 3pm
+    - 98765432, Sarah Lee, wednesday, 10am
+    - monday, Albert Poh, 2pm, 83475923
+    - tuesday, John Smith, 3pm, 91234567
+    - wednesday, Sarah Lee, 10am, 98765432
+
     - I'd like to provide my details for the booking
     - Here are my contact details for the appointment
     - Let me give you my information for the booking
@@ -277,6 +377,41 @@ nlu:
     - Let me complete the booking with my information
     - Here's what you need for my appointment
     - I want to finish booking with these details
+    - next monday 2pm [John Doe](customer_name) [91234567](customer_phone)
+    - [Ivan lee](customer_name), [947294721](customer_phone)
+    - [John Smith](customer_name), [91234567](customer_phone)
+    - [Sarah Johnson](customer_name), [98765432](customer_phone)
+    - [Mike Wilson](customer_name), [87654321](customer_phone)
+    - [Lisa Wong](customer_name), [96543210](customer_phone)
+    - [David Tan](customer_name), [85432109](customer_phone)
+    - [Rachel Lim](customer_name), [94321098](customer_phone)
+    - [Kevin Ng](customer_name), [83210987](customer_phone)
+    - tomorrow 3pm [Sarah Lee](customer_name) [98765432](customer_phone)
+    - wednesday 10am [Mike Chen](customer_name) [87654321](customer_phone)
+    - friday afternoon [Lisa Wong](customer_name) [96543210](customer_phone)
+    - next week 2pm [David Tan](customer_name) [85432109](customer_phone)
+    
+    # Without explicit entity marking for better generalization
+    - next monday 2pm john doe 91234567
+    - tomorrow 3pm sarah lee 98765432  
+    - wednesday 10am mike chen 87654321
+    - friday afternoon lisa wong 96543210
+    - next tuesday 4pm alex tan 94567890
+    - monday morning peter lim 93456789
+    - thursday 11am jenny ng 92345678
+    - next monday 2pm [91234567](customer_phone)
+    - tomorrow 3pm [98765432](customer_phone)
+    - wednesday 10am [87654321](customer_phone)
+    - next monday 2pm [John Doe](customer_name)
+    - tomorrow 3pm [Sarah Lee](customer_name)
+    - wednesday 10am [Mike Chen](customer_name)
+    - next monday 2:30pm [John](customer_name) [91234567](customer_phone)
+    - tomorrow 3:15pm [Sarah](customer_name) [98765432](customer_phone)
+    - wednesday 10:45am [Mike](customer_name) [87654321](customer_phone)
+    - next monday, 2pm, john doe, 91234567
+    - tomorrow; 3pm; sarah lee; 98765432
+    - wednesday / 10am / mike chen / 87654321
+
 
 - intent: ask_appointment_status
   examples: |

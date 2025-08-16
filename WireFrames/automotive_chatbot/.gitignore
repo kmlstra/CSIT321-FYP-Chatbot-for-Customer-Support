@@ -181,3 +181,6 @@ cursor.db
 /*.tar
 /*.tar.gz
 /*.tar.zip
+
+/*.zip
+.zip

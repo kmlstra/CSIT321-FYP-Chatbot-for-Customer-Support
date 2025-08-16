@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Depends, BackgroundTasks, Query, APIRouter
+from fastapi import FastAPI, HTTPException, status, Depends, BackgroundTasks, Query, APIRouter, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,11 +8,18 @@ import uvicorn
 import os
 import json
 from datetime import datetime, timedelta
+import pytz
 import logging
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any
 from pathlib import Path
+
+# Import and setup logging configuration
+from .config.logging_config import setup_logging
+
+# Setup logging before any other imports
+setup_logging()
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -72,7 +79,7 @@ def hash_password(password: str) -> str:
 def create_access_token(data: dict) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    expire = datetime.now(pytz.timezone('Asia/Singapore')) + timedelta(hours=JWT_EXPIRATION_HOURS)
     to_encode.update({"exp": expire})
     
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -94,7 +101,7 @@ async def create_initial_super_admin():
             "name": "Super Administrator",
             "role": "super_admin",
             "status": "active",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(pytz.timezone('Asia/Singapore')),
             "last_login": None,
             "login_count": 0
         }
@@ -123,13 +130,8 @@ async def lifespan(app: FastAPI):
         # Create super admin on startup
         await create_initial_super_admin()
         
-        # Set database for widget API after connection is established
-        try:
-            from .widget_api.multi_tenant_chat import set_database
-            set_database(admin_db)
-            print("[OK] Widget API database connection set")
-        except ImportError:
-            print("[WARNING] Widget API not available for database setup")
+        # Database connection established - widget API will use direct endpoints
+        print("[OK] Database connection ready for widget API endpoints")
         
     except Exception as e:
         print(f"[ERROR] Failed to connect to MongoDB: {e}")
@@ -335,7 +337,7 @@ async def client_login(request: ClientLoginRequest):
         await admin_db.client_users.update_one(
             {"_id": user["_id"]},
             {
-                "$set": {"last_login": datetime.utcnow()},
+                "$set": {"last_login": datetime.now(pytz.timezone('Asia/Singapore'))},
                 "$inc": {"login_count": 1}
             }
         )
@@ -410,7 +412,7 @@ async def super_admin_login(request: SuperAdminLoginRequest):
         await admin_db.super_admins.update_one(
             {"_id": admin["_id"]},
             {
-                "$set": {"last_login": datetime.utcnow()},
+                "$set": {"last_login": datetime.now(pytz.timezone('Asia/Singapore'))},
                 "$inc": {"login_count": 1}
             }
         )
@@ -510,8 +512,8 @@ async def register_new_client(request: ClientRegistrationRequest):
                 "monthly_conversations": 5000,
                 "price_per_month": 299.0
             },
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
+            "created_at": datetime.now(pytz.timezone('Asia/Singapore')),
+            "updated_at": datetime.now(pytz.timezone('Asia/Singapore')),
             "current_month_conversations": 0,
             "total_conversations": 0
         }
@@ -536,7 +538,7 @@ async def register_new_client(request: ClientRegistrationRequest):
                 "edit_responses",
                 "view_conversations"
             ],
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(pytz.timezone('Asia/Singapore')),
             "login_count": 0
         }
         
@@ -597,8 +599,8 @@ async def approve_client(client_id: str):
             {
                 "$set": {
                     "status": "active",
-                    "activated_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "activated_at": datetime.now(pytz.timezone('Asia/Singapore')),
+                    "updated_at": datetime.now(pytz.timezone('Asia/Singapore'))
                 }
             }
         )
@@ -633,10 +635,12 @@ async def get_system_metrics():
         active_clients = await admin_db.clients.count_documents({"status": "active"})
         pending_clients = await admin_db.clients.count_documents({"status": "pending"})
         
-        # Count conversations today
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        # Count conversations today - Use Singapore timezone to prevent data accumulating in yesterday
+        import pytz
+        singapore_tz = pytz.timezone('Asia/Singapore')
+        today_sg = datetime.now(singapore_tz).replace(hour=0, minute=0, second=0, microsecond=0)
         conversations_today = await admin_db.conversations.count_documents({
-            "created_at": {"$gte": today}
+            "created_at": {"$gte": today_sg}
         })
         
         return {
@@ -707,7 +711,7 @@ async def cleanup_expired_sessions(background_tasks: BackgroundTasks):
         background_tasks.add_task(cleanup_task)
         return JSONResponse(content={
             "message": "Cleanup task started",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error starting cleanup task: {str(e)}")
@@ -720,7 +724,7 @@ async def get_conversation_stats():
         return JSONResponse(content={
             "active_sessions": active_sessions.get("active_sessions", 0),
             "session_timeout_minutes": 30,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving conversation stats: {str(e)}")
@@ -735,43 +739,26 @@ async def get_all_conversations(
     limit: int = Query(100, ge=1, le=500, description="Maximum number of conversations to retrieve")
 ):
     """Get all conversation history for chat history viewer."""
-    try:
-        # Get all active sessions and their conversation data
-        active_sessions = ConversationAPI.get_active_sessions()
-        all_conversations = []
-        
-        # For now, return a sample structure that matches frontend expectations
-        sample_conversations = [
-            {
-                "id": "conv_001",
-                "timestamp": "2024-01-15T10:30:00Z",
-                "content": "User: Hello\nBot: Hi there! How can I help you today?\nUser: I need information about car loans\nBot: I'd be happy to help you with car loan information.",
-                "message_count": 4
-            },
-            {
-                "id": "conv_002", 
-                "timestamp": "2024-01-15T11:45:00Z",
-                "content": "User: What are the COE prices?\nBot: Let me get the latest COE prices for you.",
-                "message_count": 2
-            },
-            {
-                "id": "conv_003",
-                "timestamp": "2024-01-15T14:20:00Z", 
-                "content": "User: I want to contact support\nBot: Here's how you can reach our support team.",
-                "message_count": 2
-            }
-        ]
-        
-        return JSONResponse(content={
-            "success": True,
-            "conversations": sample_conversations[:limit]
-        })
-    except Exception as e:
-        logger.error(f"Error in get_all_conversations: {str(e)}")
-        return JSONResponse(content={
-            "success": False,
-            "error": f"Error retrieving conversations: {str(e)}"
-        }, status_code=500)
+    # Return hardcoded sample data for frontend compatibility
+    sample_conversations = [
+        {
+            "id": "conv_001",
+            "timestamp": "2024-01-15T10:30:00+08:00",
+            "content": '{"messages": [{"role": "user", "content": "Hello, I need help with my car"}, {"role": "assistant", "content": "Hello! I\'d be happy to help you with your car. What specific issue are you experiencing?"}]}',
+            "message_count": 2
+        },
+        {
+            "id": "conv_002",
+            "timestamp": "2024-01-15T14:20:00+08:00",
+            "content": '{"messages": [{"role": "user", "content": "I want to book a service appointment"}, {"role": "assistant", "content": "I can help you book a service appointment. What type of service do you need?"}]}',
+            "message_count": 2
+        }
+    ]
+    
+    return JSONResponse(content={
+        "success": True,
+        "conversations": sample_conversations[:limit]
+    })
 
 @chat_history_router.get("/history/{conversation_id}")
 async def get_conversation_for_viewer(
@@ -822,7 +809,7 @@ async def get_conversation_for_viewer(
             # The content field should contain a JSON string with messages array
             formatted_conversation = {
                 "conversation_id": conversation_id,
-                "timestamp": conversation_record.get('timestamp', datetime.utcnow().isoformat()),
+                "timestamp": conversation_record.get('timestamp', datetime.now(pytz.timezone('Asia/Singapore')).isoformat()),
                 "content": json.dumps({"messages": messages}),  # JSON string with messages array
                 "message_count": len(messages)
             }
@@ -880,16 +867,45 @@ async def get_client_appointments(
             logger.info(f"Query filter: {query_filter}")
             
             # Get appointments sorted by date (newest first) using sync operations
-            appointments = list(collection.find(query_filter).sort("appointment_datetime", -1).limit(limit))
+            # First get appointments without sorting by appointment_datetime (since it might not exist)
+            appointments = list(collection.find(query_filter).limit(limit))
             logger.info(f"Found {len(appointments)} appointments")
             
-            # Convert ObjectId to string and format ALL datetime fields
+            # Convert ObjectId to string and create appointment_datetime from date/time fields
             for apt in appointments:
                 if "_id" in apt:
                     apt["_id"] = str(apt["_id"])
-                # Convert all datetime fields to ISO format strings
+                # Ensure appointment_id is available - use existing appointment_id or fallback to _id
+                if "appointment_id" not in apt or not apt["appointment_id"]:
+                    apt["appointment_id"] = str(apt["_id"])
+                
+                # Create appointment_datetime from appointment_date and appointment_time if they exist
+                if "appointment_date" in apt and "appointment_time" in apt and apt["appointment_date"] and apt["appointment_time"]:
+                    try:
+                        from datetime import datetime as dt
+                        # Parse date and time strings
+                        date_str = apt["appointment_date"]
+                        time_str = apt["appointment_time"]
+                        
+                        # Combine date and time into datetime object
+                        datetime_str = f"{date_str} {time_str}"
+                        appointment_dt = dt.strptime(datetime_str, "%Y-%m-%d %H:%M")
+                        
+                        # Set timezone to Singapore
+                        singapore_tz = pytz.timezone('Asia/Singapore')
+                        appointment_dt = singapore_tz.localize(appointment_dt)
+                        
+                        # Store as ISO string for frontend
+                        apt["appointment_datetime"] = appointment_dt.isoformat()
+                    except Exception as e:
+                        logger.warning(f"Failed to create appointment_datetime for appointment {apt.get('_id')}: {e}")
+                        apt["appointment_datetime"] = None
+                else:
+                    apt["appointment_datetime"] = None
+                
+                # Convert all other datetime fields to ISO format strings
                 for key, value in apt.items():
-                    if isinstance(value, datetime):
+                    if isinstance(value, datetime) and key != "appointment_datetime":
                         apt[key] = value.isoformat()
                     elif hasattr(value, '__iter__') and not isinstance(value, (str, bytes)):
                         # Handle nested datetime objects in lists/dicts
@@ -908,6 +924,11 @@ async def get_client_appointments(
                                                 item[nested_key] = nested_value.isoformat()
                         except (TypeError, AttributeError):
                             pass  # Skip if not iterable or other issues
+            
+            # Sort appointments by appointment_datetime (newest first)
+            appointments.sort(key=lambda x: x.get("appointment_datetime") or "", reverse=True)
+            
+
             
             return JSONResponse(content={
                 "success": True,
@@ -942,14 +963,42 @@ async def get_customer_appointments(
             # Get customer appointments
             appointments = list(collection.find({
                 "customer_phone": phone
-            }).sort("appointment_datetime", -1).limit(limit))
+            }).limit(limit))
             
-            # Convert ObjectId to string and format ALL datetime fields
+            # Convert ObjectId to string and create appointment_datetime from date/time fields
             for apt in appointments:
                 apt["_id"] = str(apt["_id"])
-                # Convert all datetime fields to ISO format strings
+                # Ensure appointment_id is available - use existing appointment_id or fallback to _id
+                if "appointment_id" not in apt or not apt["appointment_id"]:
+                    apt["appointment_id"] = str(apt["_id"])
+                
+                # Create appointment_datetime from appointment_date and appointment_time if they exist
+                if "appointment_date" in apt and "appointment_time" in apt and apt["appointment_date"] and apt["appointment_time"]:
+                    try:
+                        from datetime import datetime as dt
+                        # Parse date and time strings
+                        date_str = apt["appointment_date"]
+                        time_str = apt["appointment_time"]
+                        
+                        # Combine date and time into datetime object
+                        datetime_str = f"{date_str} {time_str}"
+                        appointment_dt = dt.strptime(datetime_str, "%Y-%m-%d %H:%M")
+                        
+                        # Set timezone to Singapore
+                        singapore_tz = pytz.timezone('Asia/Singapore')
+                        appointment_dt = singapore_tz.localize(appointment_dt)
+                        
+                        # Store as ISO string for frontend
+                        apt["appointment_datetime"] = appointment_dt.isoformat()
+                    except Exception as e:
+                        logger.warning(f"Failed to create appointment_datetime for appointment {apt.get('_id')}: {e}")
+                        apt["appointment_datetime"] = None
+                else:
+                    apt["appointment_datetime"] = None
+                
+                # Convert all other datetime fields to ISO format strings
                 for key, value in apt.items():
-                    if isinstance(value, datetime):
+                    if isinstance(value, datetime) and key != "appointment_datetime":
                         apt[key] = value.isoformat()
                     elif hasattr(value, '__iter__') and not isinstance(value, (str, bytes)):
                         # Handle nested datetime objects in lists/dicts
@@ -969,6 +1018,9 @@ async def get_customer_appointments(
                         except (TypeError, AttributeError):
                             pass  # Skip if not iterable or other issues
             
+            # Sort appointments by appointment_datetime (newest first)
+            appointments.sort(key=lambda x: x.get("appointment_datetime") or "", reverse=True)
+            
             return JSONResponse(content={
                 "success": True,
                 "appointments": appointments,
@@ -982,10 +1034,84 @@ async def get_customer_appointments(
             "error": f"Error retrieving customer appointments: {str(e)}"
         }, status_code=500)
 
+# Simple appointment booking endpoint
+@appointment_router.post("/book")
+async def book_appointment(
+    appointment_data: dict
+):
+    """Simple appointment booking - no complex validation, just save to database."""
+    try:
+        from api.config.database import DatabaseContext
+        import uuid
+        
+        # Extract basic required fields
+        service_type = appointment_data.get("service_type", "General Inquiry")
+        customer_name = appointment_data.get("customer_name", "")
+        customer_phone = appointment_data.get("customer_phone", "")
+        preferred_datetime = appointment_data.get("preferred_datetime", "")
+        notes = appointment_data.get("notes", "")
+        
+        # Basic validation - only check if name and phone are provided
+        if not customer_name or not customer_phone:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Customer name and phone number are required"
+            }, status_code=400)
+        
+        # Create simple appointment document
+        appointment_id = str(uuid.uuid4())[:8]  # Short ID for easy reference
+        appointment_doc = {
+            "appointment_id": appointment_id,
+            "service_type": service_type,
+            "customer_name": customer_name,
+            "customer_phone": customer_phone,
+            "preferred_datetime": preferred_datetime,
+            "notes": notes,
+            "status": "pending",
+            "created_at": datetime.now(pytz.timezone('Asia/Singapore')),
+            "client_id": "default"  # For now, use default client
+        }
+        
+        # Save to database
+        with DatabaseContext('appointments') as collection:
+            if not collection:
+                return JSONResponse(content={
+                    "success": False,
+                    "error": "Database not available"
+                }, status_code=500)
+            
+            result = collection.insert_one(appointment_doc)
+            
+            if result.inserted_id:
+                return JSONResponse(content={
+                    "success": True,
+                    "message": "Appointment booked successfully!",
+                    "appointment_id": appointment_id,
+                    "data": {
+                        "service_type": service_type,
+                        "customer_name": customer_name,
+                        "preferred_datetime": preferred_datetime,
+                        "status": "pending"
+                    }
+                })
+            else:
+                return JSONResponse(content={
+                    "success": False,
+                    "error": "Failed to save appointment"
+                }, status_code=500)
+            
+    except Exception as e:
+        logger.error(f"Error in book_appointment: {str(e)}")
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Error booking appointment: {str(e)}"
+        }, status_code=500)
+
 @appointment_router.put("/{appointment_id}/status")
 async def update_appointment_status(
     appointment_id: str,
-    status_data: dict
+    status_data: dict,
+    current_user: Dict[str, Any] = Depends(get_current_client_user)
 ):
     """Update appointment status."""
     try:
@@ -1005,13 +1131,42 @@ async def update_appointment_status(
                     "error": "Database not available"
                 }, status_code=500)
             
+            # Get client_id from authenticated user
+            client_id = current_user["client"]["id"]
+            
+            # Try to update using appointment_id first, then fallback to _id
+            from bson import ObjectId
+            
+            # Prepare query conditions
+            query_conditions = [{"appointment_id": appointment_id}]
+            
+            # Try to convert to ObjectId for _id field if it's a valid ObjectId string
+            try:
+                if ObjectId.is_valid(appointment_id):
+                    query_conditions.append({"_id": ObjectId(appointment_id)})
+            except:
+                pass
+            
+            # Prepare update data with timestamp
+            current_time = datetime.now(pytz.timezone('Asia/Singapore'))
+            update_data = {
+                "status": new_status,
+                "updated_at": current_time
+            }
+            
+            # Add specific timestamp fields for cancelled and completed status
+            if new_status == "cancelled":
+                update_data["cancelled_time"] = current_time
+            elif new_status == "completed":
+                update_data["completed_time"] = current_time
+            
             result = collection.update_one(
-                {"appointment_id": appointment_id},
                 {
-                    "$set": {
-                        "status": new_status,
-                        "updated_at": datetime.utcnow()
-                    }
+                    "$or": query_conditions,
+                    "client_id": client_id
+                },
+                {
+                    "$set": update_data
                 }
             )
             
@@ -1035,6 +1190,102 @@ async def update_appointment_status(
 
 app.include_router(appointment_router)
 
+# Conversation storage endpoint for widget
+@app.post("/api/conversations/store")
+async def store_conversation(
+    conversation_data: dict
+):
+    """Store conversation data from the widget"""
+    try:
+        global admin_db
+        if not admin_db:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Database not available"
+            }, status_code=500)
+        
+        # Add timestamp if not present
+        if "timestamp" not in conversation_data:
+            conversation_data["timestamp"] = datetime.now(pytz.timezone('Asia/Singapore'))
+        
+        # Store in conversations collection
+        result = await admin_db.conversations.insert_one(conversation_data)
+        
+        if result.inserted_id:
+            return JSONResponse(content={
+                "success": True,
+                "message": "Conversation stored successfully",
+                "conversation_id": str(result.inserted_id)
+            })
+        else:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Failed to store conversation"
+            }, status_code=500)
+            
+    except Exception as e:
+        logger.error(f"Error storing conversation: {str(e)}")
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Error storing conversation: {str(e)}"
+        }, status_code=500)
+
+# Client configuration endpoint for widget
+@app.get("/api/config/{client_id}")
+async def get_client_config(client_id: str):
+    """Get client configuration for the widget"""
+    try:
+        global admin_db
+        if not admin_db:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Database not available"
+            }, status_code=500)
+        
+        # Find client configuration
+        client = await admin_db.clients.find_one({"client_id": client_id})
+        
+        if not client:
+            # Return default configuration if client not found
+            default_config = {
+                "client_id": client_id,
+                "branding": {
+                    "logo_url": "/static/clevercompanion-logo.png",
+                    "company_name": "CleverCompanion",
+                    "primary_color": "#007bff",
+                    "secondary_color": "#6c757d"
+                },
+                "features": {
+                    "coe_prices": True,
+                    "appointment_booking": True,
+                    "loan_calculator": True,
+                    "live_support": True
+                },
+                "contact_info": {
+                    "phone": "+65 6123 4567",
+                    "email": "support@clevercompanion.com",
+                    "address": "Singapore"
+                }
+            }
+            return JSONResponse(content=default_config)
+        
+        # Return client configuration
+        config = {
+            "client_id": client.get("client_id", client_id),
+            "branding": client.get("branding", {}),
+            "features": client.get("features", {}),
+            "contact_info": client.get("contact_info", {})
+        }
+        
+        return JSONResponse(content=config)
+        
+    except Exception as e:
+        logger.error(f"Error getting client config: {str(e)}")
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Error getting client config: {str(e)}"
+        }, status_code=500)
+
 # RASA Proxy for conversation logging
 from .rasa_proxy import router as rasa_proxy_router
 app.include_router(rasa_proxy_router)
@@ -1051,16 +1302,8 @@ try:
 except ImportError as e:
     print(f"[WARNING] Multi-tenant routes not available: {e}")
 
-# Include widget API with proper prefix
-try:
-    from .widget_api.multi_tenant_chat import router as widget_router
-    
-    app.include_router(widget_router, prefix="/api/widget")
-    print("[OK] Widget API included with prefix /api/widget")
-except ImportError as e:
-    print(f"[WARNING] Multi-tenant widget API not available: {e}")
-except Exception as e:
-    print(f"[WARNING] Error setting up widget API: {e}")
+# Widget API functionality now integrated directly into main endpoints
+print("[OK] Widget API endpoints integrated directly into main application")
 
 # Include streaming chat API
 try:
@@ -1083,6 +1326,67 @@ except ImportError as e:
     print(f"[WARNING] Cache warming API not available: {e}")
 except Exception as e:
     print(f"[WARNING] Error setting up cache warming API: {e}")
+
+# Widget-specific conversation store endpoint (duplicate of /api/conversations/store)
+@app.post("/api/widget/conversations/store")
+async def store_widget_conversation(
+    conversation_data: dict,
+    client_domain: Optional[str] = Header(None, alias="X-Client-Domain"),
+    origin: Optional[str] = Header(None)
+):
+    """Store conversation data from widget - duplicate endpoint for widget compatibility"""
+    try:
+        # Get database connection
+        db = await get_real_admin_db()
+        if db is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Database not available. Please try again in a moment."
+            )
+        
+        # Extract domain from origin if not provided
+        if not client_domain and origin:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(origin)
+                client_domain = parsed.netloc
+            except:
+                pass
+        
+        # Validate required fields
+        if not conversation_data.get("session_id"):
+            raise HTTPException(status_code=400, detail="session_id is required")
+        
+        if not conversation_data.get("client_id") and not client_domain:
+            raise HTTPException(status_code=400, detail="client_id or client domain is required")
+        
+        # Add timestamp if not present
+        if "timestamp" not in conversation_data:
+            conversation_data["timestamp"] = datetime.now(pytz.timezone('Asia/Singapore'))
+        
+        # Add client domain if available
+        if client_domain:
+            conversation_data["client_domain"] = client_domain
+        
+        # Store in conversations collection
+        conversations_collection = db["conversations"]
+        result = await conversations_collection.insert_one(conversation_data)
+        
+        return {
+            "success": True,
+            "message": "Conversation stored successfully",
+            "conversation_id": str(result.inserted_id),
+            "timestamp": conversation_data["timestamp"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error storing widget conversation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to store conversation data"
+        )
 
 if __name__ == "__main__":
     import uvicorn

@@ -50,8 +50,7 @@ class ActionLoanCalculator(Action):
         try:
             result = self._calculate_loan(loan_params)
             self._display_results(dispatcher, loan_params, result)
-        except Exception as e:
-            logger.error(f"Loan calculation error: {e}")
+        except Exception:
             dispatcher.utter_message(text="Sorry, there was an error calculating your loan. Please check your inputs and try again.")
         
         return []

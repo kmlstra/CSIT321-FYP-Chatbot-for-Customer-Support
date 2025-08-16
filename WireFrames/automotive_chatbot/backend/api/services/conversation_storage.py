@@ -14,7 +14,8 @@ import pytz
 # Import from config directory using relative import
 from ..config.database import DatabaseContext
 
-logger = logging.getLogger(__name__)
+# Configure logger with proper module name for DEBUG level
+logger = logging.getLogger('api.services.conversation_storage')
 
 class ConversationStorage:
     """Manages conversation storage in MongoDB with session expiry."""
@@ -84,6 +85,7 @@ class ConversationStorage:
             session_id: Unique session identifier
         """
         session_id = str(uuid.uuid4())
+        logger.info(f"[CONVERSATION_STORAGE] Creating new session with ID: {session_id}, user_id: {user_id}")
         
         with DatabaseContext('chat_sessions') as chat_sessions:
             if chat_sessions:
@@ -110,12 +112,13 @@ class ConversationStorage:
                         'message_count': 0
                     }
                     
-                    chat_sessions.insert_one(session_data)
-                    pass
+                    logger.debug(f"[CONVERSATION_STORAGE] Inserting session data: {session_data}")
+                    result = chat_sessions.insert_one(session_data)
+                    logger.info(f"[CONVERSATION_STORAGE] SUCCESS: Session created - session_id: {session_id}, inserted_id: {result.inserted_id}, user_id: {user_id}")
                 except Exception as e:
-                    logger.error(f"Failed to store session {session_id}: {e}")
+                    logger.error(f"[CONVERSATION_STORAGE] Failed to store session {session_id}: {e}", exc_info=True)
             else:
-                pass
+                logger.warning(f"[CONVERSATION_STORAGE] MongoDB not available for session creation, returning session_id: {session_id}")
                 
         return session_id
     
@@ -128,9 +131,11 @@ class ConversationStorage:
         Returns:
             bool: True if session was extended, False if not found
         """
+        logger.info(f"[CONVERSATION_STORAGE] Extending session: {session_id}")
+        
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                pass
+                logger.warning(f"[CONVERSATION_STORAGE] MongoDB not available for session extension, returning True for session: {session_id}")
                 return True  # Return True to not break the flow
                 
             try:
@@ -147,6 +152,7 @@ class ConversationStorage:
                 current_time = utc_current.replace(tzinfo=singapore_tz)
                 new_expires_at = utc_expires.replace(tzinfo=singapore_tz)
                 
+                logger.debug(f"[CONVERSATION_STORAGE] Updating session {session_id} with new expiry: {new_expires_at}")
                 result = chat_sessions.update_one(
                     {'session_id': session_id},
                     {
@@ -158,14 +164,14 @@ class ConversationStorage:
                 )
                 
                 if result.modified_count > 0:
-                    pass
+                    logger.info(f"[CONVERSATION_STORAGE] SUCCESS: Session extended - session_id: {session_id}, new_expiry: {new_expires_at}")
                     return True
                 else:
-                    logger.warning(f"Session {session_id} not found for extension")
+                    logger.error(f"[CONVERSATION_STORAGE] CRITICAL: Session {session_id} not found for extension")
                     return False
                     
             except Exception as e:
-                logger.error(f"Failed to extend session {session_id}: {e}")
+                logger.error(f"[CONVERSATION_STORAGE] Failed to extend session {session_id}: {e}", exc_info=True)
                 return False
     
     def store_message(self, session_id: str, message_type: str, content: str, 
@@ -177,15 +183,36 @@ class ConversationStorage:
             message_type: Type of message (text, button_click, etc.)
             content: Message content
             sender: Message sender (user, bot)
-            metadata: Additional message metadata
+            metadata: Additional message metadata (should include client_id)
             
         Returns:
             bool: True if message was stored successfully
         """
+        # Log the incoming store_message call with all parameters
+        logger.info(f"[CONVERSATION_STORAGE] store_message called - session_id: {session_id}, message_type: {message_type}, sender: {sender}")
+        logger.debug(f"[CONVERSATION_STORAGE] Message content: {content[:100]}{'...' if len(content) > 100 else ''}")
+        logger.debug(f"[CONVERSATION_STORAGE] Full metadata: {metadata}")
+        
         # Validate session_id to prevent null conversation_id errors
         if not session_id or session_id.strip() == '':
-            logger.error(f"Invalid session_id provided: {session_id}")
+            logger.error(f"[CONVERSATION_STORAGE] Invalid session_id provided: {session_id}")
             return False
+            
+        # Extract client_id from metadata if available
+        client_id = None
+        if metadata and isinstance(metadata, dict):
+            client_id = metadata.get('client_id') or metadata.get('clientId')
+            # Also check for client_id in nested metadata
+            if not client_id and 'metadata' in metadata:
+                nested_metadata = metadata['metadata']
+                if isinstance(nested_metadata, dict):
+                    client_id = nested_metadata.get('client_id') or nested_metadata.get('clientId')
+        
+        # Log client_id extraction result
+        if client_id:
+            logger.info(f"[CONVERSATION_STORAGE] SUCCESS: Extracted client_id: {client_id} from metadata")
+        else:
+            logger.error(f"[CONVERSATION_STORAGE] CRITICAL: No client_id found in metadata for session {session_id}. This may cause data isolation issues. Metadata: {metadata}")
             
         with DatabaseContext('conversations') as conversations:
             if not conversations:
@@ -193,68 +220,94 @@ class ConversationStorage:
                 return True  # Return True to not break the flow
             
             try:
+                logger.debug(f"[CONVERSATION_STORAGE] Starting message storage for session {session_id}")
+                
                 # Format the new message line with proper formatting
                 if sender.lower() == 'system':
                     new_message_line = f"{content}\n"
                 else:
                     new_message_line = f"{sender.capitalize()}: {content}\n"
                 
+                logger.debug(f"[CONVERSATION_STORAGE] Formatted message line: {new_message_line.strip()}")
+                
                 # Use Singapore timezone - store directly without UTC conversion
                 singapore_tz = pytz.timezone('Asia/Singapore')
                 current_time = datetime.now(singapore_tz)
                 new_expires_at = current_time + timedelta(minutes=self.session_timeout_minutes)
                 
+                logger.debug(f"[CONVERSATION_STORAGE] Timestamp: {current_time}, Expires: {new_expires_at}")
+                
                 # PERFORMANCE OPTIMIZATION: Single atomic operation for both conversation and session
                 # This reduces database calls from 2 to 1 per message
                 with DatabaseContext('chat_sessions') as chat_sessions:
                     if chat_sessions:
-                        # Update session in parallel (non-blocking)
-                        chat_sessions.update_one(
-                            {'session_id': session_id},
-                            {
-                                '$set': {
-                                    'last_activity': current_time,
-                                    'expires_at': new_expires_at
-                                },
-                                '$inc': {'message_count': 1},
-                                '$setOnInsert': {
-                                    'session_id': session_id,
-                                    'created_at': current_time,
-                                    'user_id': None
-                                }
+                        # Prepare session update with client_id if available
+                        session_update = {
+                            '$set': {
+                                'last_activity': current_time,
+                                'expires_at': new_expires_at
                             },
+                            '$inc': {'message_count': 1},
+                            '$setOnInsert': {
+                                'session_id': session_id,
+                                'created_at': current_time,
+                                'user_id': None
+                            }
+                        }
+                        
+                        # Add client_id to session if available (only in $setOnInsert to avoid conflict)
+                        if client_id:
+                            session_update['$setOnInsert']['client_id'] = client_id
+                            logger.debug(f"[CONVERSATION_STORAGE] Adding client_id {client_id} to session update")
+                        
+                        # Update session in parallel (non-blocking)
+                        logger.debug(f"[CONVERSATION_STORAGE] Updating session {session_id} with data: {session_update}")
+                        session_result = chat_sessions.update_one(
+                            {'session_id': session_id},
+                            session_update,
                             upsert=True
                         )
+                        logger.debug(f"[CONVERSATION_STORAGE] Session update result - matched: {session_result.matched_count}, modified: {session_result.modified_count}, upserted_id: {session_result.upserted_id}")
                 
                 # Store conversation message with optimized $concat operation
                 # Ensure conversation_id is never null to prevent E11000 duplicate key error
                 if session_id and session_id.strip():
-                    conversations.update_one(
+                    # Prepare conversation update with client_id if available
+                    conversation_set = {
+                        'conversation_id': session_id,
+                        'timestamp': current_time,
+                        'content': {
+                            '$concat': [
+                                {'$ifNull': ['$content', '']},
+                                new_message_line
+                            ]
+                        }
+                    }
+                    
+                    # Add client_id to conversation if available
+                    if client_id:
+                        conversation_set['client_id'] = client_id
+                        logger.debug(f"[CONVERSATION_STORAGE] Adding client_id {client_id} to conversation")
+                    
+                    logger.debug(f"[CONVERSATION_STORAGE] Updating conversation {session_id} with data: {conversation_set}")
+                    conversation_result = conversations.update_one(
                         {'conversation_id': session_id},
                         [
                             {
-                                '$set': {
-                                    'conversation_id': session_id,
-                                    'timestamp': current_time,
-                                    'content': {
-                                        '$concat': [
-                                            {'$ifNull': ['$content', '']},
-                                            new_message_line
-                                        ]
-                                    }
-                                }
+                                '$set': conversation_set
                             }
                         ],
                         upsert=True
                     )
+                    logger.debug(f"[CONVERSATION_STORAGE] Conversation update result - matched: {conversation_result.matched_count}, modified: {conversation_result.modified_count}, upserted_id: {conversation_result.upserted_id}")
                 else:
-                    logger.error(f"Cannot store message: invalid session_id '{session_id}'")
+                    logger.error(f"[CONVERSATION_STORAGE] Cannot store message: invalid session_id '{session_id}'")
                     return False
                 
-                pass
+                logger.info(f"[CONVERSATION_STORAGE] SUCCESS: Message stored successfully - session_id: {session_id}, sender: {sender}, client_id: {client_id}, message_type: {message_type}")
                 return True
             except Exception as e:
-                logger.error(f"Failed to store message for conversation {session_id}: {e}")
+                logger.error(f"[CONVERSATION_STORAGE] Failed to store message for conversation {session_id}: {e}", exc_info=True)
                 return False
     
     def _update_session_activity(self, session_id: str, current_time: datetime):
@@ -301,18 +354,22 @@ class ConversationStorage:
         Returns:
             List containing the conversation record with parsed content
         """
+        logger.debug(f"[CONVERSATION_STORAGE] Retrieving conversation history for session: {session_id}, limit: {limit}")
+        
         with DatabaseContext('conversations') as conversations:
             if not conversations:
-                pass
+                logger.warning(f"[CONVERSATION_STORAGE] MongoDB not available for conversation history retrieval, session: {session_id}")
                 return []
                 
             try:
+                logger.debug(f"[CONVERSATION_STORAGE] Querying conversation with conversation_id: {session_id}")
                 conversation = conversations.find_one(
                     {'conversation_id': session_id},
                     {'_id': 0}  # Exclude MongoDB _id field
                 )
                 
                 if conversation:
+                    logger.debug(f"[CONVERSATION_STORAGE] Found conversation for session {session_id}, client_id: {conversation.get('client_id', 'N/A')}")
                     # Convert datetime to local timezone ISO string for JSON serialization
                     if 'timestamp' in conversation and isinstance(conversation['timestamp'], datetime):
                         # Ensure timezone awareness and convert to Singapore timezone
@@ -327,11 +384,13 @@ class ConversationStorage:
                             local_time = conversation['timestamp'].astimezone(singapore_tz)
                         
                         conversation['timestamp'] = local_time.isoformat()
+                    logger.info(f"[CONVERSATION_STORAGE] Successfully retrieved conversation history for session {session_id}")
                     return [conversation]
                 else:
+                    logger.debug(f"[CONVERSATION_STORAGE] No conversation found for session {session_id}")
                     return []
             except Exception as e:
-                logger.error(f"Failed to retrieve conversation history for {session_id}: {e}")
+                logger.error(f"[CONVERSATION_STORAGE] Failed to retrieve conversation history for {session_id}: {e}", exc_info=True)
                 return []
     
     def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -343,18 +402,22 @@ class ConversationStorage:
         Returns:
             Session data or None if not found
         """
+        logger.debug(f"[CONVERSATION_STORAGE] Retrieving session info for: {session_id}")
+        
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                pass
+                logger.warning(f"[CONVERSATION_STORAGE] MongoDB not available for session info retrieval, session: {session_id}")
                 return None
                 
             try:
+                logger.debug(f"[CONVERSATION_STORAGE] Querying session with session_id: {session_id}")
                 session = chat_sessions.find_one(
                     {'session_id': session_id},
                     {'_id': 0}  # Exclude MongoDB _id field
                 )
                 
                 if session:
+                    logger.debug(f"[CONVERSATION_STORAGE] Found session {session_id}, client_id: {session.get('client_id', 'N/A')}, message_count: {session.get('message_count', 0)}")
                     # Convert datetime fields to ISO strings for JSON serialization
                     singapore_tz = pytz.timezone('Asia/Singapore')
                     for field in ['created_at', 'last_activity', 'expires_at']:
@@ -368,61 +431,56 @@ class ConversationStorage:
                                 local_time = session[field].astimezone(singapore_tz)
                             session[field] = local_time.isoformat()
                     
-                    pass
+                    logger.info(f"[CONVERSATION_STORAGE] Successfully retrieved session info for {session_id}")
                     return session
                 else:
-                    pass
+                    logger.debug(f"[CONVERSATION_STORAGE] No session found for session_id: {session_id}")
                     return None
             except Exception as e:
-                logger.error(f"Failed to retrieve session info for {session_id}: {e}")
+                logger.error(f"[CONVERSATION_STORAGE] Failed to retrieve session info for {session_id}: {e}", exc_info=True)
                 return None
     
     def cleanup_expired_sessions(self) -> int:
-        """Clean up expired sessions and conversations.
+        """Clean up expired sessions and old conversations.
         
         Returns:
-            Number of items cleaned up (conversations + sessions)
+            Number of sessions cleaned up
         """
-        total_cleaned = 0
+        logger.debug("[CONVERSATION_STORAGE] Starting cleanup of expired sessions and old conversations")
+        singapore_tz = pytz.timezone('Asia/Singapore')
+        current_time = datetime.now(singapore_tz)
+        
+        cleaned_count = 0
         
         # Clean up expired chat sessions
+        logger.debug(f"[CONVERSATION_STORAGE] Cleaning up chat sessions expired before: {current_time.isoformat()}")
         with DatabaseContext('chat_sessions') as chat_sessions:
             if chat_sessions:
                 try:
-                    # Use current time for session expiry check
-                    current_time = datetime.utcnow()
-                    
-                    session_result = chat_sessions.delete_many(
-                        {'expires_at': {'$lt': current_time}}
-                    )
-                    
-                    logger.info(f"Cleaned up {session_result.deleted_count} expired chat sessions")
-                    total_cleaned += session_result.deleted_count
+                    result = chat_sessions.delete_many({
+                        'expires_at': {'$lt': current_time}
+                    })
+                    logger.info(f"[CONVERSATION_STORAGE] Cleaned up {result.deleted_count} expired chat sessions")
+                    cleaned_count += result.deleted_count
                 except Exception as e:
-                    logger.error(f"Failed to cleanup expired chat sessions: {e}")
+                    logger.error(f"[CONVERSATION_STORAGE] Failed to cleanup expired chat sessions: {e}", exc_info=True)
         
-        # Clean up old conversations
+        # Clean up old conversations (older than 30 days)
+        cutoff_time = current_time - timedelta(days=30)
+        logger.debug(f"[CONVERSATION_STORAGE] Cleaning up conversations older than: {cutoff_time.isoformat()}")
         with DatabaseContext('conversations') as conversations:
-            if not conversations:
-                pass
-                return total_cleaned
-                
-            try:
-                # Clean up old conversations (older than session timeout)
-                # Use UTC for internal cleanup operations
-                cutoff_time = datetime.utcnow() - timedelta(minutes=self.session_timeout_minutes)
-                
-                conversation_result = conversations.delete_many(
-                    {'timestamp': {'$lt': cutoff_time}}
-                )
-                
-                logger.info(f"Cleaned up {conversation_result.deleted_count} old conversations")
-                total_cleaned += conversation_result.deleted_count
-            except Exception as e:
-                logger.error(f"Failed to cleanup old conversations: {e}")
+            if conversations:
+                try:
+                    result = conversations.delete_many({
+                        'timestamp': {'$lt': cutoff_time}
+                    })
+                    logger.info(f"[CONVERSATION_STORAGE] Cleaned up {result.deleted_count} old conversations")
+                    cleaned_count += result.deleted_count
+                except Exception as e:
+                    logger.error(f"[CONVERSATION_STORAGE] Failed to cleanup old conversations: {e}", exc_info=True)
         
-        logger.info(f"Total cleanup: {total_cleaned} items removed")
-        return total_cleaned
+        logger.info(f"[CONVERSATION_STORAGE] Total cleanup completed: {cleaned_count} records removed")
+        return cleaned_count
     
     def get_active_sessions_count(self) -> int:
         """Get count of active sessions.
@@ -430,25 +488,29 @@ class ConversationStorage:
         Returns:
             Number of active sessions
         """
+        logger.debug("[CONVERSATION_STORAGE] Getting active sessions count")
+        
         with DatabaseContext('chat_sessions') as chat_sessions:
             if not chat_sessions:
-                pass
+                logger.warning("[CONVERSATION_STORAGE] MongoDB not available for active sessions count")
                 return 0
                 
             try:
-                # Count sessions that haven't expired yet
-                # Use UTC for internal operations
-                current_time = datetime.utcnow()
+                singapore_tz = pytz.timezone('Asia/Singapore')
+                current_time = datetime.now(singapore_tz)
                 
-                count = chat_sessions.count_documents(
-                    {'expires_at': {'$gt': current_time}}
-                )
+                logger.debug(f"[CONVERSATION_STORAGE] Counting sessions active after: {current_time.isoformat()}")
+                count = chat_sessions.count_documents({
+                    'expires_at': {'$gt': current_time}
+                })
                 
-                pass
+                logger.info(f"[CONVERSATION_STORAGE] Found {count} active sessions")
                 return count
             except Exception as e:
-                logger.error(f"Failed to get active sessions count: {e}")
+                logger.error(f"[CONVERSATION_STORAGE] Failed to get active sessions count: {e}", exc_info=True)
                 return 0
+    
+
     
     def close(self):
         """Close MongoDB connection."""

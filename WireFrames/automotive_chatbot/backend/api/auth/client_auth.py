@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import hashlib
 from datetime import datetime, timedelta
+import pytz
 from bson import ObjectId
 
 from ..config.database import get_real_admin_db, get_security_manager
@@ -37,7 +38,7 @@ class ClientAuthManager:
     def create_access_token(self, data: Dict[str, Any]) -> str:
         """Create JWT access token"""
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+        expire = datetime.now(pytz.timezone('Asia/Singapore')) + timedelta(hours=JWT_EXPIRATION_HOURS)
         to_encode.update({"exp": expire})
         
         encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -78,7 +79,7 @@ class ClientAuthManager:
             await self.db.client_users.update_one(
                 {"_id": user["_id"]},
                 {
-                    "$set": {"last_login": datetime.utcnow()},
+                    "$set": {"last_login": datetime.now(pytz.timezone('Asia/Singapore'))},
                     "$inc": {"login_count": 1}
                 }
             )

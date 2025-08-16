@@ -42,10 +42,8 @@ stories:
   - intent: ask_public_holiday_hours
   - action: action_smart_contact
 
-- story: schedule visit
-  steps:
-  - intent: confirm_schedule_visit
-  - action: action_smart_contact
+# Removed schedule visit story - conflicts with appointment booking
+# Users should use appointment booking stories instead
 
 - story: contact to location flow
   steps:

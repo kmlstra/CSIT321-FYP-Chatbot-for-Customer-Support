@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .arrow-up { fill: #ef4444; stroke: #dc2626; stroke-width: 1; }
+    </style>
+  </defs>
+  <!-- Red upward arrow -->
+  <polygon class="arrow-up" points="10,3 16,13 4,13" />
+</svg> 

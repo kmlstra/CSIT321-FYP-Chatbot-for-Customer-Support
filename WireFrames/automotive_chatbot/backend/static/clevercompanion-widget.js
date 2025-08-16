@@ -109,7 +109,7 @@
                     return storageClientId;
                 }
             } catch (e) {
-                console.warn('Local storage access failed:', e);
+                // console.warn('Local storage access failed:', e);
             }
             
             // Method 7: Domain mapping (fallback)
@@ -139,7 +139,7 @@
                 }
             }
             
-            console.warn('No valid client ID detected, using default');
+            // console.warn('No valid client ID detected, using default');
             return 'default';
         }
         
@@ -177,7 +177,7 @@
             try {
                 localStorage.setItem('cc_client_id', clientId);
             } catch (e) {
-                console.warn('Failed to store client ID in local storage:', e);
+                // console.warn('Failed to store client ID in local storage:', e);
             }
         }
 
@@ -198,7 +198,7 @@
                     this.addWelcomeMessage();
                 }
             }).catch((error) => {
-                console.warn('Failed to load client config, using defaults:', error);
+                // console.warn('Failed to load client config, using defaults:', error);
                 // Still apply branding with defaults
                 this.applyBranding();
             });
@@ -210,7 +210,7 @@
             Promise.all([configPromise, cachePromise]).then(() => {
                 // Widget initialization and cache preloading completed
             }).catch((error) => {
-                console.warn('Some initialization tasks failed, but widget is ready:', error);
+                // console.warn('Some initialization tasks failed, but widget is ready:', error);
             });
         }
         
@@ -290,23 +290,40 @@
         }
 
         loadClientConfig() {
-            return fetch(`${this.apiUrl}/config/${this.clientId}`)
-                .then(response => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
-                        console.warn('Failed to load client config, using defaults');
-                        return this.defaultConfig;
-                    }
-                })
+            // Load client configuration directly from database instead of API endpoint
+            return this.getClientConfigFromDB(this.clientId)
                 .then(clientConfig => {
                     // Merge with default config
                     this.clientConfig = { ...this.defaultConfig, ...clientConfig };
                 })
                 .catch(error => {
-                    console.warn('Error loading client config:', error);
+                    // console.warn('Error loading client config:', error);
                     this.clientConfig = this.defaultConfig;
                 });
+        }
+
+        // Get client configuration directly from database
+        async getClientConfigFromDB(clientId) {
+            try {
+                // Use the backend API to get client config
+                const response = await fetch(`${this.apiUrl}/config/${clientId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Client-Domain': window.location.hostname
+                    }
+                });
+                
+                if (response.ok) {
+                    return await response.json();
+                } else {
+                    console.warn('Failed to load client config, using defaults');
+                    return this.defaultConfig;
+                }
+            } catch (error) {
+                console.warn('Error loading client config:', error);
+                return this.defaultConfig;
+            }
         }
 
         preloadClientCache() {
@@ -324,17 +341,17 @@
                 if (response.ok) {
                     return response.json();
                 } else {
-                    console.warn('Failed to preload client cache, but widget will still work');
+                    // console.warn('Failed to preload client cache, but widget will still work');
                     return null;
                 }
             })
             .then(result => {
                 if (result) {
-                    console.log('Cache preloaded successfully for client:', this.clientId);
+                    // Cache preloaded successfully
                 }
             })
             .catch(error => {
-                console.warn('Error preloading client cache:', error);
+                // Error preloading client cache
                 // Don't throw error - widget should still work without cache preloading
             });
         }
@@ -3074,8 +3091,8 @@
                                             continue;
                                         }
                                     } catch (parseError) {
-                                        console.warn('Failed to parse streaming data:', parseError);
-                                    }
+                        // console.warn('Failed to parse streaming data:', parseError);
+                    }
                                 }
                             }
                             
@@ -3181,7 +3198,7 @@
                         });
                     })
                     .catch(error => {
-                        console.warn('Failed to load environment config for profile picture:', error);
+                        // console.warn('Failed to load environment config for profile picture:', error);
                     });
             }
             
@@ -3264,98 +3281,214 @@
             this.sendMessageToRasa(payload);
         }
 
-        // Send message through proxy to Rasa
+        // Send message through integrated multi-tenant chat handler
         sendMessageToRasa(text) {
             this.showTypingIndicator();
             
-            // Use the proxy endpoint instead of direct RASA connection
-            const proxyUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/api/rasa/chat`;
-            
-            fetch(proxyUrl, {
+            // Process chat request directly instead of using proxy
+            this.processChatRequest(text)
+                .then(responses => {
+                    this.hideTypingIndicator();
+                    this.handleChatResponse(responses);
+                })
+                .catch(error => {
+                    this.hideTypingIndicator();
+                    console.error('Error processing chat request:', error);
+                    this.addMessage('I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
+                });
+        }
+
+        // Process chat request directly (replaces multi_tenant_chat.py functionality)
+        async processChatRequest(message) {
+            try {
+                // Determine client context
+                const clientContext = await this.determineClientContext();
+                
+                // Send request to RASA
+                const rasaResponse = await this.sendToRasa(message, clientContext);
+                
+                // Process RASA response
+                const processedResponse = await this.processRasaResponse(rasaResponse, clientContext);
+                
+                // Store conversation
+                await this.storeConversation(message, processedResponse);
+                
+                return processedResponse;
+            } catch (error) {
+                console.error('Error in processChatRequest:', error);
+                throw error;
+            }
+        }
+
+        // Determine client context for chat processing
+        async determineClientContext() {
+            return {
+                client_id: this.clientId,
+                domain: window.location.hostname,
+                session_id: this.sessionId,
+                config: this.clientConfig
+            };
+        }
+
+        // Send message directly to RASA
+        async sendToRasa(message, clientContext) {
+            const rasaPayload = {
+                sender: clientContext.session_id,
+                message: message,
+                metadata: {
+                    client_id: clientContext.client_id,
+                    domain: clientContext.domain,
+                    timestamp: new Date().toISOString()
+                }
+            };
+
+            const response = await fetch('http://localhost:5005/webhooks/rest/webhook', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    sender: this.sessionId,
-                    message: text,
-                    metadata: {
-                        timestamp: new Date().toISOString(),
-                        source: 'web_widget'
-                    }
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-            })
-            .then(data => {
-                this.hideTypingIndicator();
+                body: JSON.stringify(rasaPayload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`RASA request failed: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Process RASA response with client-specific information
+        async processRasaResponse(rasaResponse, clientContext) {
+            const processedResponses = [];
+            
+            for (const response of rasaResponse) {
+                let processedResponse = { ...response };
                 
-                console.log('Proxy response:', data); // Debug logging
-                
-                // Process proxy response format
-                if (data && data.success) {
-                    // Handle new bot_messages format (array of message objects)
-                    if (data.bot_responses && Array.isArray(data.bot_responses)) {
-                        data.bot_responses.forEach(messageObj => {
-                            console.log('Processing message object:', messageObj); // Debug logging
-                            
-                            if (typeof messageObj === 'string') {
-                                // Old format - just text
-                                this.addMessage(messageObj, 'bot');
-                            } else if (typeof messageObj === 'object') {
-                                // New format - object with text and buttons
-                                const text = messageObj.text || '';
-                                const buttons = messageObj.buttons || [];
-                                
-                                console.log('Message text:', text, 'Buttons:', buttons); // Debug logging
-                                
-                                if (buttons.length > 0) {
-                                    // Message with buttons
-                                    this.addMessageWithButtons(text, 'bot', buttons);
-                                } else if (text) {
-                                    // Regular message
-                                    this.addMessage(text, 'bot');
-                                }
-                            }
-                        });
-                    }
-                    // Fallback to raw_rasa_response for backward compatibility
-                    else if (data.raw_rasa_response && Array.isArray(data.raw_rasa_response)) {
-                        data.raw_rasa_response.forEach(item => {
-                            if (item.text) {
-                                if (item.buttons && item.buttons.length > 0) {
-                                    // Message with buttons
-                                    this.addMessageWithButtons(item.text, 'bot', item.buttons);
-                                } else {
-                                    // Regular message
-                                    this.addMessage(item.text, 'bot');
-                                }
-                            }
-                        });
-                    } else {
-                        this.addMessage('I apologize, but I\'m having trouble understanding your request. Could you please try rephrasing?', 'bot');
-                    }
-                } else {
-                    this.addMessage('I apologize, but I\'m having trouble understanding your request. Could you please try rephrasing?', 'bot');
+                // Replace dynamic information with client-specific data
+                if (response.text) {
+                    processedResponse.text = await this.replaceDynamicInfo(response.text, clientContext);
                 }
-            })
-            .catch(error => {
-                this.hideTypingIndicator();
-                console.error('Error communicating with proxy:', error);
-                this.addMessage('I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
+                
+                processedResponses.push(processedResponse);
+            }
+            
+            return processedResponses;
+        }
+
+        // Replace dynamic information in responses
+        async replaceDynamicInfo(text, clientContext) {
+            let processedText = text;
+            
+            // Replace client-specific placeholders
+            const replacements = {
+                '{company_name}': clientContext.config.branding?.title || 'Our Company',
+                '{contact_phone}': clientContext.config.contact?.phone || 'N/A',
+                '{contact_email}': clientContext.config.contact?.email || 'N/A',
+                '{website_url}': clientContext.config.contact?.website || window.location.origin
+            };
+            
+            for (const [placeholder, value] of Object.entries(replacements)) {
+                processedText = processedText.replace(new RegExp(placeholder, 'g'), value);
+            }
+            
+            return processedText;
+        }
+
+        // Handle processed chat response
+        handleChatResponse(responses) {
+            if (!Array.isArray(responses)) {
+                responses = [responses];
+            }
+            
+            responses.forEach(response => {
+                if (typeof response === 'string') {
+                    // Old format - just text
+                    this.addMessage(response, 'bot');
+                } else if (typeof response === 'object') {
+                    // New format - object with text and buttons
+                    const text = response.text || '';
+                    const buttons = response.buttons || [];
+                    
+                    if (buttons.length > 0) {
+                        // Message with buttons
+                        this.addMessageWithButtons(text, 'bot', buttons);
+                    } else if (text) {
+                        // Regular message
+                        this.addMessage(text, 'bot');
+                    }
+                }
             });
         }
 
+        // Store conversation in database
+        async storeConversation(userMessage, botResponses) {
+            try {
+                const conversationData = {
+                    client_id: this.clientId,
+                    session_id: this.sessionId,
+                    user_message: userMessage,
+                    bot_responses: botResponses,
+                    timestamp: new Date().toISOString(),
+                    domain: window.location.hostname
+                };
+                
+                // Store via backend API
+                await fetch(`${this.apiUrl}/conversations/store`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(conversationData)
+                });
+            } catch (error) {
+                console.error('Error storing conversation:', error);
+                // Don't throw error as this shouldn't break the chat flow
+            }
+        }
+
         formatMessage(text) {
-            return text
+            // Debug logging to see what's happening with newlines
+            console.log('=== FORMATMESSAGE DEBUG ===');
+            console.log('Original text:', JSON.stringify(text));
+            
+            // Test with a sample string to verify newline handling
+            const testString = "Line 1\n\nLine 3\nLine 4";
+            console.log('Test string processing:', JSON.stringify(testString));
+            const testResult = testString
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+            console.log('Test result:', JSON.stringify(testResult));
+            console.log('Test result HTML:', testResult);
+            
+            const result = text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/_(.*?)_/g, '<em>$1</em>')
-                .replace(/\n/g, '<br>');
+                .replace(/\n\n/g, '<br><br>') // Handle double newlines for empty lines
+                .replace(/\n/g, '<br>'); // Handle single newlines
+            
+            console.log('Formatted text:', JSON.stringify(result));
+            console.log('Formatted HTML:', result);
+            console.log('=== END DEBUG ===');
+            return result;
+        }
+        
+        // Test function to verify newline handling
+        testNewlineHandling() {
+            console.log('=== TESTING NEWLINE HANDLING ===');
+            const testCases = [
+                "Line 1\n\nLine 3",
+                "📊 **Latest COE Prices**\n\n🚗 **Category A:** $102,009\n🚙 **Category B:** $123,498",
+                "First paragraph\n\nSecond paragraph\n\nThird paragraph"
+            ];
+            
+            testCases.forEach((testCase, index) => {
+                console.log(`Test case ${index + 1}:`);
+                console.log('Input:', JSON.stringify(testCase));
+                const result = this.formatMessage(testCase);
+                console.log('Output:', result);
+                console.log('---');
+            });
+            console.log('=== END TESTING ===');
         }
 
         showTypingIndicator() {

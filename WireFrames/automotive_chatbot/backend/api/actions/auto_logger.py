@@ -50,10 +50,10 @@ class AutoLoggedAction(Action, ABC):
             user_message = tracker.latest_message.get('text', '')
             sender_id = tracker.sender_id
             
-            logger.info(f"[USER MESSAGE] Sender: {sender_id}, Message: {user_message}")
+            pass
             
-        except Exception as e:
-            logger.error(f"Error logging user message: {str(e)}")
+        except Exception:
+            pass
     
     def log_action_execution(self, action_name: str, tracker: Tracker) -> None:
         """Log action execution details.
@@ -66,10 +66,10 @@ class AutoLoggedAction(Action, ABC):
             sender_id = tracker.sender_id
             intent = tracker.latest_message.get('intent', {}).get('name', 'unknown')
             
-            logger.info(f"[ACTION EXECUTION] Sender: {sender_id}, Action: {action_name}, Intent: {intent}")
+            pass
             
-        except Exception as e:
-            logger.error(f"Error logging action execution: {str(e)}")
+        except Exception:
+            pass
     
     def log_bot_response(self, dispatcher: CollectingDispatcher, tracker: Tracker) -> None:
         """Log the bot's response.
@@ -85,15 +85,10 @@ class AutoLoggedAction(Action, ABC):
             messages = getattr(dispatcher, 'messages', [])
             
             for message in messages:
-                if 'text' in message:
-                    logger.info(f"[BOT RESPONSE] Sender: {sender_id}, Response: {message['text']}")
-                elif 'template' in message:
-                    logger.info(f"[BOT RESPONSE] Sender: {sender_id}, Template: {message['template']}")
-                else:
-                    logger.info(f"[BOT RESPONSE] Sender: {sender_id}, Message: {str(message)}")
+                pass
                     
-        except Exception as e:
-            logger.error(f"Error logging bot response: {str(e)}")
+        except Exception:
+            pass
     
     # Note: Subclasses should override the run() method directly
     # The logging methods above can be called manually if needed

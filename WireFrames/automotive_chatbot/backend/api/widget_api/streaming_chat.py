@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import json
 import asyncio
 from datetime import datetime
+import pytz
 import logging
 
 # Configure logger
@@ -94,20 +95,20 @@ async def streaming_chat_endpoint(
                 error_response = {
                     "type": "error",
                     "message": "Client not found or inactive",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat(),
                     "session_id": request.session_id,
                     "client_id": request.client_id or "unknown"
                 }
                 yield f"data: {json.dumps(error_response)}\n\n"
                 return
             
-            client_id = client["id"]
+            client_id = client.get("id", request.client_id or "unknown")
             company_name = client.get("business_name", "our team")
             
             # 1. Send immediate acknowledgment
             ack_response = AckResponse(
                 message=f"Thanks for your message! {company_name} is processing your request...",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
                 session_id=request.session_id,
                 client_id=client_id
             )
@@ -117,7 +118,7 @@ async def streaming_chat_endpoint(
             await asyncio.sleep(0.5)
             typing_response = TypingResponse(
                 message=f"{company_name} assistant is typing...",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
                 session_id=request.session_id,
                 client_id=client_id
             )
@@ -153,7 +154,7 @@ async def streaming_chat_endpoint(
                 # Send timeout fallback response
                 fallback_response = FinalResponse(
                     response=f"I apologize for the delay. {company_name} is experiencing high demand right now. Please try again in a moment, or contact us directly for immediate assistance.",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
                     session_id=request.session_id,
                     client_id=client_id,
                     metadata={"response_source": "timeout_fallback"}
@@ -165,7 +166,7 @@ async def streaming_chat_endpoint(
                 # Send error fallback response
                 error_fallback = FinalResponse(
                     response=f"I'm experiencing technical difficulties right now. Please try again in a moment or contact {company_name} directly for assistance.",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
                     session_id=request.session_id,
                     client_id=client_id,
                     metadata={"response_source": "error_fallback", "error": str(e)}
@@ -175,7 +176,7 @@ async def streaming_chat_endpoint(
             # 5. Send completion signal
             completion_signal = {
                 "type": "complete",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat(),
                 "session_id": request.session_id,
                 "client_id": client_id
             }
@@ -186,7 +187,7 @@ async def streaming_chat_endpoint(
             error_response = {
                 "type": "error",
                 "message": "A critical error occurred. Please refresh and try again.",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat(),
                 "session_id": request.session_id,
                 "client_id": request.client_id or "unknown"
             }
@@ -241,12 +242,12 @@ async def quick_acknowledgment(
             client_id = request.client_id or "unknown"
         else:
             company_name = client.get("business_name", "our team")
-            client_id = client["id"]
+            client_id = client.get("id", request.client_id or "unknown")
         
         # Return immediate acknowledgment
         return AckResponse(
             message=f"Message received! {company_name} is processing your request...",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
             session_id=request.session_id,
             client_id=client_id
         )
@@ -255,7 +256,109 @@ async def quick_acknowledgment(
         logger.error(f"Error in quick acknowledgment: {e}")
         return AckResponse(
             message="Message received! Processing your request...",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
             session_id=request.session_id,
             client_id=request.client_id or "unknown"
+        )
+
+@router.post("/chat")
+async def regular_chat_endpoint(
+    request: StreamingChatRequest,
+    client_domain: Optional[str] = Header(None, alias="X-Client-Domain"),
+    origin: Optional[str] = Header(None)
+):
+    """Regular chat endpoint for non-streaming responses"""
+    
+    # Import database connection
+    from api.config.database import get_real_admin_db
+    db = await get_real_admin_db()
+    
+    # Check if database is available
+    if db is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Database not available. Please try again in a moment."
+        )
+    
+    # Extract domain from origin if not provided
+    if not client_domain and origin:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(origin)
+            client_domain = parsed.netloc
+        except:
+            pass
+    
+    if not client_domain and not request.client_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Client domain or client_id required"
+        )
+    
+    try:
+        # Get chat handler
+        handler = get_chat_handler(db)
+        
+        # Get client context
+        client = await handler.get_client_context(request.client_id, client_domain)
+        if not client:
+            raise HTTPException(
+                status_code=404,
+                detail="Client not found or inactive"
+            )
+        
+        client_id = client.get("id", request.client_id or "unknown")
+        
+        # Process the chat request
+        chat_request = ChatRequest(
+            message=request.message,
+            session_id=request.session_id,
+            user_id=request.user_id,
+            client_id=client_id,
+            user_info=request.user_info
+        )
+        
+        # Process chat with timeout handling
+        try:
+            chat_response = await asyncio.wait_for(
+                handler.process_chat_request(chat_request, client_domain),
+                timeout=15.0  # 15 second timeout
+            )
+            
+            return FinalResponse(
+                response=chat_response.response,
+                timestamp=chat_response.timestamp,
+                session_id=chat_response.session_id,
+                client_id=chat_response.client_id,
+                metadata=chat_response.metadata
+            )
+            
+        except asyncio.TimeoutError:
+            company_name = client.get("business_name", "our team")
+            return FinalResponse(
+                response=f"I apologize for the delay. {company_name} is experiencing high demand right now. Please try again in a moment, or contact us directly for immediate assistance.",
+                timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
+                session_id=request.session_id,
+                client_id=client_id,
+                metadata={"response_source": "timeout_fallback"}
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in regular chat: {e}")
+            company_name = client.get("business_name", "our team")
+            return FinalResponse(
+                response=f"I'm experiencing technical difficulties right now. Please try again in a moment or contact {company_name} directly for assistance.",
+                timestamp=datetime.now(pytz.timezone('Asia/Singapore')),
+                session_id=request.session_id,
+                client_id=client_id,
+                metadata={"response_source": "error_fallback", "error": str(e)}
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Critical error in regular chat: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="A critical error occurred. Please refresh and try again."
         )

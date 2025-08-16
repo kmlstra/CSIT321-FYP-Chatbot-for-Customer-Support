@@ -2,6 +2,7 @@ version: "3.1"
 
 rules:
 
+# Core appointment booking rule - handles all booking scenarios
 - rule: Book appointment when user asks
   condition:
   - active_loop: null
@@ -9,13 +10,16 @@ rules:
   - intent: book_appointment
   - action: action_book_appointment
 
-- rule: Check appointment availability
-  condition:
-  - active_loop: null
-  steps:
-  - intent: ask_appointment_availability
-  - action: action_book_appointment
+# Handle appointment availability checks - removed to prevent repeated triggers
+# This intent should be handled within the booking flow, not as a separate trigger
+# - rule: Check appointment availability
+#   condition:
+#   - active_loop: null
+#   steps:
+#   - intent: ask_appointment_availability
+#   - action: action_book_appointment
 
+# View existing appointments
 - rule: View appointments when requested
   condition:
   - active_loop: null
@@ -23,6 +27,7 @@ rules:
   - intent: view_appointments
   - action: action_view_appointments
 
+# Cancel appointments
 - rule: Cancel appointment when requested
   condition:
   - active_loop: null
@@ -30,62 +35,20 @@ rules:
   - intent: cancel_appointment
   - action: action_cancel_appointment
 
-- rule: Handle appointment status inquiry
-  condition:
-  - active_loop: null
-  steps:
-  - intent: ask_appointment_status
-  - action: action_view_appointments
-
-- rule: Process appointment details when provided
-  condition:
-  - active_loop: null
-  - slot_was_set:
-    - appointment_active: true
+# Handle customer details during active appointment booking
+- rule: Process appointment details during booking
   steps:
   - intent: provide_appointment_details
   - action: action_book_appointment
 
-- rule: Confirm appointment booking
-  condition:
-  - active_loop: null
-  steps:
-  - intent: confirm_appointment
-  - action: action_book_appointment
+# Removed problematic rule that was causing appointment flow to restart
+# when users provided date/time information
 
-- rule: Handle reschedule request
-  condition:
-  - active_loop: null
-  steps:
-  - intent: reschedule_appointment
-  - action: action_view_appointments
-
-- rule: Respond to appointment confirmation during booking
-  condition:
-  - active_loop: null
-  - slot_was_set:
-    - appointment_active: true
-    - appointment_date: true
-    - service_type: true
-    - customer_name: true
-    - customer_phone: false
-  steps:
-  - intent: affirm
-  - action: action_book_appointment
-  wait_for_user_input: false
-
-# Removed rule that was causing split responses - appointment denial is now handled by action_cancel_appointment
-# - rule: Handle appointment denial during booking
+# Removed problematic confirm appointment rule that was causing repeated triggers
+# The confirmation should be handled within the booking flow, not as a separate trigger
+# - rule: Confirm appointment booking
 #   condition:
 #   - active_loop: null
-#   - slot_was_set:
-#     - appointment_active: true
-#     - appointment_date: true
-#     - service_type: true
-#     - customer_name: true
-#     - customer_phone: false
 #   steps:
-#   - intent: deny
-#   - action: utter_appointment_cancelled
-#   - action: action_listen
-#   wait_for_user_input: false
+#   - intent: confirm_appointment
+#   - action: action_book_appointment

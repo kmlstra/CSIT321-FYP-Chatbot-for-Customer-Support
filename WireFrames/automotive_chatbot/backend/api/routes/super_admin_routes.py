@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+import pytz
 
 from ..client_management.client_crud import ClientCRUD
 from ..auth.client_auth import get_super_admin_user
@@ -89,7 +90,7 @@ async def approve_client(
             "success": True,
             "message": f"Client {client_id} approved successfully",
             "client_id": client_id,
-            "approved_at": datetime.utcnow().isoformat()
+            "approved_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         }
         
     except HTTPException:
@@ -123,7 +124,7 @@ async def suspend_client(
             "message": f"Client {client_id} suspended successfully",
             "client_id": client_id,
             "reason": reason,
-            "suspended_at": datetime.utcnow().isoformat()
+            "suspended_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         }
         
     except HTTPException:
@@ -155,7 +156,7 @@ async def activate_client(
             "success": True,
             "message": f"Client {client_id} activated successfully",
             "client_id": client_id,
-            "activated_at": datetime.utcnow().isoformat()
+            "activated_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         }
         
     except HTTPException:
@@ -180,7 +181,7 @@ async def get_system_metrics(database = Depends(get_real_admin_db)) -> SystemMet
         pending_approvals = len([c for c in all_clients if c.get("status") == "pending"])
         
         # Get today's conversations
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(pytz.timezone('Asia/Singapore')).replace(hour=0, minute=0, second=0, microsecond=0)
         today_conversations = await database.conversations.count_documents({
             "created_at": {"$gte": today}
         })
@@ -287,6 +288,60 @@ async def get_client_users(
             detail=f"Failed to fetch client users: {str(e)}"
         )
 
+class CreateUserRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+    role: str = "admin"
+
+@router.post("/clients/{client_id}/users", dependencies=[Depends(get_super_admin_user)])
+async def create_client_user(
+    client_id: str,
+    user_request: CreateUserRequest,
+    database = Depends(get_real_admin_db)
+):
+    """Create a new user for a specific client"""
+    
+    try:
+        client_crud = ClientCRUD(database)
+        
+        # Verify client exists
+        client = await client_crud.get_client(client_id)
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client not found"
+            )
+        
+        # Create user
+        user_data = {
+            "email": user_request.email,
+            "name": user_request.name,
+            "password": user_request.password
+        }
+        
+        user_id = await client_crud.create_client_user(
+            client_id=client_id,
+            user_data=user_data,
+            role=user_request.role
+        )
+        
+        return {
+            "success": True,
+            "message": f"User {user_request.email} created successfully",
+            "user_id": user_id,
+            "client_id": client_id,
+            "created_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create client user: {str(e)}"
+        )
+
 @router.post("/users/{user_id}/deactivate", dependencies=[Depends(get_super_admin_user)])
 async def deactivate_user(
     user_id: str,
@@ -317,7 +372,7 @@ async def deactivate_user(
             "success": True,
             "message": f"User {user.get('email', user_id)} deactivated successfully",
             "user_id": user_id,
-            "deactivated_at": datetime.utcnow().isoformat()
+            "deactivated_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         }
         
     except HTTPException:
@@ -401,7 +456,7 @@ async def update_user_role(
             "message": f"User {user.get('email', user_id)} role updated to {role}",
             "user_id": user_id,
             "new_role": role,
-            "updated_at": datetime.utcnow().isoformat()
+            "updated_at": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
         }
         
     except HTTPException:
@@ -429,5 +484,5 @@ async def get_system_health():
             "cpu_usage": "45%",
             "memory_usage": "62%"
         },
-        "last_updated": datetime.utcnow().isoformat()
+        "last_updated": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
     }

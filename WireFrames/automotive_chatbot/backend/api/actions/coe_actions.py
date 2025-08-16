@@ -268,7 +268,7 @@ def extract_coe_query_details(text: str) -> dict:
             result['month'] = current_date.month - 1
             result['year'] = current_date.year
     
-    logger.info(f"Enhanced COE query extraction from '{text}': {result}")
+
     return result
 
 def format_change(change: int, use_html: bool = False) -> str:
@@ -294,7 +294,7 @@ def format_change(change: int, use_html: bool = False) -> str:
 def get_live_coe_prices():
     """Fetch live COE prices from data.gov.sg API with rate limiting and caching"""
     try:
-        logger.info("Making data.gov.sg API request for COE prices")
+
         
         # New data.gov.sg API endpoint (no authentication required)
         response = requests.get(
@@ -302,11 +302,11 @@ def get_live_coe_prices():
             timeout=10
         )
         
-        logger.info(f"COE API response status: {response.status_code}")
+
         
         if response.status_code == 200:
             data = response.json()
-            logger.info(f"COE API response structure: result={('result' in data)}, records={('records' in data.get('result', {}))}, record_count={len(data.get('result', {}).get('records', []))}")
+
             
             if 'result' in data and 'records' in data['result'] and data['result']['records']:
                 # Get the most recent bidding results for each category
@@ -329,8 +329,7 @@ def get_live_coe_prices():
                 required_categories = ['A', 'B', 'C', 'D', 'E']
                 found_categories = set(latest_prices.keys())
                 
-                logger.info(f"Found categories in latest_prices: {found_categories}")
-                logger.info(f"Latest prices data: {latest_prices}")
+
                 
                 if len(found_categories) >= 4 and found_categories.intersection(required_categories):  # At least 4 out of 5 categories
                     # Parse the latest_month to datetime for consistency
@@ -425,20 +424,20 @@ def get_live_coe_prices():
                         'date': latest_date,
                         'month_str': latest_month or datetime.now().strftime('%Y-%m')
                     }
-                    logger.info(f"Successfully fetched COE prices: {result}")
+
                     return result
                 else:
-                    logger.warning(f"API response invalid, only found {len(found_categories)} categories: {found_categories}, using fallback prices")
+
                     return get_fallback_coe_prices()
             else:
-                logger.warning("API response missing result/records structure, using fallback prices")
+
                 return get_fallback_coe_prices()
         else:
-            logger.warning(f"API request failed with status {response.status_code}, using fallback prices")
+
             return get_fallback_coe_prices()
         
         # Fallback if API fails
-        logger.warning("API response invalid, using fallback prices")
+
         return get_fallback_coe_prices()
         
     except Exception as e:
@@ -603,7 +602,6 @@ def format_coe_response_with_chart(base_response: str, prices: Dict[str, Any], h
         else:
             return base_response
     except Exception as e:
-        logger.warning(f"Could not generate chart for COE response: {e}")
         return base_response
 
 class ActionCOEPrices(AutoLoggedAction):
@@ -695,7 +693,6 @@ class ActionCOEPrices(AutoLoggedAction):
                         bidding_round_info += "\n📅 **Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
                         
                     except Exception as e:
-                        logger.warning(f"Error determining bidding round: {e}")
                         bidding_round_info = "\n📅 **Bidding Schedule:** COE bidding occurs twice monthly (1st & 3rd Wednesday)"
                     
                     # Always format the base response consistently - ADD COE MARKER
@@ -733,7 +730,6 @@ class ActionCOEPrices(AutoLoggedAction):
                             response = base_response
                                 
                     except Exception as e:
-                        logger.warning(f"Could not generate price chart: {e}")
                         # Use base response if chart generation fails
                         response = base_response
 
@@ -1398,7 +1394,7 @@ class ActionCOETrends(AutoLoggedAction):
                 if chart_html:
                     response += f"\n\n{chart_html}"
             except Exception as e:
-                logger.warning(f"Could not generate trend chart: {e}")
+                pass
 
         dispatcher.utter_message(text=response)
         return []

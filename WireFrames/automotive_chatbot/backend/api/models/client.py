@@ -4,9 +4,17 @@ Defines the structure for automotive business clients
 """
 
 from datetime import datetime
-from typing import Optional, Dict, List, Any
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, EmailStr, HttpUrl
 from bson import ObjectId
+import pytz
+
+# Singapore timezone
+SINGAPORE_TZ = pytz.timezone('Asia/Singapore')
+
+def get_singapore_time():
+    """Get current time in Singapore timezone"""
+    return datetime.now(SINGAPORE_TZ)
 
 class BrandingConfig(BaseModel):
     """Client branding configuration"""
@@ -77,8 +85,8 @@ class Client(BaseModel):
     settings: ClientSettings
     
     # Metadata
-    created_at: datetime = datetime.utcnow()
-    updated_at: datetime = datetime.utcnow()
+    created_at: datetime = get_singapore_time()
+    updated_at: datetime = get_singapore_time()
     activated_at: Optional[datetime] = None
     last_activity: Optional[datetime] = None
     
@@ -116,7 +124,7 @@ class ClientUser(BaseModel):
     ]
     
     # Metadata
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = get_singapore_time()
     last_login: Optional[datetime] = None
     login_count: int = 0
     
@@ -147,8 +155,8 @@ class ClientVehicle(BaseModel):
     description: Optional[str] = None
     
     # Metadata
-    created_at: datetime = datetime.utcnow()
-    updated_at: datetime = datetime.utcnow()
+    created_at: datetime = get_singapore_time()
+    updated_at: datetime = get_singapore_time()
     
     class Config:
         json_encoders = {
@@ -176,7 +184,7 @@ class Conversation(BaseModel):
     conversion_event: Optional[str] = None  # test_drive_booked, contact_requested
     
     # Metadata
-    created_at: datetime = datetime.utcnow()
+    created_at: datetime = get_singapore_time()
     ended_at: Optional[datetime] = None
     
     class Config:

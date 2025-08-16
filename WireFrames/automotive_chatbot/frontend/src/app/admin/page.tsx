@@ -128,7 +128,7 @@ export default function SuperAdminLoginPage() {
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        {/* <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h3 className="font-semibold text-yellow-800 mb-2">Security Notice</h3>
           <ul className="text-yellow-700 text-sm space-y-1">
             <li>• Super admin access grants full system control</li>
@@ -136,7 +136,7 @@ export default function SuperAdminLoginPage() {
             <li>• Access to system-wide analytics and billing</li>
             <li>• Change default credentials in production</li>
           </ul>
-        </div>
+        </div> */}
       </div>
     </div>
   );

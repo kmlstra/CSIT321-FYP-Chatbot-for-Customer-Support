@@ -5,6 +5,7 @@ Creates the initial super admin user and handles super admin login
 
 import hashlib
 from datetime import datetime, timedelta
+import pytz
 from typing import Dict, Any, Optional
 from .jwt_handler import create_access_token
 
@@ -36,7 +37,7 @@ class SuperAdminAuth:
                 "name": "Super Administrator",
                 "role": "super_admin",
                 "status": "active",
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(pytz.timezone('Asia/Singapore')),
                 "last_login": None,
                 "login_count": 0,
                 "permissions": [
@@ -77,7 +78,7 @@ class SuperAdminAuth:
             await self.db.super_admins.update_one(
                 {"_id": admin["_id"]},
                 {
-                    "$set": {"last_login": datetime.utcnow()},
+                    "$set": {"last_login": datetime.now(pytz.timezone('Asia/Singapore'))},
                     "$inc": {"login_count": 1}
                 }
             )

@@ -74,8 +74,7 @@ class ActionLiveSupport(AutoLoggedAction):
                             is_business_hours = False
                     else:
                         is_business_hours = False
-                except Exception as e:
-                    logger.error(f"Error parsing business hours: {e}")
+                except Exception:
                     # Fall back to default hours
                     if current_day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']:
                         is_business_hours = 9 <= current_hour < 19
@@ -102,8 +101,7 @@ class ActionLiveSupport(AutoLoggedAction):
                 'current_day': current_day,
                 'is_weekend': current_day in ['saturday', 'sunday']
             }
-        except Exception as e:
-            logger.error(f"Error getting time context: {e}")
+        except Exception:
             return {'is_business_hours': True, 'current_hour': 12, 'current_day': 'monday', 'is_weekend': False}
 
     def _format_business_hours(self, business_hours: Dict[str, Any]) -> str:
@@ -134,8 +132,7 @@ class ActionLiveSupport(AutoLoggedAction):
             
             return "\n".join(formatted_hours)
             
-        except Exception as e:
-            logger.error(f"Error formatting business hours: {e}")
+        except Exception:
             return "Mon-Fri 9AM-7PM, Sat 9AM-6PM, Sun 10AM-5PM"
 
     def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
@@ -170,7 +167,7 @@ class ActionLiveSupport(AutoLoggedAction):
                         # Add support-specific fields
                         client_data['average_response_time'] = '2-5 minutes'
                         client_data['support_hours'] = client_data.get('business_hours', {})
-                        logger.debug(f"Using fresh cached client data for client_id: {client_id}")
+                        pass
                     else:
                         # Only fetch from DB if cache miss or expired
                         client_data = cache.get_client_data(client_id)
@@ -178,9 +175,9 @@ class ActionLiveSupport(AutoLoggedAction):
                             # Add support-specific fields
                             client_data['average_response_time'] = '2-5 minutes'
                             client_data['support_hours'] = client_data.get('business_hours', {})
-                            logger.info(f"Retrieved client data from cache for client_id: {client_id}")
-                except Exception as e:
-                    logger.error(f"Error getting client data from cache: {e}")
+                            pass
+                except Exception:
+                    pass
             
             # Use fallback data if client data not available
             if not client_data:
@@ -189,7 +186,7 @@ class ActionLiveSupport(AutoLoggedAction):
                 # Add support-specific fields for fallback data
                 client_data['average_response_time'] = '2-5 minutes'
                 client_data['support_hours'] = client_data.get('business_hours', {})
-                logger.info(f"Using fallback support data for client_id: {client_id}")
+                pass
             
             # Get current time context with client business hours
             time_context = self._get_current_time_context(client_data.get('business_hours', {}))
@@ -233,8 +230,8 @@ class ActionLiveSupport(AutoLoggedAction):
 *Your conversation ID will be automatically shared with our support team.*
             """
                 
-        except Exception as e:
-            logger.error(f"Error getting support info: {e}")
+        except Exception:
+            pass
             # Fallback message
             conversation_id = tracker.sender_id
             from backend.api.cache.client_cache import get_fallback_contact_data

@@ -83,7 +83,6 @@ class ActionSmartContact(AutoLoggedAction):
                 'time_until_open': None if is_business_hours else self._calculate_time_until_open(current_time, sg_tz)
             }
         except Exception as e:
-            logger.error(f"Error getting time context: {e}")
             return {'is_business_hours': True, 'current_day': 'monday'}
     
     def _calculate_time_until_open(self, current_time: datetime, sg_tz: Any) -> str:
@@ -458,26 +457,22 @@ Usually responds within 5 minutes
             cache_key = f"contact_data_{client_id}" if client_id else "contact_data_fallback"
             client_data = contact_cache.get(cache_key)
             
-            if client_data:
-                logger.info(f"Retrieved contact data from cache for client_id: {client_id}")
-            else:
+            if not client_data:
                 # Get client-specific data from cache (with automatic MongoDB fallback)
                 if client_id:
                     cache = get_client_cache()
                     client_data = cache.get_client_data(client_id)
                     if client_data:
-                        logger.info(f"Retrieved client data from cache for client_id: {client_id}")
                         # Cache the contact data for faster future access
                         contact_cache.set(cache_key, client_data, ttl=3600)  # 1 hour cache
             
                 # Use fallback data if client data not available
                 if not client_data:
                     client_data = get_fallback_contact_data()
-                    logger.info(f"Using fallback contact data for client_id: {client_id}")
                     # Cache fallback data too
                     contact_cache.set(cache_key, client_data, ttl=3600)  # 1 hour cache
             
-            logger.info(f"Smart contact action triggered with message: {user_message}, client_id: {client_id}")
+
             
             # Get time context with client business hours
             time_context = self._get_current_time_context(client_data.get('business_hours', {}))
@@ -490,7 +485,7 @@ Usually responds within 5 minutes
                 if intent_analysis['needs_phone'] or intent_analysis['needs_whatsapp']:
                     urgent_response = self._get_urgent_contact_response(conversation_id, time_context, client_data)
                     dispatcher.utter_message(text=urgent_response)
-                    logger.info(f"Urgent contact response sent successfully")
+
                     return []
             
             # Get contextual greeting with intent awareness
@@ -551,7 +546,7 @@ Usually responds within 5 minutes
             final_response = "\n\n".join(response_parts)
             dispatcher.utter_message(text=final_response)
             
-            logger.info(f"Smart contact response sent successfully")
+
             
         except Exception as e:
             logger.error(f"Error in ActionSmartContact: {e}")

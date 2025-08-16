@@ -4,11 +4,17 @@ Captures and stores conversation events from RASA.
 
 import json
 import logging
+import pytz
 from typing import Dict, Any, Optional
 from datetime import datetime
 from ..services.conversation_storage import conversation_storage
 
 logger = logging.getLogger(__name__)
+SINGAPORE_TZ = pytz.timezone('Asia/Singapore')
+
+def get_singapore_time():
+    """Get current time in Singapore timezone"""
+    return datetime.now(SINGAPORE_TZ)
 
 class ConversationTracker:
     """Tracks and stores conversation events."""
@@ -46,14 +52,13 @@ class ConversationTracker:
             'confidence': None
         }
         
-        # Storage disabled to prevent duplicates - handled by RASA actions
-        # conversation_storage.store_message(
-        #     session_id=session_id,
-        #     message_type='user_message',
-        #     content=message,
-        #     sender='user',
-        #     metadata=metadata
-        # )
+        conversation_storage.store_message(
+            session_id=session_id,
+            message_type='user_message',
+            content=message,
+            sender='user',
+            metadata=metadata
+        )
         logger.debug(f"User message tracked for {sender_id}: {message[:50]}...")
     
     @staticmethod
@@ -72,14 +77,13 @@ class ConversationTracker:
             'response_type': 'text'
         }
         
-        # Storage disabled to prevent duplicates - handled by RASA actions
-        # conversation_storage.store_message(
-        #     session_id=session_id,
-        #     message_type='bot_response',
-        #     content=response,
-        #     sender='bot',
-        #     metadata=metadata
-        # )
+        conversation_storage.store_message(
+            session_id=session_id,
+            message_type='bot_response',
+            content=response,
+            sender='bot',
+            metadata=metadata
+        )
         logger.debug(f"Bot response tracked for {sender_id}: {response[:50]}...")
     
     @staticmethod
@@ -105,14 +109,13 @@ class ConversationTracker:
         if not success and error_message:
             content += f" (Error: {error_message})"
         
-        # Storage disabled to prevent duplicates - handled by RASA actions
-        # conversation_storage.store_message(
-        #     session_id=session_id,
-        #     message_type='action_execution',
-        #     content=content,
-        #     sender='system',
-        #     metadata=metadata
-        # )
+        conversation_storage.store_message(
+            session_id=session_id,
+            message_type='action_execution',
+            content=content,
+            sender='system',
+            metadata=metadata
+        )
         logger.debug(f"Action execution tracked for {sender_id}: {action_name}")
 
 # ConversationLoggingAction removed - should only be used in RASA actions server
@@ -210,13 +213,13 @@ class ConversationAPI:
             active_count = conversation_storage.get_active_sessions_count()
             return {
                 'active_sessions': active_count,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': get_singapore_time().isoformat()
             }
         except Exception as e:
             logger.error(f"Error retrieving active sessions: {e}")
             return {
                 'active_sessions': 0,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': get_singapore_time().isoformat(),
                 'error': str(e)
             }
     
@@ -231,12 +234,12 @@ class ConversationAPI:
             cleaned_count = conversation_storage.cleanup_expired_sessions()
             return {
                 'cleaned_sessions': cleaned_count,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': get_singapore_time().isoformat()
             }
         except Exception as e:
             logger.error(f"Error cleaning up sessions: {e}")
             return {
                 'cleaned_sessions': 0,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': get_singapore_time().isoformat(),
                 'error': str(e)
             }

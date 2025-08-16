@@ -10,6 +10,14 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 import secrets
 import hashlib
+import pytz
+
+# Singapore timezone
+SINGAPORE_TZ = pytz.timezone('Asia/Singapore')
+
+def get_singapore_time():
+    """Get current time in Singapore timezone"""
+    return datetime.now(SINGAPORE_TZ)
 
 from ..models.client import Client, ClientUser, SUBSCRIPTION_PLANS
 from ..auth.jwt_handler import create_access_token, hash_password
@@ -340,7 +348,7 @@ class ClientCRUD:
                         "current_month_conversations": 1,
                         "total_conversations": 1
                     },
-                    "$set": {"last_activity": datetime.utcnow()}
+                    "$set": {"last_activity": get_singapore_time()}
                 }
             )
             
@@ -438,7 +446,7 @@ class ClientCRUD:
                 {
                     "$set": {
                         "status": status,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": get_singapore_time()
                     }
                 }
             )
@@ -474,7 +482,7 @@ class ClientCRUD:
                 {
                     "$set": {
                         "role": role,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": get_singapore_time()
                     }
                 }
             )

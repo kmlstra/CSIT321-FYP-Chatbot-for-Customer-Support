@@ -69,15 +69,22 @@ CleverCompanion is an advanced automotive chatbot platform specifically designed
 ### Frontend (React + Next.js)
 - **Main Chat Interface**: `localhost:3000`
 - **Admin Dashboard**: `localhost:3000/dashboard` 
-- **Embeddable Widget**: `clevercompanion-widget.js`
+- **Self-Contained Widget**: `clevercompanion-widget.js` (with integrated multi-tenant support)
 
 ### Backend (FastAPI + RASA)
-- **API Server**: `localhost:8000`
+- **API Server**: `localhost:8000` (with integrated widget endpoints)
 - **RASA NLU**: `localhost:5005`
 - **RASA Actions**: `localhost:5055`
+- **New Endpoints**: `/api/config/{client_id}`, `/api/conversations/store`
+
+### Enhanced Widget Architecture
+- **Autonomous Operation**: Widget handles client config, chat processing, and database operations
+- **Direct RASA Communication**: Widget communicates directly with RASA API
+- **MongoDB Integration**: Built-in conversation storage and client configuration
+- **Multi-Tenant Support**: Client-specific branding and feature configuration
 
 ### BCE Framework Implementation
-- **Boundaries**: HTTP API endpoints (`/api/coe`, `/api/vehicles`)
+- **Boundaries**: HTTP API endpoints (`/api/coe`, `/api/vehicles`, `/api/config`, `/api/conversations`)
 - **Controllers**: Business logic orchestration
 - **Entities**: Data models and structures
 - **External**: RASA actions call through boundaries only
@@ -130,6 +137,14 @@ CleverCompanion is an advanced automotive chatbot platform specifically designed
 - **Real-time Support**: View complete conversation history with timestamps
 
 ## 🔧 Recent Fixes & Updates
+
+### ✅ Multi-Tenant Architecture Integration (Latest)
+- **Major Change**: Integrated all multi-tenant functionality directly into the widget
+- **Removed**: `multi_tenant_chat.py` - functionality moved to `clevercompanion-widget.js`
+- **Enhanced Widget**: Now handles client configuration, chat processing, and database operations internally
+- **New Endpoints**: Added `/api/config/{client_id}` and `/api/conversations/store` to main.py
+- **Benefits**: Self-contained widget, reduced backend dependencies, improved performance
+- **Status**: ✅ Widget now fully autonomous with integrated multi-tenant support
 
 ### ✅ RASA Action Registration Fix
 - **Issue**: `RasaException: Failed to execute custom action 'action_contact_us'`
@@ -421,6 +436,7 @@ See `docs/AWS_DEPLOYMENT_GUIDE.md` for detailed setup instructions.
 WireFrames/automotive_chatbot/
 ├── backend/
 │   ├── api/
+│   │   ├── main.py         # Main FastAPI app with integrated endpoints
 │   │   ├── external/       # RASA actions (modular)
 │   │   │   ├── coe_actions.py
 │   │   │   ├── loan_actions.py
@@ -454,7 +470,8 @@ WireFrames/automotive_chatbot/
 │   ├── src/
 │   │   ├── app/           # Next.js pages
 │   │   └── components/    # React components
-│   ├── public/            # Static files & widget
+│   ├── public/            # Static files & enhanced widget
+│   │   └── clevercompanion-widget.js  # Self-contained multi-tenant widget
 │   └── package.json       # Node.js dependencies
 ├── setup.py              # Automated setup script
 └── quick-setup.md        # Detailed setup guide

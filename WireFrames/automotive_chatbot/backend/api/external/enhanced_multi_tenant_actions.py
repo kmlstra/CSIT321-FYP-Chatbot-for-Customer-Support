@@ -11,6 +11,7 @@ import logging
 import requests
 import os
 from datetime import datetime
+import pytz
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
@@ -131,7 +132,7 @@ class EnhancedMultiTenantActionBase(Action):
         """Log client action for audit trail"""
         try:
             log_entry = {
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(pytz.timezone('Asia/Singapore')),
                 "client_id": client_id,
                 "action": action_name,
                 "success": success,
