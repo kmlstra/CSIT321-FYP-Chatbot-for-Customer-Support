@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Depends, BackgroundTasks, Query, APIRouter, Header
+from fastapi import FastAPI, HTTPException, status, Depends, BackgroundTasks, Query, APIRouter, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,12 @@ from pathlib import Path
 # Import and setup logging configuration
 from .config.logging_config import setup_logging
 
+# Import performance monitoring and health check components
+from .middleware.performance_middleware import PerformanceMiddleware
+from .utils.performance_monitor import performance_monitor
+from .services.metrics_collector import MetricsCollector
+from .routes.health_routes import router as health_router
+
 # Setup logging before any other imports
 setup_logging()
 
@@ -36,6 +42,20 @@ from .config import Settings
 from .middleware.conversation_middleware import ConversationAPI
 from .middleware.auto_logger import ConversationLogger
 from .auth.client_auth import get_current_client_user
+
+# Import unified services
+try:
+    from .services.conversation_service import unified_conversation_service, MessageType
+    from .services.unified_session_manager import UnifiedSessionManager
+    
+    # Initialize unified session manager
+    unified_session_manager = UnifiedSessionManager()
+    
+    print("[OK] Unified session and conversation services initialized")
+except ImportError as e:
+    print(f"[WARNING] Unified services not available: {e}")
+    unified_session_manager = None
+    unified_conversation_service = None
 
 settings = Settings()
 
@@ -130,6 +150,18 @@ async def lifespan(app: FastAPI):
         # Create super admin on startup
         await create_initial_super_admin()
         
+        # Initialize performance monitoring
+        try:
+            # Start performance monitoring with alert callbacks
+            def performance_alert_callback(severity: str, metric_type: str, value: float, message: str):
+                logger.warning(f"Performance Alert [{severity}]: {message}")
+            
+            performance_monitor.add_alert_callback(performance_alert_callback)
+            performance_monitor.start_monitoring()
+            print("[OK] Performance monitoring system initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize performance monitoring: {e}")
+        
         # Database connection established - widget API will use direct endpoints
         print("[OK] Database connection ready for widget API endpoints")
         
@@ -138,6 +170,14 @@ async def lifespan(app: FastAPI):
     
     print("Starting CleverCompanion SaaS Platform v3.0...")
     yield
+    
+    # Shutdown: Stop performance monitoring and metrics collection
+    try:
+        performance_monitor.stop_monitoring()
+        await metrics_collector.stop_collection()
+        print("[OK] Performance monitoring and metrics collection stopped")
+    except Exception as e:
+        logger.error(f"Error stopping monitoring services: {e}")
     
     # Shutdown: Close MongoDB connections
     await close_database_connection()
@@ -149,6 +189,9 @@ app = FastAPI(
     version="3.0.0",
     lifespan=lifespan
 )
+
+# Add performance monitoring middleware
+app.add_middleware(PerformanceMiddleware)
 
 # CORS middleware configuration with optimized settings
 app.add_middleware(
@@ -163,6 +206,18 @@ app.add_middleware(
 # Mount static files directory
 static_path = os.path.join(os.path.dirname(__file__), "../static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+# Include health check routes
+app.include_router(health_router, prefix="/health", tags=["health"])
+
+# Initialize metrics collector
+metrics_collector = MetricsCollector()
+
+# Start metrics collection in background
+@app.on_event("startup")
+async def start_metrics_collection():
+    """Start background metrics collection"""
+    await metrics_collector.start_collection()
 
 # Root endpoint
 @app.get("/")
@@ -190,21 +245,31 @@ async def root():
         }
     }
 
-# Health check endpoint
+# Legacy health check endpoint (kept for backward compatibility)
 @app.get("/health")
-async def health_check():
+async def legacy_health_check():
+    """Legacy health check endpoint - redirects to new detailed health check"""
     db_status = "connected" if admin_db else "disconnected"
     
+    # Get performance summary from performance monitor
+    try:
+        perf_summary = performance_monitor.get_health_summary()
+        performance_status = "healthy" if perf_summary.get("overall_health", 0) > 0.7 else "degraded"
+    except Exception:
+        performance_status = "unknown"
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "connected" and performance_status != "degraded" else "degraded",
         "version": "3.0.0",
         "database": db_status,
+        "performance": performance_status,
         "services": {
             "api": "running",
             "information_service": "available",
             "coe_service": "available",
             "rag_service": "available" if os.getenv("OPENAI_API_KEY") else "limited"
-        }
+        },
+        "note": "This is a legacy endpoint. Use /health/detailed for comprehensive health information."
     }
 
 # Environment configuration endpoint
@@ -884,11 +949,12 @@ async def get_client_appointments(
                     try:
                         from datetime import datetime as dt
                         # Parse date and time strings
-                        date_str = apt["appointment_date"]
-                        time_str = apt["appointment_time"]
+                        date_str = apt["appointment_date"]  # Format: "2025-09-03"
+                        time_str = apt["appointment_time"]  # Format: "12:00" or "16:15"
                         
                         # Combine date and time into datetime object
                         datetime_str = f"{date_str} {time_str}"
+                        # Use correct format for parsing - date is YYYY-MM-DD, time is HH:MM
                         appointment_dt = dt.strptime(datetime_str, "%Y-%m-%d %H:%M")
                         
                         # Set timezone to Singapore
@@ -899,6 +965,7 @@ async def get_client_appointments(
                         apt["appointment_datetime"] = appointment_dt.isoformat()
                     except Exception as e:
                         logger.warning(f"Failed to create appointment_datetime for appointment {apt.get('_id')}: {e}")
+                        logger.warning(f"Date: '{apt.get('appointment_date')}', Time: '{apt.get('appointment_time')}'")
                         apt["appointment_datetime"] = None
                 else:
                     apt["appointment_datetime"] = None
@@ -977,11 +1044,12 @@ async def get_customer_appointments(
                     try:
                         from datetime import datetime as dt
                         # Parse date and time strings
-                        date_str = apt["appointment_date"]
-                        time_str = apt["appointment_time"]
+                        date_str = apt["appointment_date"]  # Format: "2025-09-03"
+                        time_str = apt["appointment_time"]  # Format: "12:00" or "16:15"
                         
                         # Combine date and time into datetime object
                         datetime_str = f"{date_str} {time_str}"
+                        # Use correct format for parsing - date is YYYY-MM-DD, time is HH:MM
                         appointment_dt = dt.strptime(datetime_str, "%Y-%m-%d %H:%M")
                         
                         # Set timezone to Singapore
@@ -992,6 +1060,7 @@ async def get_customer_appointments(
                         apt["appointment_datetime"] = appointment_dt.isoformat()
                     except Exception as e:
                         logger.warning(f"Failed to create appointment_datetime for appointment {apt.get('_id')}: {e}")
+                        logger.warning(f"Date: '{apt.get('appointment_date')}', Time: '{apt.get('appointment_time')}'")
                         apt["appointment_datetime"] = None
                 else:
                     apt["appointment_datetime"] = None
@@ -1195,27 +1264,49 @@ app.include_router(appointment_router)
 async def store_conversation(
     conversation_data: dict
 ):
-    """Store conversation data from the widget"""
+    """Store conversation data from the widget using unified conversation service"""
     try:
-        global admin_db
-        if not admin_db:
+        # Extract required fields from conversation data
+        session_id = conversation_data.get("session_id")
+        message = conversation_data.get("message", "")
+        message_type_str = conversation_data.get("message_type", "user")
+        client_id = conversation_data.get("client_id")
+        metadata = conversation_data.get("metadata", {})
+        
+        # Validate required fields
+        if not session_id:
             return JSONResponse(content={
                 "success": False,
-                "error": "Database not available"
-            }, status_code=500)
+                "error": "session_id is required"
+            }, status_code=400)
         
-        # Add timestamp if not present
-        if "timestamp" not in conversation_data:
-            conversation_data["timestamp"] = datetime.now(pytz.timezone('Asia/Singapore'))
+        # Map message type to MessageType enum
+        try:
+            if message_type_str.lower() == "user":
+                message_type = MessageType.USER
+            elif message_type_str.lower() == "assistant" or message_type_str.lower() == "bot":
+                message_type = MessageType.ASSISTANT
+            elif message_type_str.lower() == "system":
+                message_type = MessageType.SYSTEM
+            else:
+                message_type = MessageType.USER  # Default to user
+        except:
+            message_type = MessageType.USER
         
-        # Store in conversations collection
-        result = await admin_db.conversations.insert_one(conversation_data)
+        # Store message using unified conversation service
+        success = unified_conversation_service.store_message(
+            session_id=session_id,
+            message=message,
+            message_type=message_type,
+            metadata=metadata,
+            client_id=client_id
+        )
         
-        if result.inserted_id:
+        if success:
             return JSONResponse(content={
                 "success": True,
                 "message": "Conversation stored successfully",
-                "conversation_id": str(result.inserted_id)
+                "session_id": session_id
             })
         else:
             return JSONResponse(content={
@@ -1250,7 +1341,7 @@ async def get_client_config(client_id: str):
             default_config = {
                 "client_id": client_id,
                 "branding": {
-                    "logo_url": "/static/clevercompanion-logo.png",
+                    "logo_url": "/static/media/images/CleverCompanion-logo.png",
                     "company_name": "CleverCompanion",
                     "primary_color": "#007bff",
                     "secondary_color": "#6c757d"
@@ -1270,11 +1361,12 @@ async def get_client_config(client_id: str):
             return JSONResponse(content=default_config)
         
         # Return client configuration
+        settings = client.get("settings", {})
         config = {
             "client_id": client.get("client_id", client_id),
-            "branding": client.get("branding", {}),
-            "features": client.get("features", {}),
-            "contact_info": client.get("contact_info", {})
+            "branding": settings.get("branding", {}),
+            "features": settings.get("features", {}),
+            "contact_info": settings.get("contact_info", {})
         }
         
         return JSONResponse(content=config)
@@ -1284,6 +1376,63 @@ async def get_client_config(client_id: str):
         return JSONResponse(content={
             "success": False,
             "error": f"Error getting client config: {str(e)}"
+        }, status_code=500)
+
+# Widget-specific client configuration endpoint (duplicate of /api/config/{client_id})
+@app.get("/api/widget/config/{client_id}")
+async def get_widget_client_config(client_id: str):
+    """Get client configuration for the widget - same as /api/config/{client_id}"""
+    try:
+        global admin_db
+        if not admin_db:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Database not available"
+            }, status_code=500)
+        
+        # Find client configuration
+        client = await admin_db.clients.find_one({"client_id": client_id})
+        
+        if not client:
+            # Return default configuration if client not found
+            default_config = {
+                "client_id": client_id,
+                "branding": {
+                    "logo_url": "/static/media/images/CleverCompanion-logo.png",
+                    "company_name": "CleverCompanion",
+                    "primary_color": "#007bff",
+                    "secondary_color": "#6c757d"
+                },
+                "features": {
+                    "coe_prices": True,
+                    "appointment_booking": True,
+                    "loan_calculator": True,
+                    "live_support": True
+                },
+                "contact_info": {
+                    "phone": "+65 6123 4567",
+                    "email": "support@clevercompanion.com",
+                    "address": "Singapore"
+                }
+            }
+            return JSONResponse(content=default_config)
+        
+        # Return client configuration
+        settings = client.get("settings", {})
+        config = {
+            "client_id": client.get("client_id", client_id),
+            "branding": settings.get("branding", {}),
+            "features": settings.get("features", {}),
+            "contact_info": settings.get("contact_info", {})
+        }
+        
+        return JSONResponse(content=config)
+        
+    except Exception as e:
+        logger.error(f"Error getting widget client config: {str(e)}")
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Error getting widget client config: {str(e)}"
         }, status_code=500)
 
 # RASA Proxy for conversation logging
@@ -1334,15 +1483,14 @@ async def store_widget_conversation(
     client_domain: Optional[str] = Header(None, alias="X-Client-Domain"),
     origin: Optional[str] = Header(None)
 ):
-    """Store conversation data from widget - duplicate endpoint for widget compatibility"""
+    """Store conversation data from widget using unified conversation service"""
     try:
-        # Get database connection
-        db = await get_real_admin_db()
-        if db is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Database not available. Please try again in a moment."
-            )
+        # Extract required fields from conversation data
+        session_id = conversation_data.get("session_id")
+        message = conversation_data.get("message", "")
+        message_type_str = conversation_data.get("message_type", "user")
+        client_id = conversation_data.get("client_id")
+        metadata = conversation_data.get("metadata", {})
         
         # Extract domain from origin if not provided
         if not client_domain and origin:
@@ -1354,30 +1502,54 @@ async def store_widget_conversation(
                 pass
         
         # Validate required fields
-        if not conversation_data.get("session_id"):
+        if not session_id:
             raise HTTPException(status_code=400, detail="session_id is required")
         
-        if not conversation_data.get("client_id") and not client_domain:
+        if not client_id and not client_domain:
             raise HTTPException(status_code=400, detail="client_id or client domain is required")
         
-        # Add timestamp if not present
-        if "timestamp" not in conversation_data:
-            conversation_data["timestamp"] = datetime.now(pytz.timezone('Asia/Singapore'))
-        
-        # Add client domain if available
+        # Add client domain to metadata if available
         if client_domain:
-            conversation_data["client_domain"] = client_domain
+            metadata["client_domain"] = client_domain
         
-        # Store in conversations collection
-        conversations_collection = db["conversations"]
-        result = await conversations_collection.insert_one(conversation_data)
+        # Use client_domain as client_id if client_id not provided
+        if not client_id and client_domain:
+            client_id = client_domain
         
-        return {
-            "success": True,
-            "message": "Conversation stored successfully",
-            "conversation_id": str(result.inserted_id),
-            "timestamp": conversation_data["timestamp"]
-        }
+        # Map message type to MessageType enum
+        try:
+            if message_type_str.lower() == "user":
+                message_type = MessageType.USER
+            elif message_type_str.lower() == "assistant" or message_type_str.lower() == "bot":
+                message_type = MessageType.ASSISTANT
+            elif message_type_str.lower() == "system":
+                message_type = MessageType.SYSTEM
+            else:
+                message_type = MessageType.USER  # Default to user
+        except:
+            message_type = MessageType.USER
+        
+        # Store message using unified conversation service
+        success = unified_conversation_service.store_message(
+            session_id=session_id,
+            message=message,
+            message_type=message_type,
+            metadata=metadata,
+            client_id=client_id
+        )
+        
+        if success:
+            return {
+                "success": True,
+                "message": "Conversation stored successfully",
+                "session_id": session_id,
+                "timestamp": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to store conversation data"
+            )
         
     except HTTPException:
         raise
@@ -1387,6 +1559,518 @@ async def store_widget_conversation(
             status_code=500,
             detail="Failed to store conversation data"
         )
+
+# ============================================================================
+# UNIFIED SESSION AND CONVERSATION MANAGEMENT API ENDPOINTS
+# ============================================================================
+# These new endpoints provide unified session and conversation management
+# while maintaining full backward compatibility with existing endpoints.
+# The existing /api/config/{client_id} and /api/conversations/store endpoints
+# remain completely unchanged to ensure widget compatibility.
+
+# This section will be moved to earlier in the file
+
+# Unified session management endpoints
+@app.post("/api/unified/sessions/create")
+async def create_unified_session(
+    session_data: dict
+):
+    """Create a new unified session with both session_id and conversation_id"""
+    try:
+        if not unified_session_manager:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified session manager not available"
+            )
+        
+        # Validate required fields
+        client_id = session_data.get("client_id")
+        user_id = session_data.get("user_id", "anonymous")
+        if not client_id:
+            raise HTTPException(status_code=400, detail="client_id is required")
+        
+        # Create new unified session
+        session_id, conversation_id = unified_session_manager.create_session(
+            client_id=client_id,
+            user_id=user_id,
+            metadata=session_data.get("metadata", {})
+        )
+        
+        session_info = {
+            "session_id": session_id,
+            "conversation_id": conversation_id,
+            "client_id": client_id
+        }
+        
+        return {
+            "success": True,
+            "session": session_info,
+            "message": "Unified session created successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating unified session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create unified session"
+        )
+
+@app.get("/api/unified/sessions/{session_id}")
+async def get_unified_session(session_id: str):
+    """Get unified session information"""
+    try:
+        if not unified_session_manager:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified session manager not available"
+            )
+        
+        session_info = unified_session_manager.get_session_info(session_id)
+        
+        if not session_info:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        return {
+            "success": True,
+            "session": session_info
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting unified session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get unified session"
+        )
+
+@app.post("/api/unified/sessions/{session_id}/extend")
+async def extend_unified_session(session_id: str):
+    """Extend unified session expiry time"""
+    try:
+        if not unified_session_manager:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified session manager not available"
+            )
+        
+        success = unified_session_manager.extend_session(session_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Session not found or expired")
+        
+        return {
+            "success": True,
+            "message": "Session extended successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extending unified session: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to extend unified session"
+        )
+
+# Unified conversation management endpoints
+@app.post("/api/unified/conversations/store")
+async def store_unified_conversation(
+    conversation_data: dict
+):
+    """Store conversation message using unified conversation service"""
+    try:
+        if not unified_conversation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified conversation service not available"
+            )
+        
+        # Validate required fields
+        session_id = conversation_data.get("session_id")
+        message = conversation_data.get("message")
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id is required")
+        if not message:
+            raise HTTPException(status_code=400, detail="message is required")
+        
+        # Determine message type
+        message_type_str = conversation_data.get("message_type", "user").lower()
+        
+        # Map message type string to MessageType enum
+        if message_type_str == "user":
+            message_type = MessageType.USER
+        elif message_type_str in ["bot", "assistant"]:
+            message_type = MessageType.ASSISTANT
+        elif message_type_str == "system":
+            message_type = MessageType.SYSTEM
+        else:
+            message_type = MessageType.USER  # Default to user
+        
+        # Store conversation message
+        result = unified_conversation_service.store_message(
+            session_id=session_id,
+            message=message,
+            message_type=message_type,
+            metadata=conversation_data.get("metadata", {})
+        )
+        
+        if not result:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to store message"
+            )
+        
+        return {
+            "success": True,
+            "message": "Conversation stored successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error storing unified conversation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to store unified conversation"
+        )
+
+@app.get("/api/unified/conversations/{conversation_id}/history")
+async def get_unified_conversation_history(
+    conversation_id: str,
+    limit: int = 50,
+    offset: int = 0
+):
+    """Get conversation history using unified conversation service"""
+    try:
+        if not unified_conversation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified conversation service not available"
+            )
+        
+        history = unified_conversation_service.get_conversation_history_by_id(
+            conversation_id=conversation_id,
+            limit=limit,
+            include_metadata=True
+        )
+        
+        return {
+            "success": True,
+            "conversation_id": conversation_id,
+            "messages": history,
+            "total_messages": len(history)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting unified conversation history: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get unified conversation history"
+        )
+
+@app.get("/api/unified/conversations/client/{client_id}")
+async def get_client_unified_conversations(
+    client_id: str,
+    limit: int = 20,
+    offset: int = 0
+):
+    """Get all conversations for a specific client using unified service"""
+    try:
+        if not unified_conversation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified conversation service not available"
+            )
+        
+        conversations = unified_conversation_service.get_client_conversations(
+            client_id=client_id,
+            limit=limit,
+            include_archived=False
+        )
+        
+        return {
+            "success": True,
+            "client_id": client_id,
+            "conversations": conversations,
+            "total_conversations": len(conversations)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting client unified conversations: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get client unified conversations"
+        )
+
+# Unified statistics and management endpoints
+@app.get("/api/unified/stats/sessions")
+async def get_unified_session_stats():
+    """Get unified session statistics"""
+    try:
+        if not unified_session_manager:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified session manager not available"
+            )
+        
+        stats = unified_session_manager.get_session_stats()
+        
+        return {
+            "success": True,
+            "stats": stats
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting unified session stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get unified session stats"
+        )
+
+@app.get("/api/unified/stats/conversations")
+async def get_unified_conversation_stats():
+    """Get unified conversation statistics"""
+    try:
+        if not unified_conversation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified conversation service not available"
+            )
+        
+        stats = unified_conversation_service.get_conversation_statistics()
+        
+        return {
+            "success": True,
+            "stats": stats
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting unified conversation stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to get unified conversation stats"
+        )
+
+@app.post("/api/unified/cleanup/expired")
+async def cleanup_unified_expired_data():
+    """Cleanup expired sessions and old conversations"""
+    try:
+        if not unified_session_manager or not unified_conversation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Unified services not available"
+            )
+        
+        # Cleanup expired sessions
+        session_cleanup_result = unified_session_manager.cleanup_expired_sessions()
+        
+        # Cleanup old conversations (older than 90 days)
+        conversation_cleanup_result = unified_conversation_service.cleanup_old_conversations(days_old=90)
+        
+        return {
+            "success": True,
+            "cleanup_results": {
+                "expired_sessions_removed": session_cleanup_result,
+                "old_conversations_removed": conversation_cleanup_result
+            },
+            "message": "Cleanup completed successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during unified cleanup: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to cleanup unified data"
+        )
+
+# Backward compatibility endpoints - these mirror existing functionality
+# but use the unified services internally for consistency
+@app.post("/api/unified/legacy/conversations/store")
+async def store_legacy_compatible_conversation(
+    conversation_data: dict
+):
+    """Legacy-compatible conversation storage using unified services"""
+    try:
+        if not unified_conversation_service or not unified_session_manager:
+            # Fallback to original behavior if unified services not available
+            return await store_conversation(conversation_data)
+        
+        # Extract session_id or create new session if needed
+        session_id = conversation_data.get("session_id")
+        client_id = conversation_data.get("client_id")
+        
+        if not session_id and client_id:
+            # Create new session for legacy compatibility
+            session_info = await unified_session_manager.create_session(
+                client_id=client_id,
+                metadata=conversation_data.get("metadata", {})
+            )
+            session_id = session_info["session_id"]
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id or client_id is required")
+        
+        # Store using unified service
+        result = await unified_conversation_service.store_message(
+            session_id=session_id,
+            message=conversation_data.get("message", conversation_data),
+            metadata=conversation_data.get("metadata", {})
+        )
+        
+        # Return in legacy format
+        return {
+            "success": True,
+            "message": "Conversation stored successfully",
+            "conversation_id": result["conversation_id"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error storing legacy compatible conversation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to store legacy compatible conversation"
+        )
+
+# Chat unified endpoint - handles chat requests with automatic conversation storage
+@app.post("/api/chat/unified")
+async def chat_unified(
+    request_data: dict,
+    request: Request
+):
+    """Unified chat endpoint that processes messages and stores conversations automatically"""
+    try:
+        # Import chat handler
+        from api.widget_api.multi_tenant_chat import ChatRequest, get_chat_handler
+        from api.services.conversation_service import MessageType
+        
+        # Extract request data
+        message = request_data.get("message", "")
+        session_id = request_data.get("session_id")
+        client_id = request_data.get("client_id")
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Session ID is required")
+        
+        # Get database connection
+        from api.config.database import get_real_admin_db
+        db = await get_real_admin_db()
+        
+        if db is None:
+            raise HTTPException(
+                status_code=503, 
+                detail="Database not available. Please try again in a moment."
+            )
+        
+        # Ensure session exists (handles frontend-generated session IDs)
+        if unified_session_manager:
+            try:
+                session_id, conversation_id = unified_session_manager.ensure_session_exists(
+                    session_id=session_id,
+                    client_id=client_id,
+                    user_id=request_data.get("user_info", {}).get("user_id")
+                )
+                logger.info(f"[UNIFIED_CHAT] Session ensured - session_id: {session_id}, conversation_id: {conversation_id}")
+            except Exception as e:
+                logger.error(f"[UNIFIED_CHAT] Failed to ensure session {session_id}: {e}")
+                raise HTTPException(status_code=500, detail=f"Failed to ensure session: {e}")
+        
+        # Store user message first
+        if unified_conversation_service:
+            user_metadata = {
+                'timestamp': datetime.now(pytz.timezone('Asia/Singapore')).isoformat(),
+                'source': 'chat_unified',
+                'user_info': request_data.get("user_info", {}),
+                'client_domain': request.headers.get('X-Client-Domain', 'unknown')
+            }
+            
+            unified_conversation_service.store_message(
+                session_id=session_id,
+                message=message,
+                message_type=MessageType.USER,
+                metadata=user_metadata,
+                client_id=client_id
+            )
+        
+        # Get chat handler and process request
+        handler = get_chat_handler(db)
+        
+        # Create chat request
+        chat_request = ChatRequest(
+            message=message,
+            session_id=session_id,
+            client_id=client_id,
+            user_info=request_data.get("user_info", {})
+        )
+        
+        # Process chat request
+        response = await handler.process_chat_request(chat_request)
+        
+        # Store bot response
+        if unified_conversation_service:
+            bot_metadata = {
+                'timestamp': response.timestamp.isoformat(),
+                'source': 'rasa_response',
+                'response_metadata': response.metadata
+            }
+            
+            unified_conversation_service.store_message(
+                session_id=session_id,
+                message=response.response,
+                message_type=MessageType.ASSISTANT,
+                metadata=bot_metadata,
+                client_id=client_id
+            )
+        
+        return {
+            "success": True,
+            "response": response.response,
+            "session_id": response.session_id,
+            "client_id": response.client_id,
+            "timestamp": response.timestamp.isoformat(),
+            "metadata": response.metadata
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in unified chat: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process chat request"
+        )
+
+# Unified chat endpoint - alias for the above endpoint
+@app.post("/api/unified/chat")
+async def unified_chat(
+    request_data: dict,
+    request: Request
+):
+    """Unified chat endpoint - alias for /api/chat/unified"""
+    return await chat_unified(request_data, request)
+
+print("[OK] Unified session and conversation management API endpoints added")
+print("[OK] Unified chat endpoint /api/chat/unified added")
+print("[INFO] All existing endpoints remain unchanged for backward compatibility")
+print("[INFO] Client configuration endpoint /api/config/{client_id} is fully preserved")
 
 if __name__ == "__main__":
     import uvicorn

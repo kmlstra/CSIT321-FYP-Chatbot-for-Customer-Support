@@ -7,14 +7,32 @@ import logging
 import pytz
 from typing import Dict, Any, Optional
 from datetime import datetime
-from ..services.conversation_storage import conversation_storage
+from api.services.conversation_service import unified_conversation_service, MessageType
+from api.services.unified_session_manager import unified_session_manager
+from api.utils.timezone_utils import get_singapore_time
 
 logger = logging.getLogger(__name__)
 SINGAPORE_TZ = pytz.timezone('Asia/Singapore')
 
-def get_singapore_time():
-    """Get current time in Singapore timezone"""
-    return datetime.now(SINGAPORE_TZ)
+# Initialize unified conversation service
+try:
+    # unified_conversation_service is already initialized in conversation_service.py
+    pass
+except Exception as e:
+    logger.error(f"Failed to initialize UnifiedConversationService: {e}")
+    # Create a mock service for fallback
+    class MockUnifiedConversationService:
+        def store_message(self, *args, **kwargs):
+            logger.warning("Mock service: message not stored")
+            return True
+        def get_conversation_history(self, *args, **kwargs):
+            return []
+        def get_conversation_summary(self, *args, **kwargs):
+            return {'total_messages': 0, 'participants': []}
+        def archive_conversation(self, *args, **kwargs):
+            return True
+    
+    unified_conversation_service = MockUnifiedConversationService()
 
 class ConversationTracker:
     """Tracks and stores conversation events."""
@@ -36,7 +54,7 @@ class ConversationTracker:
     @staticmethod
     def store_user_message(sender_id: str, message: str, intent: Optional[str] = None, 
                           entities: Optional[list] = None):
-        """Store user message.
+        """Store user message with intent and entities.
         
         Args:
             sender_id: RASA sender identifier
@@ -49,17 +67,21 @@ class ConversationTracker:
         metadata = {
             'intent': intent,
             'entities': entities or [],
-            'confidence': None
+            'confidence': None,
+            'client_id': sender_id  # Use sender_id as client_id for compatibility
         }
         
-        conversation_storage.store_message(
-            session_id=session_id,
-            message_type='user_message',
-            content=message,
-            sender='user',
-            metadata=metadata
-        )
-        logger.debug(f"User message tracked for {sender_id}: {message[:50]}...")
+        try:
+            unified_conversation_service.store_message(
+                session_id=session_id,
+                message_type=MessageType.USER,
+                message=message,
+                client_id=sender_id,
+                metadata=metadata
+            )
+            logger.debug(f"User message tracked for {sender_id}: {message[:50]}...")
+        except Exception as e:
+            logger.error(f"Failed to store user message for {sender_id}: {e}")
     
     @staticmethod
     def store_bot_response(sender_id: str, response: str, action_name: Optional[str] = None):
@@ -74,17 +96,21 @@ class ConversationTracker:
         
         metadata = {
             'action_name': action_name,
-            'response_type': 'text'
+            'response_type': 'text',
+            'client_id': sender_id  # Use sender_id as client_id for compatibility
         }
         
-        conversation_storage.store_message(
-            session_id=session_id,
-            message_type='bot_response',
-            content=response,
-            sender='bot',
-            metadata=metadata
-        )
-        logger.debug(f"Bot response tracked for {sender_id}: {response[:50]}...")
+        try:
+            unified_conversation_service.store_message(
+                session_id=session_id,
+                message_type=MessageType.ASSISTANT,
+                message=response,
+                client_id=sender_id,
+                metadata=metadata
+            )
+            logger.debug(f"Bot response tracked for {sender_id}: {response[:50]}...")
+        except Exception as e:
+            logger.error(f"Failed to store bot response for {sender_id}: {e}")
     
     @staticmethod
     def store_action_execution(sender_id: str, action_name: str, success: bool = True, 
@@ -102,21 +128,25 @@ class ConversationTracker:
         metadata = {
             'action_name': action_name,
             'success': success,
-            'error_message': error_message
+            'error_message': error_message,
+            'client_id': sender_id  # Use sender_id as client_id for compatibility
         }
         
         content = f"Action executed: {action_name}"
         if not success and error_message:
             content += f" (Error: {error_message})"
         
-        conversation_storage.store_message(
-            session_id=session_id,
-            message_type='action_execution',
-            content=content,
-            sender='system',
-            metadata=metadata
-        )
-        logger.debug(f"Action execution tracked for {sender_id}: {action_name}")
+        try:
+            unified_conversation_service.store_message(
+                session_id=session_id,
+                message_type=MessageType.SYSTEM,
+                message=content,
+                client_id=sender_id,
+                metadata=metadata
+            )
+            logger.debug(f"Action execution tracked for {sender_id}: {action_name}")
+        except Exception as e:
+            logger.error(f"Failed to store action execution for {sender_id}: {e}")
 
 # ConversationLoggingAction removed - should only be used in RASA actions server
 # This middleware is for FastAPI backend integration only
@@ -173,8 +203,9 @@ class ConversationAPI:
             Dictionary with conversation data
         """
         try:
-            session_info = conversation_storage.get_session_info(session_id)
-            messages = conversation_storage.get_conversation_history(session_id, limit)
+            # Get conversation history from unified service
+            messages = unified_conversation_service.get_conversation_history(session_id, limit)
+            summary = unified_conversation_service.get_conversation_summary(session_id)
             
             # Ensure all datetime objects are serialized
             def serialize_datetime(obj):
@@ -188,7 +219,7 @@ class ConversationAPI:
             
             return {
                 'session_id': session_id,
-                'session_info': serialize_datetime(session_info),
+                'session_info': serialize_datetime(summary),
                 'messages': serialize_datetime(messages),
                 'message_count': len(messages)
             }
@@ -210,7 +241,10 @@ class ConversationAPI:
             Dictionary with active session data
         """
         try:
-            active_count = conversation_storage.get_active_sessions_count()
+            # Get statistics from unified conversation service
+            stats = unified_conversation_service.get_conversation_statistics()
+            active_count = stats.get('active_conversations_24h', 0)
+            
             return {
                 'active_sessions': active_count,
                 'timestamp': get_singapore_time().isoformat()
@@ -231,7 +265,8 @@ class ConversationAPI:
             Dictionary with cleanup results
         """
         try:
-            cleaned_count = conversation_storage.cleanup_expired_sessions()
+            # Use unified conversation service for cleanup
+            cleaned_count = unified_conversation_service.cleanup_old_conversations(days_old=30)
             return {
                 'cleaned_sessions': cleaned_count,
                 'timestamp': get_singapore_time().isoformat()

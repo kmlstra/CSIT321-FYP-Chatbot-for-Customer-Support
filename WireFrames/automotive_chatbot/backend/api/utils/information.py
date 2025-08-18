@@ -112,6 +112,7 @@ class SupportInformation:
                 except Exception as e:
                     logger.warning(f"Failed to get database for cache preloader: {e}")
                     return None
+                    
             if not cache_preloader:
                 return None
                 

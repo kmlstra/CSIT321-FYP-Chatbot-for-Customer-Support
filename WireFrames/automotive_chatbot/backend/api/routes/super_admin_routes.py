@@ -12,6 +12,8 @@ import pytz
 from ..client_management.client_crud import ClientCRUD
 from ..auth.client_auth import get_super_admin_user
 from ..config.database import get_real_admin_db
+from ..utils.performance_monitor import get_performance_monitor
+from ..utils.health_monitor import HealthMonitor
 
 router = APIRouter()
 
@@ -469,20 +471,82 @@ async def update_user_role(
 
 @router.get("/system/health", dependencies=[Depends(get_super_admin_user)])
 async def get_system_health():
-    """Get detailed system health information"""
+    """Get detailed system health information for super admin dashboard"""
     
-    return {
-        "services": {
-            "api": {"status": "healthy", "uptime": "99.9%"},
-            "database": {"status": "healthy", "connections": "optimal"},
-            "rasa": {"status": "healthy", "response_time": "1.2s"},
-            "widget_api": {"status": "healthy", "requests_per_minute": 150}
-        },
-        "performance": {
-            "avg_response_time": "1.2s",
-            "error_rate": "0.1%",
-            "cpu_usage": "45%",
-            "memory_usage": "62%"
-        },
-        "last_updated": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
-    }
+    try:
+        # Get performance monitor and health monitor
+        perf_monitor = get_performance_monitor()
+        health_monitor = HealthMonitor()
+        
+        # Get comprehensive health data
+        services_status = await health_monitor.monitor_all_services()
+        performance_summary = perf_monitor.get_health_summary()
+        system_snapshot = perf_monitor.get_current_snapshot()
+        
+        # Calculate health scores
+        total_services = len(services_status)
+        healthy_services = sum(1 for service in services_status.values() if service.get('status') == 'healthy')
+        service_health_score = (healthy_services / total_services * 100) if total_services > 0 else 0
+        
+        return {
+            "overall_health": {
+                "status": "healthy" if service_health_score >= 80 else "degraded" if service_health_score >= 60 else "unhealthy",
+                "score": round(service_health_score, 1),
+                "last_updated": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
+            },
+            "services": services_status,
+            "performance": {
+                "avg_response_time": f"{performance_summary.get('avg_response_time', 0):.2f}ms",
+                "error_rate": f"{performance_summary.get('error_rate', 0):.2f}%",
+                "requests_per_minute": performance_summary.get('requests_per_minute', 0),
+                "active_connections": performance_summary.get('active_connections', 0)
+            },
+            "system_resources": {
+                "cpu_usage": f"{system_snapshot.cpu_percent:.1f}%" if system_snapshot else "N/A",
+                "memory_usage": f"{system_snapshot.memory_percent:.1f}%" if system_snapshot else "N/A",
+                "disk_usage": f"{system_snapshot.disk_percent:.1f}%" if system_snapshot else "N/A",
+                "network_io": {
+                    "bytes_sent": system_snapshot.network_io_sent if system_snapshot else 0,
+                    "bytes_recv": system_snapshot.network_io_recv if system_snapshot else 0
+                }
+            },
+            "alerts": {
+                "active_alerts": len(performance_summary.get('active_alerts', [])),
+                "warnings": len(performance_summary.get('warnings', [])),
+                "critical_issues": len([alert for alert in performance_summary.get('active_alerts', []) if alert.get('severity') == 'critical'])
+            }
+        }
+        
+    except Exception as e:
+        # Fallback to basic health info if monitoring fails
+        return {
+            "overall_health": {
+                "status": "unknown",
+                "score": 0,
+                "error": str(e),
+                "last_updated": datetime.now(pytz.timezone('Asia/Singapore')).isoformat()
+            },
+            "services": {
+                "api": {"status": "healthy", "uptime": "available"},
+                "database": {"status": "unknown", "connections": "unknown"},
+                "rasa": {"status": "unknown", "response_time": "unknown"},
+                "widget_api": {"status": "unknown", "requests_per_minute": 0}
+            },
+            "performance": {
+                "avg_response_time": "unknown",
+                "error_rate": "unknown",
+                "requests_per_minute": 0,
+                "active_connections": 0
+            },
+            "system_resources": {
+                "cpu_usage": "unknown",
+                "memory_usage": "unknown",
+                "disk_usage": "unknown",
+                "network_io": {"bytes_sent": 0, "bytes_recv": 0}
+            },
+            "alerts": {
+                "active_alerts": 0,
+                "warnings": 0,
+                "critical_issues": 0
+            }
+        }

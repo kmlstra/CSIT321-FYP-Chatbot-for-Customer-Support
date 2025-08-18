@@ -1,56 +1,139 @@
-# RASA Server Dockerfile - Simplified
-FROM rasa/rasa:3.6.4-full
+# Optimized Production Dockerfile for RASA Server
+# Multi-stage build for better performance and security
 
-# Set environment variables
-ENV RASA_HOME=/app
-ENV PYTHONUNBUFFERED=1
+# Stage 1: Base RASA image
+FROM rasa/rasa:3.6.4-full AS base
 
-# Switch to root to install dependencies
+# Install system dependencies
 USER root
+RUN apt-get update && apt-get install -y \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create necessary directories
-RUN mkdir -p /app/models /app/logs /app/data
-
-# Set work directory
+# Stage 2: Builder
+FROM base AS builder
 WORKDIR /app
 
-# Copy RASA configuration files
-COPY ./backend/config.yml .
-COPY ./backend/domain.yml .
-COPY ./backend/endpoints.yml .
-COPY ./backend/credentials.yml .
+# Copy RASA configuration and training data
+COPY ./rasa/ .
 
-# Copy training data
-COPY ./backend/data/ ./data/
+# Copy custom actions requirements
+COPY ./backend/api/actions/requirements.txt ./actions/requirements.txt
 
-# Create models directory (models will be trained on startup if none exist)
-RUN mkdir -p ./models
+# Install custom actions dependencies
+RUN pip install --no-cache-dir -r ./actions/requirements.txt
 
-# Copy custom actions and API dependencies
-COPY ./backend/actions.py .
-COPY ./backend/api/ ./api/
-COPY ./backend/requirements.txt .
+# Stage 3: Runner
+FROM base AS runner
+WORKDIR /app
 
-# Install additional dependencies for custom actions
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy Python dependencies from builder
+COPY --from=builder /opt/venv /opt/venv
 
-# Use existing rasa user from base image
-RUN chown -R 1001:1001 /app
+# Copy RASA files and custom actions
+COPY --from=builder /app .
+
+# Copy custom actions from backend
+COPY ./backend/api/actions/ ./actions/
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/models /app/cache && \
+    chown -R 1001:1001 /app
+
+# Switch to RASA user
 USER 1001
 
+# Environment variables for RASA
+ENV RASA_MODEL_SERVER=http://localhost:5005
+ENV RASA_ACTION_ENDPOINT=http://localhost:5055/webhook
+ENV RASA_CORS_ORIGINS="*"
+ENV RASA_ENABLE_API=true
+ENV RASA_RESPONSE_TIMEOUT=3600
+ENV RASA_LOG_LEVEL=INFO
+
+# MongoDB Atlas configuration for actions
+ENV MONGODB_TYPE=atlas
+ENV MONGODB_ATLAS_URI=""
+ENV MONGODB_DATABASE=automotive_chatbot
+ENV MONGODB_COLLECTION_APPOINTMENTS=appointments
+ENV MONGODB_COLLECTION_CUSTOMERS=customers
+ENV MONGODB_COLLECTION_SERVICES=services
+ENV MONGODB_COLLECTION_CHAT_HISTORY=chat_history
+
+# Database connection pool settings
+ENV DB_POOL_MIN_SIZE=5
+ENV DB_POOL_MAX_SIZE=20
+ENV DB_POOL_MAX_IDLE_TIME=30000
+ENV DB_CONNECTION_TIMEOUT=10000
+ENV DB_SERVER_SELECTION_TIMEOUT=5000
+ENV DB_RETRY_WRITES=true
+ENV DB_W=majority
+
+# Cache configuration
+ENV CACHE_ENABLED=true
+ENV CACHE_TTL=1800
+ENV CACHE_MAX_SIZE=500
+ENV CACHE_CLEANUP_INTERVAL=300
+
+# Email configuration for actions
+ENV SMTP_SERVER=""
+ENV SMTP_PORT=587
+ENV SMTP_USERNAME=""
+ENV SMTP_PASSWORD=""
+ENV SMTP_USE_TLS=true
+ENV EMAIL_FROM=""
+
+# Feature flags
+ENV FEATURE_APPOINTMENTS=true
+ENV FEATURE_EMAIL_NOTIFICATIONS=true
+ENV FEATURE_CHAT_HISTORY=true
+ENV FEATURE_ANALYTICS=true
+
+# Performance settings
+ENV RASA_WORKERS=2
+ENV RASA_MAX_REQUESTS=1000
+ENV RASA_BACKLOG=100
+
+# Security settings
+ENV RASA_JWT_SECRET=""
+ENV RASA_JWT_METHOD=HS256
+
+# Monitoring settings
+ENV HEALTH_CHECK_ENABLED=true
+ENV METRICS_ENABLED=true
+
 # Expose ports
-EXPOSE 5005 5055
+EXPOSE 5005
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5005/status || exit 1
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
 set -e\n\
-echo "Starting RASA server..."\n\
-if [ ! -f models/*.tar.gz ] && [ ! -f models/*.pkl ]; then\n\
-  echo "No trained model found, training new model..."\n\
-  rasa train --config config.yml --domain domain.yml --data data/ --out models/\n\
+\n\
+# Check if model exists\n\
+if [ ! -f "/app/models/$(ls /app/models 2>/dev/null | head -1)" ]; then\n\
+    echo "No trained model found. Training model..."\n\
+    rasa train --config config.yml --domain domain.yml --data data/ --out models/\n\
 fi\n\
-echo "Starting RASA API server..."\n\
-exec rasa run --enable-api --model models --cors "*" --debug --endpoints endpoints.yml --port 5005 --interface 0.0.0.0' > /app/start-rasa.sh && chmod +x /app/start-rasa.sh
+\n\
+# Start RASA server with optimized settings\n\
+exec rasa run \\\n\
+    --model models/ \\\n\
+    --endpoints endpoints.yml \\\n\
+    --credentials credentials.yml \\\n\
+    --cors "*" \\\n\
+    --enable-api \\\n\
+    --log-level INFO \\\n\
+    --port 5005 \\\n\
+    --interface 0.0.0.0' > /app/start-rasa.sh && \
+    chmod +x /app/start-rasa.sh
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start RASA server
 CMD ["/app/start-rasa.sh"]

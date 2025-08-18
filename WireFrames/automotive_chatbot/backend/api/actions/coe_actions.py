@@ -8,6 +8,7 @@ from rasa_sdk import Tracker
 from rasa_sdk.executor import CollectingDispatcher
 from rasa_sdk.events import SlotSet
 from .auto_logger import AutoLoggedAction
+from api.middleware.intent_validation_middleware import validate_medium_confidence
 import logging
 import requests
 import os
@@ -605,12 +606,21 @@ def format_coe_response_with_chart(base_response: str, prices: Dict[str, Any], h
         return base_response
 
 class ActionCOEPrices(AutoLoggedAction):
+    """
+    COE prices action with intent validation middleware integration.
+    Handles COE price queries with medium confidence validation.
+    """
     def name(self) -> Text:
         return "action_coe_prices"
 
-    def run(self, dispatcher: CollectingDispatcher,
+    @validate_medium_confidence(confidence_threshold=0.6)
+    async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Log user message and action execution
+        self.log_user_message(tracker)
+        self.log_action_execution("action_coe_prices", "started", tracker)
         
         try:
             # Check if COE prices feature is enabled for this client
@@ -736,13 +746,20 @@ class ActionCOEPrices(AutoLoggedAction):
             # Send the response - it will be processed by formatCOEData() on the frontend
             dispatcher.utter_message(text=response)
             
+            # Log bot response
+            self.log_bot_response(dispatcher, tracker)
+            
             return []
             
         except Exception as e:
             logger.error(f"Error in ActionCOEPrices: {e}")
-            dispatcher.utter_message(
-                text="Sorry, there was an error retrieving COE price information. Please try again."
-            )
+            fallback_message = "Sorry, there was an error retrieving COE price information. Please try again."
+            dispatcher.utter_message(text=fallback_message)
+            
+            # Log action execution failure and bot response
+            self.log_action_execution("action_coe_prices", "failed", tracker, str(e))
+            self.log_bot_response(dispatcher, tracker)
+            
             return []
     
 
@@ -756,10 +773,15 @@ class ActionExplainCOECategories(AutoLoggedAction):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
+        # Log user message and action execution
+        self.log_user_message(tracker)
+        self.log_action_execution("action_explain_coe_categories", "started", tracker)
+        
         # Check if COE feature is enabled for this client
         client_id = tracker.get_slot("client_id")
         if not check_coe_feature_enabled(client_id):
             dispatcher.utter_message(text=COE_FEATURE_DISABLED_MESSAGE)
+            self.log_bot_response(dispatcher, tracker)
             return []
         
         # Get current prices for dynamic information
@@ -880,6 +902,10 @@ class ActionExplainCOECategories(AutoLoggedAction):
 📊 **Data Source:** Land Transport Authority (LTA) Singapore"""
                 
         dispatcher.utter_message(text=response)
+        
+        # Log bot response
+        self.log_bot_response(dispatcher, tracker)
+        
         return []
 
 class ActionExplainCOERenewal(AutoLoggedAction):

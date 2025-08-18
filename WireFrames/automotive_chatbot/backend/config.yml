@@ -18,7 +18,7 @@ pipeline:
 
   # Fallback classifier for low confidence predictions
 - name: FallbackClassifier
-  threshold: 0.7
+  threshold: 0.5
   ambiguity_threshold: 0.1
 
   # Optional: map entity synonyms

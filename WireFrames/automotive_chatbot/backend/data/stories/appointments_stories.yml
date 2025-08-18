@@ -6,7 +6,7 @@ stories:
 - story: book appointment simple
   steps:
   - intent: book_appointment
-  - action: action_appointment_calculator
+  - action: action_book_appointment
 
 # Appointment booking with some initial details
 - story: book appointment with details
@@ -14,7 +14,25 @@ stories:
   - intent: book_appointment
     entities:
     - service_type: "test drive"
-  - action: action_appointment_calculator
+  - action: action_book_appointment
+
+# Appointment booking with sales consultation
+- story: book appointment sales consultation
+  steps:
+  - intent: book_appointment
+    entities:
+    - service_type: "sales consultation"
+    - date: "tomorrow"
+  - action: action_book_appointment
+
+# Appointment booking with financing discussion
+- story: book appointment financing
+  steps:
+  - intent: book_appointment
+    entities:
+    - service_type: "financing discussion"
+    - time: "afternoon"
+  - action: action_book_appointment
 
 # Appointment booking with date preference
 - story: book appointment with date
@@ -22,7 +40,7 @@ stories:
   - intent: book_appointment
     entities:
     - appointment_date: "Monday"
-  - action: action_appointment_calculator
+  - action: action_book_appointment
 
 # Legacy appointment booking flow - for backward compatibility
 - story: book appointment legacy

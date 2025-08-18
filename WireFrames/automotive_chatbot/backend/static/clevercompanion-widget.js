@@ -270,13 +270,11 @@
         }
 
         generateSessionId() {
-            // Check if session has expired
-            if (this.isSessionExpired()) {
-                this.clearExpiredSession();
-            }
-            
+            // Simplified session generation - backend handles session validation
             let sessionId = localStorage.getItem('cc_session_id');
-            if (!sessionId) {
+            if (!sessionId || this.isSessionExpired()) {
+                // Clear expired session and generate new one
+                this.clearExpiredSession();
                 sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 localStorage.setItem('cc_session_id', sessionId);
                 localStorage.setItem('cc_session_timestamp', Date.now().toString());
@@ -285,7 +283,7 @@
         }
 
         updateSessionTimestamp() {
-            // Update session timestamp on activity
+            // Simplified timestamp update - backend manages session lifecycle
             localStorage.setItem('cc_session_timestamp', Date.now().toString());
         }
 
@@ -452,13 +450,14 @@
                 { icon: '📅', text: 'Appointment Booking', action: 'I want to book an appointment', enabled: this.clientConfig.features?.appointment_booking },
                 // { icon: '🔧', text: 'Maintenance Tips', action: 'Provide vehicle maintenance guidance and service center recommendations', enabled: true },
                 { icon: '💳', text: 'Loan Calculator', action: 'Calculate car loan with current interest rates and financing options', enabled: this.clientConfig.features?.loan_calculator },
-                { icon: '📞', text: 'Contact Us', action: 'Show me contact information and ways to reach us', enabled: this.clientConfig.features?.contact_info },
+                { icon: '📞', text: 'Contact Us', action: 'Show me contact information and ways to reach us', enabled: true }, // Contact Us is always available as core feature
                 // { icon: '📝', text: 'Feedback', action: 'I want to provide feedback about the service and suggest improvements', enabled: true },
-                { icon: '💬', text: 'Live Support', action: 'I need live support assistance', enabled: this.clientConfig.features?.live_support }
+                { icon: '💬', text: 'Live Support', action: 'I need live support assistance', enabled: this.clientConfig.features?.live_support } // Live Support can be disabled
             ];
 
+            // 只显示明确启用的功能按钮 (enabled === true)
             return menuOptions
-                .filter(option => option.enabled !== false)
+                .filter(option => option.enabled === true)
                 .map(option => 
                     `<div class="cc-menu-item" data-action="${option.action}">
                         <span>${option.icon}</span>
@@ -2624,9 +2623,14 @@
             color: #64748b;
         }
 
-        /* PROBLEM 6 FIX: Loan calculator DISABLED - Hidden completely */
+        /* Loan calculator styling */
         .cc-loan-calculator {
-            display: none !important; /* Calculator completely disabled */
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 16px 0;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
         }
 
         .cc-loan-header {
@@ -2977,11 +2981,9 @@
             
             if (!text.trim()) return;
 
-            // Check if session has expired before sending
-            if (this.isSessionExpired()) {
-                this.clearExpiredSession();
-                this.sessionId = this.generateSessionId();
-            }
+            // Unified session management - backend handles session validation and storage
+            this.sessionId = this.generateSessionId();
+            this.updateSessionTimestamp();
 
             // Add user message (non-blocking)
             this.addMessage(text, 'user');
@@ -2989,9 +2991,6 @@
             // Clear input and disable send button
             if (input) input.value = '';
             if (sendBtn) sendBtn.disabled = true;
-            
-            // Update session timestamp on activity
-            this.updateSessionTimestamp();
 
             // Check if this is an appointment-related message
             const appointmentKeywords = ['appointment', 'book', 'schedule', 'service', 'test drive', 'consultation', 'trade-in'];
@@ -3006,11 +3005,10 @@
                 return;
             }
 
-            // Flag to prevent duplicate fallback calls
-            let fallbackCalled = false;
-
-            // First, get immediate acknowledgment using Promise chains
-            fetch(`${this.apiUrl}/chat/quick-ack`, {
+            // Use unified chat API endpoint with automatic conversation storage
+            this.showTypingIndicator();
+            
+            fetch(`${this.apiUrl.replace('/api/widget', '/api')}/chat/unified`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3023,114 +3021,42 @@
                     timestamp: new Date().toISOString()
                 })
             })
-            .then(ackResponse => {
-                if (ackResponse.ok) {
-                    // Show typing indicator after acknowledgment
-                    this.showTypingIndicator();
-                    
-                    // Now get the streaming response
-                    return fetch(`${this.apiUrl}/chat/stream`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Client-Domain': window.location.hostname
-                        },
-                        body: JSON.stringify({
-                            client_id: this.clientId,
-                            session_id: this.sessionId,
-                            message: text,
-                            timestamp: new Date().toISOString()
-                        })
-                    });
-                } else {
-                    // Fallback to regular chat if quick-ack fails
-                    if (!fallbackCalled) {
-                        fallbackCalled = true;
-                        this.sendMessageFallback(text);
-                    }
-                    throw new Error('Quick-ack failed');
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Chat request failed: ${response.status}`);
                 }
+                return response.json();
             })
-            .then(streamResponse => {
-                if (streamResponse.ok) {
-                    const reader = streamResponse.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-
-                    // Process stream using recursive function to avoid async/await
-                    const processStream = () => {
-                        return reader.read().then(({ done, value }) => {
-                            if (done) {
-                                return;
-                            }
-
-                            buffer += decoder.decode(value, { stream: true });
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop(); // Keep incomplete line in buffer
-
-                            for (const line of lines) {
-                                if (line.trim() && line.startsWith('data: ')) {
-                                    try {
-                                        const data = JSON.parse(line.slice(6));
-                                        
-                                        if (data.type === 'typing') {
-                                            // Keep typing indicator visible
-                                            continue;
-                                        } else if (data.type === 'response') {
-                                            // Hide typing indicator and show response
-                                            this.hideTypingIndicator();
-                                            this.addMessage(data.response, 'bot'); // Fixed: use data.response instead of data.content
-                                        } else if (data.type === 'error') {
-                                            this.hideTypingIndicator();
-                                            this.addMessage(data.message || 'I\'m experiencing technical difficulties. Please try again in a moment.', 'bot');
-                                        } else if (data.type === 'acknowledgment') {
-                                            // Handle acknowledgment messages
-                                            continue;
-                                        } else if (data.type === 'complete') {
-                                            // Handle completion signal
-                                            continue;
-                                        }
-                                    } catch (parseError) {
-                        // console.warn('Failed to parse streaming data:', parseError);
-                    }
-                                }
-                            }
-                            
-                            // Continue processing stream
-                            return processStream();
-                        });
-                    };
-                    
-                    return processStream();
+            .then(data => {
+                this.hideTypingIndicator();
+                
+                if (data.response) {
+                    this.addMessage(data.response, 'bot');
+                } else if (data.error) {
+                    this.addMessage(data.error, 'bot');
                 } else {
-                    // Fallback to regular chat if streaming fails
-                    if (!fallbackCalled) {
-                        fallbackCalled = true;
-                        this.sendMessageFallback(text);
-                    }
-                    throw new Error('Streaming failed');
+                    this.addMessage('I apologize, but I\'m having trouble understanding your request. Could you please try rephrasing?', 'bot');
                 }
             })
             .catch(error => {
-                console.error('Error in streaming chat:', error);
-                // Only call fallback if it hasn't been called yet
-                if (!fallbackCalled) {
-                    fallbackCalled = true;
-                    this.sendMessageFallback(text);
-                }
+                console.error('Error in unified chat:', error);
+                this.hideTypingIndicator();
+                
+                // Fallback to legacy endpoint for backward compatibility
+                this.sendMessageFallback(text);
             })
             .finally(() => {
-                this.hideTypingIndicator();
                 if (sendBtn) sendBtn.disabled = false;
-                // Save chat history after message exchange
+                // Save chat history after message exchange (local backup)
                 this.saveChatHistory();
             });
         }
 
-        // Fallback method for regular chat when streaming fails
+        // Fallback method for backward compatibility with legacy endpoints
         sendMessageFallback(text) {
             this.showTypingIndicator();
             
+            // Try legacy endpoint for backward compatibility
             fetch(`${this.apiUrl}/chat`, {
                 method: 'POST',
                 headers: {
@@ -3203,10 +3129,13 @@
             }
             
             const avatar = sender === 'bot' ? `<img src="${logoUrl}" alt="Bot" />` : `<img src="${this.cachedUserAvatarUrl}" alt="User" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" />`;
-            const timestamp = new Date().toLocaleTimeString([], { 
+            // Generate timestamp in Singapore timezone
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString('en-SG', { 
                 hour: '2-digit', 
                 minute: '2-digit',
-                hour12: true 
+                hour12: true,
+                timeZone: 'Asia/Singapore'
             });
 
             const messageHTML = `
@@ -3238,10 +3167,13 @@
             }
             
             const avatar = sender === 'bot' ? `<img src="${logoUrl}" alt="Bot" />` : `<img src="${this.cachedUserAvatarUrl}" alt="User" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" />`;
-            const timestamp = new Date().toLocaleTimeString([], { 
+            // Generate timestamp in Singapore timezone
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString('en-SG', { 
                 hour: '2-digit', 
                 minute: '2-digit',
-                hour12: true 
+                hour12: true,
+                timeZone: 'Asia/Singapore'
             });
 
             // Generate buttons HTML if buttons exist
@@ -3420,75 +3352,90 @@
             });
         }
 
-        // Store conversation in database
+        // Store conversation using unified backend session management
         async storeConversation(userMessage, botResponses) {
             try {
-                const conversationData = {
-                    client_id: this.clientId,
-                    session_id: this.sessionId,
-                    user_message: userMessage,
-                    bot_responses: botResponses,
-                    timestamp: new Date().toISOString(),
-                    domain: window.location.hostname
-                };
+                // Store user message first
+                await this.storeMessage(userMessage, 'user');
                 
-                // Store via backend API
-                await fetch(`${this.apiUrl}/conversations/store`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(conversationData)
-                });
+                // Store each bot response separately
+                if (Array.isArray(botResponses)) {
+                    for (const response of botResponses) {
+                        const responseText = typeof response === 'string' ? response : response.text || '';
+                        if (responseText) {
+                            await this.storeMessage(responseText, 'bot');
+                        }
+                    }
+                } else if (botResponses) {
+                    const responseText = typeof botResponses === 'string' ? botResponses : botResponses.text || '';
+                    if (responseText) {
+                        await this.storeMessage(responseText, 'bot');
+                    }
+                }
             } catch (error) {
                 console.error('Error storing conversation:', error);
                 // Don't throw error as this shouldn't break the chat flow
             }
         }
+        
+        // Store individual message with correct format for unified API
+        async storeMessage(message, messageType) {
+            try {
+                const messageData = {
+                    session_id: this.sessionId,
+                    message: message,
+                    message_type: messageType, // 'user' or 'bot'
+                    metadata: {
+                        client_id: this.clientId,
+                        domain: window.location.hostname,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+                
+                // Use new unified conversation API endpoint
+                await fetch(`${this.apiUrl.replace('/api/widget', '/api')}/unified/conversations/store`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Client-Domain': window.location.hostname
+                    },
+                    body: JSON.stringify(messageData)
+                });
+            } catch (error) {
+                console.error('Error storing message:', error);
+                // Fallback to legacy endpoint for backward compatibility
+                try {
+                    const legacyData = {
+                        client_id: this.clientId,
+                        session_id: this.sessionId,
+                        message: message,
+                        sender: messageType,
+                        timestamp: new Date().toISOString(),
+                        domain: window.location.hostname
+                    };
+                    
+                    await fetch(`${this.apiUrl}/conversations/store`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(legacyData)
+                    });
+                } catch (fallbackError) {
+                    console.error('Fallback message storage also failed:', fallbackError);
+                    // Don't throw error as this shouldn't break the chat flow
+                }
+            }
+        }
 
         formatMessage(text) {
-            // Debug logging to see what's happening with newlines
-            console.log('=== FORMATMESSAGE DEBUG ===');
-            console.log('Original text:', JSON.stringify(text));
-            
-            // Test with a sample string to verify newline handling
-            const testString = "Line 1\n\nLine 3\nLine 4";
-            console.log('Test string processing:', JSON.stringify(testString));
-            const testResult = testString
-                .replace(/\n\n/g, '<br><br>')
-                .replace(/\n/g, '<br>');
-            console.log('Test result:', JSON.stringify(testResult));
-            console.log('Test result HTML:', testResult);
-            
             const result = text
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/_(.*?)_/g, '<em>$1</em>')
                 .replace(/\n\n/g, '<br><br>') // Handle double newlines for empty lines
                 .replace(/\n/g, '<br>'); // Handle single newlines
             
-            console.log('Formatted text:', JSON.stringify(result));
-            console.log('Formatted HTML:', result);
-            console.log('=== END DEBUG ===');
             return result;
-        }
-        
-        // Test function to verify newline handling
-        testNewlineHandling() {
-            console.log('=== TESTING NEWLINE HANDLING ===');
-            const testCases = [
-                "Line 1\n\nLine 3",
-                "📊 **Latest COE Prices**\n\n🚗 **Category A:** $102,009\n🚙 **Category B:** $123,498",
-                "First paragraph\n\nSecond paragraph\n\nThird paragraph"
-            ];
-            
-            testCases.forEach((testCase, index) => {
-                console.log(`Test case ${index + 1}:`);
-                console.log('Input:', JSON.stringify(testCase));
-                const result = this.formatMessage(testCase);
-                console.log('Output:', result);
-                console.log('---');
-            });
-            console.log('=== END TESTING ===');
         }
 
         showTypingIndicator() {
@@ -3552,13 +3499,9 @@
             }
         }
 
-        // Save chat history to localStorage with session validation
+        // Save chat history to localStorage - simplified with backend session management
         saveChatHistory() {
-            // Check if session has expired before saving
-            if (this.isSessionExpired()) {
-                this.clearExpiredSession();
-                return;
-            }
+            // Simplified session validation - backend manages session lifecycle
             
             const messagesContainer = document.getElementById('cc-messages');
             if (!messagesContainer) return;
@@ -3570,24 +3513,31 @@
                 const isUser = messageEl.classList.contains('cc-user');
                 const bubble = messageEl.querySelector('.cc-bubble');
                 if (bubble) {
-                    // Get text content without timestamp
+                    // Get text content without timestamp and buttons
                     const timestamp = bubble.querySelector('.cc-timestamp');
                     
-                    // Clone bubble to extract clean text
+                    // Clone bubble to extract clean text content
                     const bubbleClone = bubble.cloneNode(true);
                     const clonedTimestamp = bubbleClone.querySelector('.cc-timestamp');
+                    const clonedButtons = bubbleClone.querySelector('.cc-buttons');
                     
+                    // Remove timestamp and buttons from clone to get clean content
                     if (clonedTimestamp && clonedTimestamp.parentNode) {
                         clonedTimestamp.parentNode.removeChild(clonedTimestamp);
                     }
+                    if (clonedButtons && clonedButtons.parentNode) {
+                        clonedButtons.parentNode.removeChild(clonedButtons);
+                    }
                     
+                    // Store only plain text content
                     messages.push({
-                        text: bubbleClone.innerHTML.trim(),
+                        text: bubbleClone.textContent.trim(), // Store only plain text
                         sender: isUser ? 'user' : 'bot',
-                        timestamp: timestamp ? timestamp.textContent : new Date().toLocaleTimeString([], { 
+                        timestamp: timestamp ? timestamp.textContent : new Date().toLocaleTimeString('en-SG', { 
                             hour: '2-digit', 
                             minute: '2-digit',
-                            hour12: true 
+                            hour12: true,
+                            timeZone: 'Asia/Singapore'
                         })
                     });
                 }
@@ -3598,13 +3548,9 @@
             this.updateSessionTimestamp();
         }
 
-        // Load chat history from localStorage with session validation
+        // Load chat history from localStorage - simplified with backend session management
         loadChatHistory() {
-            // Check if session has expired before loading
-            if (this.isSessionExpired()) {
-                this.clearExpiredSession();
-                return;
-            }
+            // Simplified session validation - backend manages session lifecycle
             
             const savedHistory = localStorage.getItem('cc_chat_history');
             if (!savedHistory) return;
@@ -3622,10 +3568,10 @@
                     }
                 });
                 
-                // Restore messages (non-blocking)
+                // Restore messages with plain text content only
                 for (const message of messages) {
-                    if (message.sender && message.text && message.timestamp) {
-                        this.addMessage(message.text, message.sender);
+                    if (message.sender && message.timestamp && message.text) {
+                        this.addMessage(message.text, message.sender === 'user', message.timestamp);
                     }
                 }
                 
@@ -3640,6 +3586,8 @@
                 localStorage.removeItem('cc_chat_history');
             }
         }
+        
+
 
 
     }

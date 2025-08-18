@@ -31,7 +31,7 @@ class HealthMonitor:
         # Use unified domain:port approach for all service URLs
         domain = os.getenv('DOMAIN', 'http://localhost')
         rasa_port = os.getenv('RASA_PORT', '5005')
-        backend_port = os.getenv('BACKEND_PORT', '8001')
+        backend_port = os.getenv('BACKEND_PORT', '8000')
         frontend_port = os.getenv('FRONTEND_PORT', '3000')
         
         self.services = {

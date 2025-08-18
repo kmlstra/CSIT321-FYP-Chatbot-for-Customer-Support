@@ -5,4 +5,4 @@ rules:
 - rule: Respond to loan calculation request
   steps:
   - intent: calculate_loan
-  - action: action_loan_calculation_result
+  - action: action_loan_calculator

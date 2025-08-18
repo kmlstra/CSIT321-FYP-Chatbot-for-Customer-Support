@@ -72,7 +72,7 @@ export const API_ENDPOINTS = {
   SUPER_ADMIN_LOGIN: `${API_CONFIG.API_URL}/api/auth/super-admin-login`,
   
   // Client Management
-  CLIENT_CONVERSATIONS: `${API_CONFIG.API_URL}/api/client/conversations`,
+  CLIENT_CONVERSATIONS: (clientId: string) => `${API_CONFIG.API_URL}/api/unified/conversations/client/${clientId}`,
   CLIENT_OPERATING_HOURS: `${API_CONFIG.API_URL}/api/client/operating-hours`,
   CLIENT_DATABASE_STATUS: `${API_CONFIG.API_URL}/api/client/database/status`,
   CLIENT_VEHICLES: `${API_CONFIG.API_URL}/api/client/vehicles`,
@@ -108,7 +108,7 @@ export const API_ENDPOINTS = {
   
   // Conversation History
   CONVERSATION_HISTORY: (conversationId: string) => `${API_CONFIG.API_URL}/api/conversation/history/${conversationId}`,
-  CONVERSATION_DETAILS: (conversationId: string) => `${API_CONFIG.API_URL}/api/client/conversations/${conversationId}`,
+  CONVERSATION_DETAILS: (conversationId: string) => `${API_CONFIG.API_URL}/api/unified/conversations/${conversationId}/history`,
   CONVERSATION_STATS: `${API_CONFIG.API_URL}/api/conversation/stats`,
 };
 

@@ -22,6 +22,18 @@ import {
   Cell
 } from 'recharts';
 
+function formatToSGTime(timestamp: string) {
+  const d = new Date(timestamp); // UTC time
+  const sg = new Date(d.getTime() + 8 * 60 * 60 * 1000); // UTC+8 offset
+
+  const hours = sg.getUTCHours();
+  const minutes = sg.getUTCMinutes();
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+
+  return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+}
+
 interface DatabaseConfig {
   db_type: string;
   connection_string: string;
@@ -327,15 +339,43 @@ export default function ClientDashboard() {
         return;
       }
       
-      const response = await fetch(API_ENDPOINTS.CLIENT_CONVERSATIONS, {
+      // Get client_id from stored client data
+      const storedClientData = localStorage.getItem('client_data');
+      if (!storedClientData) {
+        console.error('Client data not found in localStorage');
+        return;
+      }
+      
+      const clientData = JSON.parse(storedClientData);
+      const clientId = clientData.id;
+      if (!clientId) {
+        console.error('Client ID not found in client data');
+        return;
+      }
+      
+      // Use new unified API endpoint
+      const response = await fetch(`${API_CONFIG.API_URL}/api/unified/conversations/client/${clientId}`, {
         headers: getAuthHeaders()
       });
       
       if (response.ok) {
         const data = await response.json();
-        setChatHistory(data.conversations || []);
-        setFilteredChatHistory(data.conversations || []);
-
+        // Transform backend data structure to match frontend expectations
+        const transformedConversations = (data.conversations || []).map((conv: any) => ({
+          _id: conv.conversation_id || conv._id,
+          customer_name: `Customer ${conv.conversation_id?.slice(-8) || 'Unknown'}`, // Generate customer name from conversation ID
+          messages: conv.message_count || 0,
+          status: conv.status || 'active',
+          last_message: `${conv.message_count || 0} messages`, // Show message count as last message info
+          created_at: conv.first_message_at || new Date().toISOString(),
+          updated_at: conv.last_message_at || new Date().toISOString(),
+          total_messages: conv.message_count || 0,
+          conversation_id: conv.conversation_id,
+          session_id: conv.session_id
+        }));
+        
+        setChatHistory(transformedConversations);
+        setFilteredChatHistory(transformedConversations);
       } else {
         console.error('Failed to fetch chat history:', response.status, response.statusText);
       }
@@ -524,13 +564,9 @@ export default function ClientDashboard() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Raw appointment data from backend:', data.appointments);
         
         // Process appointments to ensure consistent field naming
         const processedAppointments = (data.appointments || []).map((appointment: any) => {
-          // Debug log each appointment structure
-          console.log('Individual appointment:', appointment);
-          
           // Ensure appointment_id is available - use _id as fallback if appointment_id is missing
           if (!appointment.appointment_id && appointment._id) {
             appointment.appointment_id = appointment._id;
@@ -538,8 +574,6 @@ export default function ClientDashboard() {
           
           return appointment;
         });
-        
-        console.log('Processed appointments:', processedAppointments);
         setAppointments(processedAppointments);
         setFilteredAppointments(processedAppointments);
 
@@ -784,25 +818,16 @@ export default function ClientDashboard() {
           // Conversation details response received
           
           // Update the conversation with detailed messages
-          if (data.success && data.conversation) {
-            const detailedConversation = data.conversation;
-            
-            // Get messages array directly from the conversation
-            let messages = [];
-            if (detailedConversation.messages && Array.isArray(detailedConversation.messages)) {
-              messages = detailedConversation.messages;
-            } else {
-              console.warn('No messages array found in conversation');
-              messages = [];
-            }
+          if (data.success && data.messages) {
+            // Get messages array directly from data and use the role field directly
+            const messages = Array.isArray(data.messages) ? data.messages : [];
             
             // Update the selected conversation with messages
             setSelectedConversation({
               ...conversation,
               messages: messages,
-              total_messages: detailedConversation.total_messages || messages.length,
-              created_at: detailedConversation.created_at,
-              updated_at: detailedConversation.updated_at
+              total_messages: data.total_messages || messages.length,
+              conversation_id: data.conversation_id
             });
           } else {
             console.warn('No detailed conversation data found for ID:', conversationId);
@@ -1007,7 +1032,11 @@ export default function ClientDashboard() {
       for (let i = 6; i >= 0; i--) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        // Ensure consistent date formatting - Fixed for proper 17th date display
+        const dateStr = date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        });
         
         if (type === 'conversations') {
           const count = chatHistory.filter(conv => {
@@ -1080,7 +1109,11 @@ export default function ClientDashboard() {
       for (let i = 5; i >= 0; i--) {
         const monthDate = new Date(now);
         monthDate.setMonth(monthDate.getMonth() - i);
-        const monthStr = monthDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        // Ensure consistent month formatting - Fixed for proper date display
+        const monthStr = monthDate.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        });
         
         if (type === 'conversations') {
           const count = chatHistory.filter(conv => {
@@ -1297,9 +1330,9 @@ export default function ClientDashboard() {
                 </div>
               </div>
 
-              {/* Analytics Charts Grid - Reorganized to prioritize Daily Users and Active Users */}
+              {/* Analytics Charts Grid - Fixed layout to show all 3 charts properly */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Daily Users Chart - Moved to first position */}
+                {/* Daily Users Chart */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-4">
                     Daily Users - {analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)}
@@ -1324,9 +1357,7 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Active Users Chart removed as requested */}
-
-                {/* Conversations Chart - Moved to third position */}
+                {/* Conversations Chart */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-4">
                     Conversations - {analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)}
@@ -1351,7 +1382,7 @@ export default function ClientDashboard() {
                   </div>
                 </div>
 
-                {/* Appointments Chart - Moved to fourth position */}
+                {/* Appointments Chart */}
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-4">
                     Appointments - {analyticsPeriod.charAt(0).toUpperCase() + analyticsPeriod.slice(1)}
@@ -1740,7 +1771,12 @@ export default function ClientDashboard() {
                             {conversation.last_message || 'No preview available'}
                           </p>
                           <p className="text-xs text-gray-400 mt-2">
-                            {conversation.created_at ? new Date(conversation.created_at).toLocaleDateString() : 'Unknown date'}
+                            {conversation.created_at ? new Date(conversation.created_at).toLocaleDateString('en-SG', { 
+                              timeZone: 'Asia/Singapore',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            }) : 'Unknown date'}
                           </p>
                         </div>
                         <button
@@ -1846,10 +1882,20 @@ export default function ClientDashboard() {
                             Phone: {appointment.customer_phone || 'N/A'} | Service: {appointment.service_type || 'N/A'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Date: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleDateString() : 'N/A'}
+                            Date: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleDateString('en-SG', { 
+                              timeZone: 'Asia/Singapore',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            }) : 'N/A'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Time: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleTimeString() : 'N/A'}
+                            Time: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleTimeString('en-SG', { 
+                              timeZone: 'Asia/Singapore',
+                              hour: '2-digit', 
+                              minute: '2-digit',
+                              hour12: true 
+                            }) : 'N/A'}
                           </p>
                           <div className="flex items-center space-x-2 mt-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -1991,20 +2037,50 @@ export default function ClientDashboard() {
                             Phone: {appointment.customer_phone || 'N/A'} | Service: {appointment.service_type || 'N/A'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Date: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleDateString() : 'N/A'}
+                            Date: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleDateString('en-SG', { 
+                              timeZone: 'Asia/Singapore',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            }) : 'N/A'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Time: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleTimeString() : 'N/A'}
+                            Time: {appointment.appointment_datetime ? new Date(appointment.appointment_datetime).toLocaleTimeString('en-SG', { 
+                              timeZone: 'Asia/Singapore',
+                              hour: '2-digit', 
+                              minute: '2-digit',
+                              hour12: true 
+                            }) : 'N/A'}
                           </p>
                           {/* Display status timestamp for cancelled or completed appointments */}
                           {appointment.status === 'cancelled' && appointment.cancelled_time && (
                             <p className="text-sm text-red-600">
-                              Cancelled: {new Date(appointment.cancelled_time).toLocaleDateString()} at {new Date(appointment.cancelled_time).toLocaleTimeString()}
+                              Cancelled: {new Date(appointment.cancelled_time).toLocaleDateString('en-SG', { 
+                                timeZone: 'Asia/Singapore',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })} at {new Date(appointment.cancelled_time).toLocaleTimeString('en-SG', { 
+                                timeZone: 'Asia/Singapore',
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
                             </p>
                           )}
                           {appointment.status === 'completed' && appointment.completed_time && (
                             <p className="text-sm text-blue-600">
-                              Completed: {new Date(appointment.completed_time).toLocaleDateString()} at {new Date(appointment.completed_time).toLocaleTimeString()}
+                              Completed: {new Date(appointment.completed_time).toLocaleDateString('en-SG', { 
+                                timeZone: 'Asia/Singapore',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })} at {new Date(appointment.completed_time).toLocaleTimeString('en-SG', { 
+                                timeZone: 'Asia/Singapore',
+                                hour: '2-digit', 
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
                             </p>
                           )}
                           <div className="flex items-center space-x-2 mt-2">
@@ -2404,7 +2480,7 @@ export default function ClientDashboard() {
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-900">Enable/Disable Features</h4>
                   
-                  {Object.entries(features).filter(([feature]) => feature !== 'business_hours' && feature !== 'vehicle_search').map(([feature, enabled]) => (
+                  {Object.entries(features).filter(([feature]) => feature !== 'business_hours' && feature !== 'vehicle_search' && feature !== 'contact_support').map(([feature, enabled]) => (
                     <label key={feature} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                       <div>
                         <span className="font-medium text-gray-900 capitalize">
@@ -2455,7 +2531,7 @@ export default function ClientDashboard() {
                     These features will be available in your chatbot:
                   </p>
                   
-                  {Object.entries(features).filter(([feature]) => feature !== 'business_hours' && feature !== 'vehicle_search').map(([feature, enabled]) => (
+                  {Object.entries(features).filter(([feature]) => feature !== 'business_hours' && feature !== 'vehicle_search' && feature !== 'contact_support').map(([feature, enabled]) => (
                     <div key={feature} className="flex items-center space-x-3">
                       <span className={`w-4 h-4 rounded-full ${enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span className={`text-sm capitalize ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -2607,7 +2683,15 @@ export default function ClientDashboard() {
                   <p>Database: {dbStatus.database_name || 'Not connected'}</p>
                   <p>Collection: {dbStatus.collection_name || 'Not set'}</p>
                   <p>Records: {dbStatus.record_count || 0}</p>
-                  <p>Last Sync: {dbStatus.last_sync ? new Date(dbStatus.last_sync).toLocaleString() : 'Never'}</p>
+                  <p>Last Sync: {dbStatus.last_sync ? new Date(dbStatus.last_sync).toLocaleString('en-SG', { 
+                    timeZone: 'Asia/Singapore',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  }) : 'Never'}</p>
                 </div>
               </div>
 
@@ -2693,7 +2777,12 @@ export default function ClientDashboard() {
                 <div>
                   <span className="font-medium text-gray-700">Date:</span>
                   <p className="text-gray-900">
-                    {selectedConversation.created_at ? new Date(selectedConversation.created_at).toLocaleDateString() : 'Unknown'}
+                    {selectedConversation.created_at ? new Date(selectedConversation.created_at).toLocaleDateString('en-SG', { 
+                      timeZone: 'Asia/Singapore',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    }) : 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -2703,26 +2792,26 @@ export default function ClientDashboard() {
             <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {selectedConversation.messages && Array.isArray(selectedConversation.messages) ? (
                 <div className="space-y-4 max-w-4xl mx-auto">
-                  {selectedConversation.messages.map((msg: { role: string; content: string; timestamp?: string }, index: number) => (
+                  {selectedConversation.messages.map((msg: { message_type: string; message: string; timestamp?: string }, index: number) => (
                     <div key={index} className={`flex ${
-                      msg.role === 'user' ? 'justify-end' : 'justify-start'
+                      msg.message_type === 'user' ? 'justify-end' : 'justify-start'
                     }`}>
                       <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        msg.role === 'user' 
+                        msg.message_type === 'user' 
                           ? 'bg-indigo-600 text-white rounded-br-none' 
                           : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'
                       }`}>
                         <div className="flex items-center space-x-2 mb-1">
                           <span className="text-xs font-medium opacity-75">
-                            {msg.role === 'user' ? '👤 Customer' : '🤖 Assistant'}
+                            {msg.message_type === 'user' ? '👤 Customer' : '🤖 Assistant'}
                           </span>
                           {msg.timestamp && (
                             <span className="text-xs opacity-50">
-                              {new Date(msg.timestamp).toLocaleTimeString()}
+                              {formatToSGTime(msg.timestamp)}
                             </span>
                           )}
                         </div>
-                        <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
+                        <div className="text-sm whitespace-pre-wrap">{msg.message}</div>
                       </div>
                     </div>
                   ))}
@@ -2804,8 +2893,8 @@ export default function ClientDashboard() {
               return appointment ? (
                 <div className="bg-gray-50 rounded-lg p-3 mb-6">
                   <p className="text-sm text-gray-700">
-                    <strong>Date:</strong> {new Date(appointment.appointment_datetime).toLocaleDateString()}<br/>
-                    <strong>Time:</strong> {new Date(appointment.appointment_datetime).toLocaleTimeString()}<br/>
+                    <strong>Date:</strong> {new Date(appointment.appointment_datetime).toLocaleDateString('en-SG', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit', day: '2-digit' })}<br/>
+                    <strong>Time:</strong> {new Date(appointment.appointment_datetime).toLocaleTimeString('en-SG', { timeZone: 'Asia/Singapore', hour12: false, hour: '2-digit', minute: '2-digit' })}<br/>
                     <strong>Service:</strong> {appointment.service_type || 'General Service'}
                   </p>
                 </div>

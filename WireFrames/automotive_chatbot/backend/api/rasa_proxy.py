@@ -14,27 +14,28 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import pytz
 
-# Import conversation storage
+# Import unified conversation service
 try:
-    from api.services.conversation_storage import ConversationStorage
-    conversation_storage = ConversationStorage()
-    print("ConversationStorage imported successfully")
+    from api.services.conversation_service import UnifiedConversationService, MessageType
+    unified_conversation_service = UnifiedConversationService()
+    print("UnifiedConversationService imported successfully")
 except ImportError as e:
     print(f"Import error: {e}")
     # Try alternative import path
     try:
-        from services.conversation_storage import ConversationStorage
-        conversation_storage = ConversationStorage()
-        print("ConversationStorage imported successfully (alternative path)")
+        from services.conversation_service import UnifiedConversationService, MessageType
+        unified_conversation_service = UnifiedConversationService()
+        print("UnifiedConversationService imported successfully (alternative path)")
     except ImportError as e2:
         print(f"Alternative import also failed: {e2}")
         # Fallback if import fails
-        class MockConversationStorage:
+        class MockUnifiedConversationService:
             def store_message(self, **kwargs):
-                print(f"Mock storage: {kwargs}")
+                print(f"Mock unified storage: {kwargs}")
+                return True
         
-        conversation_storage = MockConversationStorage()
-        print("Using MockConversationStorage as fallback")
+        unified_conversation_service = MockUnifiedConversationService()
+        print("Using MockUnifiedConversationService as fallback")
 
 logger = logging.getLogger(__name__)
 
@@ -47,30 +48,42 @@ class ChatMessage(BaseModel):
 
 # Background task functions for async database storage
 async def store_user_message_async(session_id: str, content: str, metadata: Dict[str, Any]):
-    """Store user message asynchronously in background."""
+    """Store user message asynchronously in background using unified conversation service."""
     try:
-        conversation_storage.store_message(
+        # Extract client_id from metadata
+        client_id = metadata.get('client_id', 'unknown')
+        
+        # Store message using unified conversation service
+        success = unified_conversation_service.store_message(
             session_id=session_id,
-            message_type='user_message',
-            content=content,
-            sender='user',
-            metadata=metadata
+            message=content,
+            message_type=MessageType.USER,
+            metadata=metadata,
+            client_id=client_id
         )
-        pass
+        
+        if not success:
+            logger.error(f"Failed to store user message for session {session_id}")
     except Exception as e:
         logger.error(f"Failed to store user message asynchronously: {e}")
 
 async def store_bot_message_async(session_id: str, content: str, metadata: Dict[str, Any]):
-    """Store bot message asynchronously in background."""
+    """Store bot message asynchronously in background using unified conversation service."""
     try:
-        conversation_storage.store_message(
+        # Extract client_id from metadata
+        client_id = metadata.get('client_id', 'unknown')
+        
+        # Store message using unified conversation service
+        success = unified_conversation_service.store_message(
             session_id=session_id,
-            message_type='bot_response',
-            content=content,
-            sender='bot',
-            metadata=metadata
+            message=content,
+            message_type=MessageType.ASSISTANT,
+            metadata=metadata,
+            client_id=client_id
         )
-        pass
+        
+        if not success:
+            logger.error(f"Failed to store bot message for session {session_id}")
     except Exception as e:
         logger.error(f"Failed to store bot message asynchronously: {e}")
 

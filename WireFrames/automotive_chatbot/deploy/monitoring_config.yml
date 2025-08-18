@@ -1,0 +1,451 @@
+# Monitoring Configuration for Automotive Chatbot
+# This file contains configuration for Prometheus, Grafana, and AlertManager
+
+# Prometheus Configuration
+prometheus:
+  global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+    external_labels:
+      cluster: 'automotive-chatbot'
+      environment: 'production'
+
+  rule_files:
+    - "/etc/prometheus/rules/*.yml"
+
+  alerting:
+    alertmanagers:
+      - static_configs:
+          - targets:
+            - alertmanager:9093
+
+  scrape_configs:
+    # Prometheus self-monitoring
+    - job_name: 'prometheus'
+      static_configs:
+        - targets: ['localhost:9090']
+      scrape_interval: 30s
+      metrics_path: /metrics
+
+    # Node Exporter for system metrics
+    - job_name: 'node-exporter'
+      static_configs:
+        - targets: ['localhost:9100']
+      scrape_interval: 15s
+      metrics_path: /metrics
+
+    # FastAPI Backend Application
+    - job_name: 'automotive-chatbot-api'
+      static_configs:
+        - targets: ['localhost:8000']
+      scrape_interval: 15s
+      metrics_path: /metrics
+      scrape_timeout: 10s
+
+    # Frontend Application (if metrics enabled)
+    - job_name: 'automotive-chatbot-frontend'
+      static_configs:
+        - targets: ['localhost:3000']
+      scrape_interval: 30s
+      metrics_path: /metrics
+      scrape_timeout: 10s
+
+    # RASA Core
+    - job_name: 'rasa-core'
+      static_configs:
+        - targets: ['localhost:5005']
+      scrape_interval: 15s
+      metrics_path: /metrics
+      scrape_timeout: 10s
+
+    # RASA Actions
+    - job_name: 'rasa-actions'
+      static_configs:
+        - targets: ['localhost:5055']
+      scrape_interval: 15s
+      metrics_path: /metrics
+      scrape_timeout: 10s
+
+    # Nginx metrics (if nginx-prometheus-exporter is installed)
+    - job_name: 'nginx'
+      static_configs:
+        - targets: ['localhost:9113']
+      scrape_interval: 15s
+      metrics_path: /metrics
+
+    # MongoDB metrics (if mongodb_exporter is installed)
+    - job_name: 'mongodb'
+      static_configs:
+        - targets: ['localhost:9216']
+      scrape_interval: 30s
+      metrics_path: /metrics
+
+    # Redis metrics (if redis_exporter is installed)
+    - job_name: 'redis'
+      static_configs:
+        - targets: ['localhost:9121']
+      scrape_interval: 30s
+      metrics_path: /metrics
+
+    # Docker metrics (if cadvisor is running)
+    - job_name: 'cadvisor'
+      static_configs:
+        - targets: ['localhost:8080']
+      scrape_interval: 30s
+      metrics_path: /metrics
+
+# Grafana Configuration
+grafana:
+  server:
+    protocol: http
+    http_addr: 0.0.0.0
+    http_port: 3001
+    domain: localhost
+    root_url: "%(protocol)s://%(domain)s:%(http_port)s/"
+    serve_from_sub_path: false
+
+  database:
+    type: sqlite3
+    path: /var/lib/grafana/grafana.db
+
+  security:
+    admin_user: admin
+    admin_password: ${GRAFANA_ADMIN_PASSWORD}
+    secret_key: ${GRAFANA_SECRET_KEY}
+    disable_gravatar: true
+    cookie_secure: true
+    cookie_samesite: strict
+
+  users:
+    allow_sign_up: false
+    allow_org_create: false
+    auto_assign_org: true
+    auto_assign_org_id: 1
+    auto_assign_org_role: Viewer
+
+  auth:
+    disable_login_form: false
+    disable_signout_menu: false
+
+  auth.anonymous:
+    enabled: false
+
+  smtp:
+    enabled: true
+    host: ${SMTP_HOST}
+    user: ${SMTP_USER}
+    password: ${SMTP_PASSWORD}
+    from_address: ${SMTP_FROM_ADDRESS}
+    from_name: Automotive Chatbot Monitoring
+
+  alerting:
+    enabled: true
+    execute_alerts: true
+
+  unified_alerting:
+    enabled: true
+
+# AlertManager Configuration
+alertmanager:
+  global:
+    smtp_smarthost: '${SMTP_HOST}:587'
+    smtp_from: '${SMTP_FROM_ADDRESS}'
+    smtp_auth_username: '${SMTP_USER}'
+    smtp_auth_password: '${SMTP_PASSWORD}'
+
+  route:
+    group_by: ['alertname', 'cluster', 'service']
+    group_wait: 10s
+    group_interval: 10s
+    repeat_interval: 1h
+    receiver: 'web.hook'
+    routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+        group_wait: 5s
+        repeat_interval: 30m
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+        repeat_interval: 2h
+      - match:
+          alertname: 'InstanceDown'
+        receiver: 'instance-down'
+        group_wait: 5s
+        repeat_interval: 15m
+
+  receivers:
+    - name: 'web.hook'
+      webhook_configs:
+        - url: 'http://localhost:8000/api/alerts/webhook'
+          send_resolved: true
+
+    - name: 'critical-alerts'
+      email_configs:
+        - to: '${ALERT_EMAIL}'
+          subject: '[CRITICAL] Automotive Chatbot Alert: {{ .GroupLabels.alertname }}'
+          body: |
+            {{ range .Alerts }}
+            Alert: {{ .Annotations.summary }}
+            Description: {{ .Annotations.description }}
+            Instance: {{ .Labels.instance }}
+            Severity: {{ .Labels.severity }}
+            Time: {{ .StartsAt }}
+            {{ end }}
+      slack_configs:
+        - api_url: '${SLACK_WEBHOOK_URL}'
+          channel: '#alerts'
+          title: 'CRITICAL Alert: {{ .GroupLabels.alertname }}'
+          text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          color: 'danger'
+
+    - name: 'warning-alerts'
+      email_configs:
+        - to: '${ALERT_EMAIL}'
+          subject: '[WARNING] Automotive Chatbot Alert: {{ .GroupLabels.alertname }}'
+          body: |
+            {{ range .Alerts }}
+            Alert: {{ .Annotations.summary }}
+            Description: {{ .Annotations.description }}
+            Instance: {{ .Labels.instance }}
+            Severity: {{ .Labels.severity }}
+            Time: {{ .StartsAt }}
+            {{ end }}
+
+    - name: 'instance-down'
+      email_configs:
+        - to: '${ALERT_EMAIL}'
+          subject: '[URGENT] Service Down: {{ .GroupLabels.alertname }}'
+          body: |
+            {{ range .Alerts }}
+            URGENT: {{ .Annotations.summary }}
+            Instance: {{ .Labels.instance }}
+            Time: {{ .StartsAt }}
+            {{ end }}
+      slack_configs:
+        - api_url: '${SLACK_WEBHOOK_URL}'
+          channel: '#alerts'
+          title: 'SERVICE DOWN: {{ .GroupLabels.alertname }}'
+          text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          color: 'danger'
+
+  inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+
+# Alert Rules
+alert_rules:
+  groups:
+    - name: automotive-chatbot.rules
+      rules:
+        # Instance availability
+        - alert: InstanceDown
+          expr: up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Instance {{ $labels.instance }} down"
+            description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+
+        # High CPU usage
+        - alert: HighCPUUsage
+          expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on {{ $labels.instance }}"
+            description: "CPU usage is above 80% for more than 5 minutes on {{ $labels.instance }}."
+
+        # High memory usage
+        - alert: HighMemoryUsage
+          expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage on {{ $labels.instance }}"
+            description: "Memory usage is above 85% for more than 5 minutes on {{ $labels.instance }}."
+
+        # Disk space usage
+        - alert: DiskSpaceUsage
+          expr: (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) / node_filesystem_size_bytes{fstype!="tmpfs"} * 100 > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High disk usage on {{ $labels.instance }}"
+            description: "Disk usage is above 85% on {{ $labels.instance }} {{ $labels.mountpoint }}."
+
+        # API response time
+        - alert: HighAPIResponseTime
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="automotive-chatbot-api"}[5m])) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High API response time"
+            description: "95th percentile API response time is above 2 seconds for more than 5 minutes."
+
+        # API error rate
+        - alert: HighAPIErrorRate
+          expr: rate(http_requests_total{job="automotive-chatbot-api",status=~"5.."}[5m]) / rate(http_requests_total{job="automotive-chatbot-api"}[5m]) * 100 > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High API error rate"
+            description: "API error rate is above 5% for more than 5 minutes."
+
+        # RASA response time
+        - alert: HighRASAResponseTime
+          expr: histogram_quantile(0.95, rate(rasa_core_tracker_session_duration_seconds_bucket[5m])) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High RASA response time"
+            description: "95th percentile RASA response time is above 5 seconds for more than 5 minutes."
+
+        # Database connection issues
+        - alert: DatabaseConnectionIssues
+          expr: mongodb_connections_current / mongodb_connections_available * 100 > 80
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High database connection usage"
+            description: "Database connection usage is above 80% for more than 2 minutes."
+
+        # SSL certificate expiration
+        - alert: SSLCertificateExpiring
+          expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "SSL certificate expiring soon"
+            description: "SSL certificate for {{ $labels.instance }} expires in less than 30 days."
+
+        # Container restart frequency
+        - alert: ContainerRestartFrequency
+          expr: increase(container_start_time_seconds[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container restarting frequently"
+            description: "Container {{ $labels.name }} has restarted more than 3 times in the last hour."
+
+# Dashboard Configurations
+dashboards:
+  automotive_chatbot_overview:
+    title: "Automotive Chatbot - System Overview"
+    panels:
+      - title: "System Health"
+        type: "stat"
+        targets:
+          - expr: "up"
+            legendFormat: "{{ instance }}"
+      
+      - title: "API Request Rate"
+        type: "graph"
+        targets:
+          - expr: "rate(http_requests_total{job='automotive-chatbot-api'}[5m])"
+            legendFormat: "{{ method }} {{ status }}"
+      
+      - title: "Response Time"
+        type: "graph"
+        targets:
+          - expr: "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='automotive-chatbot-api'}[5m]))"
+            legendFormat: "95th percentile"
+          - expr: "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job='automotive-chatbot-api'}[5m]))"
+            legendFormat: "50th percentile"
+      
+      - title: "CPU Usage"
+        type: "graph"
+        targets:
+          - expr: "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+            legendFormat: "{{ instance }}"
+      
+      - title: "Memory Usage"
+        type: "graph"
+        targets:
+          - expr: "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"
+            legendFormat: "{{ instance }}"
+      
+      - title: "RASA Performance"
+        type: "graph"
+        targets:
+          - expr: "rate(rasa_core_tracker_session_duration_seconds_sum[5m]) / rate(rasa_core_tracker_session_duration_seconds_count[5m])"
+            legendFormat: "Average Response Time"
+
+  automotive_chatbot_business:
+    title: "Automotive Chatbot - Business Metrics"
+    panels:
+      - title: "Active Sessions"
+        type: "stat"
+        targets:
+          - expr: "automotive_chatbot_active_sessions"
+            legendFormat: "Active Sessions"
+      
+      - title: "Conversations per Hour"
+        type: "graph"
+        targets:
+          - expr: "rate(automotive_chatbot_conversations_total[1h]) * 3600"
+            legendFormat: "Conversations/hour"
+      
+      - title: "Intent Recognition Accuracy"
+        type: "stat"
+        targets:
+          - expr: "automotive_chatbot_intent_confidence_avg"
+            legendFormat: "Average Confidence"
+      
+      - title: "User Satisfaction"
+        type: "graph"
+        targets:
+          - expr: "automotive_chatbot_user_satisfaction_avg"
+            legendFormat: "Average Rating"
+      
+      - title: "Appointment Bookings"
+        type: "graph"
+        targets:
+          - expr: "rate(automotive_chatbot_appointments_booked_total[1h]) * 3600"
+            legendFormat: "Bookings/hour"
+      
+      - title: "Error Rate by Intent"
+        type: "graph"
+        targets:
+          - expr: "rate(automotive_chatbot_intent_errors_total[5m]) by (intent)"
+            legendFormat: "{{ intent }}"
+
+# Monitoring Best Practices
+best_practices:
+  retention:
+    prometheus: "30d"  # Keep metrics for 30 days
+    grafana: "90d"     # Keep dashboard data for 90 days
+    logs: "7d"         # Keep detailed logs for 7 days
+  
+  backup:
+    frequency: "daily"
+    retention: "30d"
+    location: "s3://automotive-chatbot-backups/monitoring/"
+  
+  security:
+    - "Enable HTTPS for all monitoring endpoints"
+    - "Use strong authentication for Grafana"
+    - "Restrict Prometheus access to internal networks"
+    - "Encrypt sensitive configuration data"
+    - "Regular security updates for monitoring stack"
+  
+  performance:
+    - "Use recording rules for frequently queried metrics"
+    - "Implement metric cardinality limits"
+    - "Regular cleanup of old time series data"
+    - "Monitor monitoring system resource usage"
+    - "Use federation for multi-cluster setups"

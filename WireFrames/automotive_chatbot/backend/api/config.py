@@ -4,7 +4,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # API Settings
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8001
+    API_PORT: int = 8000
     DEBUG: bool = True
 
     # Security

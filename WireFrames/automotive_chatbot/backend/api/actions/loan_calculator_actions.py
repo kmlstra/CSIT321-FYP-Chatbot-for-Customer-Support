@@ -3,6 +3,8 @@ from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
 from api.cache.client_cache import get_client_cache
 from api.cache.feature_cache_manager import check_loan_calculator_feature_enabled
+from api.middleware.intent_validation_middleware import validate_medium_confidence
+from .auto_logger import AutoLoggedAction
 import re
 import logging
 
@@ -10,20 +12,27 @@ logger = logging.getLogger(__name__)
 
 
 
-class ActionLoanCalculator(Action):
-    """Simple and user-friendly loan calculator"""
+class ActionLoanCalculator(AutoLoggedAction):
+    """Simple and user-friendly loan calculator with intent validation"""
     
     def name(self) -> Text:
         return "action_loan_calculator"
     
-    def run(self, dispatcher: CollectingDispatcher,
+    # @validate_medium_confidence(confidence_threshold=0.6)
+    async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Log user message and action execution
+        self.log_user_message(tracker)
+        self.log_action_execution("action_loan_calculator", "started", tracker)
         
         # Check if loan calculator feature is enabled for this client
         client_id = tracker.get_slot("client_id")
         if not check_loan_calculator_feature_enabled(client_id):
-            dispatcher.utter_message(text="I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries.")
+            feature_disabled_message = "I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries."
+            dispatcher.utter_message(text=feature_disabled_message)
+            self.log_bot_response(dispatcher, tracker)
             return []
         
         user_message = tracker.latest_message.get('text', '').lower()
@@ -31,27 +40,39 @@ class ActionLoanCalculator(Action):
         
         # Check if this is actually a loan calculation request
         if not self._is_loan_related(user_message, current_intent):
-            dispatcher.utter_message(text="I'm not sure what you're looking for. Could you please clarify your request?")
+            clarification_message = "I'm not sure what you're looking for. Could you please clarify your request?"
+            dispatcher.utter_message(text=clarification_message)
+            self.log_bot_response(dispatcher, tracker)
             return []
         
         # Check if user is asking for help or general loan calculator info
         if self._is_help_request(user_message) or self._is_welcome_request(user_message):
-            self._show_calculator_help(dispatcher)
+            help_response = self._show_calculator_help(dispatcher)
+            self.log_bot_response(dispatcher, tracker)
             return []
         
         # Try to extract loan parameters
+        logger.info(f"[LOAN_DEBUG] 准备提取参数，用户消息: '{user_message}'")
         loan_params = self._extract_loan_parameters(user_message)
+        logger.info(f"[LOAN_DEBUG] 参数提取结果: {loan_params}")
         
         if not loan_params:
-            self._show_input_format(dispatcher)
+            logger.warning(f"[LOAN_DEBUG] 参数提取失败，显示输入格式提示")
+            input_format_response = self._show_input_format(dispatcher)
+            self.log_bot_response(dispatcher, tracker)
             return []
         
         # Calculate and display results
         try:
             result = self._calculate_loan(loan_params)
-            self._display_results(dispatcher, loan_params, result)
-        except Exception:
-            dispatcher.utter_message(text="Sorry, there was an error calculating your loan. Please check your inputs and try again.")
+            calculation_response = self._display_results(dispatcher, loan_params, result)
+            self.log_bot_response(dispatcher, tracker)
+            self.log_action_execution("action_loan_calculator", "completed", tracker)
+        except Exception as e:
+            error_message = "Sorry, there was an error calculating your loan. Please check your inputs and try again."
+            dispatcher.utter_message(text=error_message)
+            self.log_action_execution("action_loan_calculator", f"failed: {str(e)}", tracker)
+            self.log_bot_response(dispatcher, tracker)
         
         return []
     
@@ -135,18 +156,28 @@ Try it now! 🚗💰"""
     
     def _extract_loan_parameters(self, text: str) -> Optional[dict[str, float]]:
         """Extract loan parameters from user input"""
+        logger.info(f"[LOAN_DEBUG] 开始提取参数，输入文本: '{text}'")
+        
         # Try simple comma-separated format first
-        numbers = re.findall(r'\d+(?:\.\d+)?', text.replace(',', ' '))
+        # Remove spaces around commas (both English and Chinese) and split by comma or space
+        clean_text = re.sub(r'\s*[,，]\s*', ',', text)  # Handle both English and Chinese commas
+        logger.info(f"[LOAN_DEBUG] 清理后文本: '{clean_text}'")
+        
+        numbers = re.findall(r'\d+(?:\.\d+)?', clean_text)
+        logger.info(f"[LOAN_DEBUG] 提取的数字: {numbers}, 数量: {len(numbers)}")
         
         if len(numbers) >= 4:
             try:
-                return {
+                result = {
                     'car_price': float(numbers[0]),
                     'down_payment': float(numbers[1]),
                     'loan_years': float(numbers[2]),
                     'interest_rate': float(numbers[3])
                 }
-            except ValueError:
+                logger.info(f"[LOAN_DEBUG] 成功提取参数: {result}")
+                return result
+            except ValueError as e:
+                logger.error(f"[LOAN_DEBUG] 转换数字时出错: {e}")
                 pass
         
         # Try extracting from natural language
@@ -277,22 +308,22 @@ Try again with all 4 numbers! 🚗"""
         
         dispatcher.utter_message(text=response)
 
-# Keep the old action name for backward compatibility
-class ActionCalculateLoanPayment(ActionLoanCalculator):
-    """Backward compatibility alias"""
+# # Keep the old action name for backward compatibility
+# class ActionCalculateLoanPayment(ActionLoanCalculator):
+#     """Backward compatibility alias"""
     
-    def name(self) -> Text:
-        return "action_loan_calculation_result"
+#     def name(self) -> Text:
+#         return "action_loan_calculation_result"
     
-    def run(self, dispatcher: CollectingDispatcher,
-            tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+#     async def run(self, dispatcher: CollectingDispatcher,
+#             tracker: Tracker,
+#             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
-        # Check if loan calculator feature is enabled for this client
-        client_id = tracker.get_slot("client_id")
-        if not check_loan_calculator_feature_enabled(client_id):
-            dispatcher.utter_message(text="I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries.")
-            return []
+#         # Check if loan calculator feature is enabled for this client
+#         client_id = tracker.get_slot("client_id")
+#         if not check_loan_calculator_feature_enabled(client_id):
+#             dispatcher.utter_message(text="I'm sorry, but the loan calculator feature is not available at the moment. Please contact our support team for assistance with financing inquiries.")
+#             return []
         
-        # Call parent class implementation
-        return super().run(dispatcher, tracker, domain)
+#         # Call parent class implementation
+#         return await super().run(dispatcher, tracker, domain)

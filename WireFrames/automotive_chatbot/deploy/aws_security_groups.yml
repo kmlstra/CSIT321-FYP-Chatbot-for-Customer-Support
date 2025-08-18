@@ -1,0 +1,436 @@
+# AWS Security Groups Configuration for Automotive Chatbot
+# Comprehensive security configuration following AWS best practices
+
+security_groups:
+  # Web Application Security Group
+  web_app_sg:
+    name: automotive-chatbot-web-sg
+    description: Security group for web application tier
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # HTTP/HTTPS Traffic
+      - protocol: tcp
+        port: 80
+        source: 0.0.0.0/0
+        description: HTTP traffic from internet
+      - protocol: tcp
+        port: 443
+        source: 0.0.0.0/0
+        description: HTTPS traffic from internet
+      
+      # Frontend Application
+      - protocol: tcp
+        port: 3000
+        source: "{{ alb_sg_id }}"
+        description: Frontend from ALB only
+      
+      # SSH Access (Restricted)
+      - protocol: tcp
+        port: 22
+        source: "{{ admin_ip_range }}"
+        description: SSH access from admin IPs only
+    
+    egress_rules:
+      # All outbound traffic (can be restricted further)
+      - protocol: -1
+        port: -1
+        destination: 0.0.0.0/0
+        description: All outbound traffic
+
+  # Application Load Balancer Security Group
+  alb_sg:
+    name: automotive-chatbot-alb-sg
+    description: Security group for Application Load Balancer
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # HTTP/HTTPS from internet
+      - protocol: tcp
+        port: 80
+        source: 0.0.0.0/0
+        description: HTTP from internet
+      - protocol: tcp
+        port: 443
+        source: 0.0.0.0/0
+        description: HTTPS from internet
+    
+    egress_rules:
+      # To web application instances
+      - protocol: tcp
+        port: 3000
+        destination: "{{ web_app_sg_id }}"
+        description: To frontend instances
+      - protocol: tcp
+        port: 8000
+        destination: "{{ api_sg_id }}"
+        description: To backend API instances
+
+  # API Backend Security Group
+  api_sg:
+    name: automotive-chatbot-api-sg
+    description: Security group for backend API services
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # API Traffic from ALB
+      - protocol: tcp
+        port: 8000
+        source: "{{ alb_sg_id }}"
+        description: Backend API from ALB
+      
+      # Internal API communication
+      - protocol: tcp
+        port: 8000
+        source: "{{ web_app_sg_id }}"
+        description: API access from web tier
+      
+      # SSH Access (Restricted)
+      - protocol: tcp
+        port: 22
+        source: "{{ admin_ip_range }}"
+        description: SSH access from admin IPs only
+    
+    egress_rules:
+      # Database access
+      - protocol: tcp
+        port: 27017
+        destination: "{{ database_sg_id }}"
+        description: MongoDB Atlas access
+      
+      # RASA Services
+      - protocol: tcp
+        port: 5005
+        destination: "{{ rasa_sg_id }}"
+        description: RASA Core access
+      - protocol: tcp
+        port: 5055
+        destination: "{{ rasa_sg_id }}"
+        description: RASA Actions access
+      
+      # External APIs (HTTPS)
+      - protocol: tcp
+        port: 443
+        destination: 0.0.0.0/0
+        description: External API calls
+      
+      # DNS Resolution
+      - protocol: udp
+        port: 53
+        destination: 0.0.0.0/0
+        description: DNS resolution
+
+  # RASA Services Security Group
+  rasa_sg:
+    name: automotive-chatbot-rasa-sg
+    description: Security group for RASA services
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # RASA Core
+      - protocol: tcp
+        port: 5005
+        source: "{{ api_sg_id }}"
+        description: RASA Core from API tier
+      
+      # RASA Actions
+      - protocol: tcp
+        port: 5055
+        source: "{{ api_sg_id }}"
+        description: RASA Actions from API tier
+      
+      # Internal RASA communication
+      - protocol: tcp
+        port: 5005
+        source: "{{ rasa_sg_id }}"
+        description: RASA internal communication
+      - protocol: tcp
+        port: 5055
+        source: "{{ rasa_sg_id }}"
+        description: RASA Actions internal communication
+      
+      # SSH Access (Restricted)
+      - protocol: tcp
+        port: 22
+        source: "{{ admin_ip_range }}"
+        description: SSH access from admin IPs only
+    
+    egress_rules:
+      # Database access
+      - protocol: tcp
+        port: 27017
+        destination: "{{ database_sg_id }}"
+        description: MongoDB Atlas access
+      
+      # External APIs
+      - protocol: tcp
+        port: 443
+        destination: 0.0.0.0/0
+        description: External API calls
+      
+      # DNS Resolution
+      - protocol: udp
+        port: 53
+        destination: 0.0.0.0/0
+        description: DNS resolution
+
+  # Database Security Group (for MongoDB Atlas whitelist)
+  database_sg:
+    name: automotive-chatbot-db-sg
+    description: Security group for database access
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # MongoDB Atlas doesn't use security groups directly
+      # This is for documentation and potential future use
+      - protocol: tcp
+        port: 27017
+        source: "{{ api_sg_id }}"
+        description: MongoDB access from API tier
+      - protocol: tcp
+        port: 27017
+        source: "{{ rasa_sg_id }}"
+        description: MongoDB access from RASA tier
+    
+    egress_rules:
+      # No outbound rules needed for database
+      []
+
+  # Monitoring Security Group
+  monitoring_sg:
+    name: automotive-chatbot-monitoring-sg
+    description: Security group for monitoring services
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # Prometheus
+      - protocol: tcp
+        port: 9090
+        source: "{{ admin_ip_range }}"
+        description: Prometheus from admin IPs
+      
+      # Grafana
+      - protocol: tcp
+        port: 3001
+        source: "{{ admin_ip_range }}"
+        description: Grafana from admin IPs
+      
+      # Node Exporter
+      - protocol: tcp
+        port: 9100
+        source: "{{ monitoring_sg_id }}"
+        description: Node Exporter metrics
+      
+      # SSH Access (Restricted)
+      - protocol: tcp
+        port: 22
+        source: "{{ admin_ip_range }}"
+        description: SSH access from admin IPs only
+    
+    egress_rules:
+      # Scrape targets
+      - protocol: tcp
+        port: 9100
+        destination: "{{ web_app_sg_id }}"
+        description: Scrape web app metrics
+      - protocol: tcp
+        port: 9100
+        destination: "{{ api_sg_id }}"
+        description: Scrape API metrics
+      - protocol: tcp
+        port: 9100
+        destination: "{{ rasa_sg_id }}"
+        description: Scrape RASA metrics
+      
+      # External alerting
+      - protocol: tcp
+        port: 443
+        destination: 0.0.0.0/0
+        description: External alerting services
+
+# Network ACLs (Additional layer of security)
+network_acls:
+  web_tier_nacl:
+    name: automotive-chatbot-web-nacl
+    vpc_id: "{{ vpc_id }}"
+    
+    ingress_rules:
+      # Allow HTTP/HTTPS
+      - rule_number: 100
+        protocol: tcp
+        port_range: "80-80"
+        source: 0.0.0.0/0
+        action: allow
+      - rule_number: 110
+        protocol: tcp
+        port_range: "443-443"
+        source: 0.0.0.0/0
+        action: allow
+      
+      # Allow SSH from admin networks
+      - rule_number: 120
+        protocol: tcp
+        port_range: "22-22"
+        source: "{{ admin_ip_range }}"
+        action: allow
+      
+      # Allow ephemeral ports for return traffic
+      - rule_number: 130
+        protocol: tcp
+        port_range: "1024-65535"
+        source: 0.0.0.0/0
+        action: allow
+    
+    egress_rules:
+      # Allow all outbound
+      - rule_number: 100
+        protocol: -1
+        port_range: "0-65535"
+        destination: 0.0.0.0/0
+        action: allow
+
+# Security Best Practices Configuration
+security_best_practices:
+  # Instance Security
+  instance_security:
+    # Disable root login
+    disable_root_login: true
+    
+    # Key-based authentication only
+    password_authentication: false
+    
+    # Automatic security updates
+    auto_security_updates: true
+    
+    # Fail2Ban configuration
+    fail2ban:
+      enabled: true
+      ban_time: 3600
+      find_time: 600
+      max_retry: 5
+    
+    # UFW Firewall
+    ufw:
+      enabled: true
+      default_incoming: deny
+      default_outgoing: allow
+      
+      rules:
+        - port: 22
+          source: "{{ admin_ip_range }}"
+          action: allow
+        - port: 80
+          action: allow
+        - port: 443
+          action: allow
+        - port: 3000
+          source: "{{ alb_ip_range }}"
+          action: allow
+        - port: 8000
+          source: "{{ alb_ip_range }}"
+          action: allow
+  
+  # Application Security
+  application_security:
+    # HTTPS enforcement
+    force_https: true
+    
+    # Security headers
+    security_headers:
+      strict_transport_security: "max-age=31536000; includeSubDomains"
+      content_security_policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      x_frame_options: "DENY"
+      x_content_type_options: "nosniff"
+      x_xss_protection: "1; mode=block"
+    
+    # Rate limiting
+    rate_limiting:
+      enabled: true
+      requests_per_minute: 60
+      burst_size: 10
+    
+    # Input validation
+    input_validation:
+      max_request_size: "10MB"
+      allowed_file_types: ["jpg", "jpeg", "png", "pdf", "txt"]
+      sanitize_inputs: true
+  
+  # Database Security
+  database_security:
+    # MongoDB Atlas IP Whitelist
+    ip_whitelist:
+      - "{{ ec2_public_ip }}/32"
+      - "{{ admin_ip_range }}"
+    
+    # Connection encryption
+    ssl_enabled: true
+    
+    # Authentication
+    auth_enabled: true
+    username: "{{ vault_mongodb_username }}"
+    password: "{{ vault_mongodb_password }}"
+  
+  # Monitoring and Alerting
+  security_monitoring:
+    # CloudWatch alarms
+    cloudwatch_alarms:
+      - name: HighCPUUtilization
+        metric: CPUUtilization
+        threshold: 80
+        comparison: GreaterThanThreshold
+      
+      - name: HighMemoryUtilization
+        metric: MemoryUtilization
+        threshold: 85
+        comparison: GreaterThanThreshold
+      
+      - name: DiskSpaceUtilization
+        metric: DiskSpaceUtilization
+        threshold: 90
+        comparison: GreaterThanThreshold
+    
+    # Security event logging
+    security_logging:
+      enabled: true
+      log_failed_logins: true
+      log_privilege_escalation: true
+      log_file_access: true
+      
+      # Log retention
+      retention_days: 90
+      
+      # Log forwarding
+      forward_to_cloudwatch: true
+      log_group: "/aws/ec2/automotive-chatbot/security"
+
+# Compliance and Audit
+compliance:
+  # Data protection
+  data_protection:
+    encryption_at_rest: true
+    encryption_in_transit: true
+    data_classification: "confidential"
+    
+    # Backup encryption
+    backup_encryption: true
+    backup_retention: 30  # days
+  
+  # Access control
+  access_control:
+    principle_of_least_privilege: true
+    regular_access_review: true
+    multi_factor_authentication: true
+  
+  # Audit logging
+  audit_logging:
+    enabled: true
+    log_all_api_calls: true
+    log_admin_actions: true
+    log_data_access: true
+    
+    # Audit log retention
+    retention_years: 7
+    
+    # Compliance reporting
+    generate_compliance_reports: true
+    report_frequency: monthly

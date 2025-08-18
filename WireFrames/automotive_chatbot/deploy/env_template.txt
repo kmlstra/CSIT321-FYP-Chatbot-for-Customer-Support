@@ -1,0 +1,329 @@
+# Environment Variables Template for Automotive Chatbot
+# Copy this file to .env and fill in the actual values
+# NEVER commit .env files to version control
+
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
+
+# Application Environment
+NODE_ENV=production
+PYTHON_ENV=production
+DEBUG=false
+
+# Application URLs
+FRONTEND_URL=https://your-domain.com
+BACKEND_URL=https://api.your-domain.com
+RASA_URL=http://localhost:5005
+RASA_ACTIONS_URL=http://localhost:5055
+
+# Application Ports
+FRONTEND_PORT=3000
+BACKEND_PORT=8000
+RASA_PORT=5005
+RASA_ACTIONS_PORT=5055
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+
+# JWT Configuration
+JWT_SECRET_KEY=your-super-secret-jwt-key-change-this-in-production
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=24
+JWT_REFRESH_EXPIRATION_DAYS=30
+
+# Session Configuration
+SESSION_SECRET=your-session-secret-key-change-this-in-production
+SESSION_TIMEOUT_MINUTES=30
+
+# Encryption Keys
+ENCRYPTION_KEY=your-32-character-encryption-key-here
+HASH_SALT_ROUNDS=12
+
+# CORS Configuration
+CORS_ORIGINS=https://your-domain.com,https://www.your-domain.com
+CORS_CREDENTIALS=true
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+
+# MongoDB Atlas Configuration
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/automotive_chatbot?retryWrites=true&w=majority
+MONGODB_DATABASE=automotive_chatbot
+MONGODB_MAX_POOL_SIZE=10
+MONGODB_MIN_POOL_SIZE=5
+MONGODB_MAX_IDLE_TIME_MS=30000
+MONGODB_SERVER_SELECTION_TIMEOUT_MS=5000
+MONGODB_SOCKET_TIMEOUT_MS=45000
+
+# Database Security
+MONGODB_SSL=true
+MONGODB_AUTH_SOURCE=admin
+MONGODB_REPLICA_SET=atlas-replica-set
+
+# =============================================================================
+# REDIS CONFIGURATION (for caching and sessions)
+# =============================================================================
+
+# Redis Connection
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your-redis-password
+REDIS_DB=0
+REDIS_MAX_CONNECTIONS=10
+REDIS_TIMEOUT=5000
+
+# Redis Cluster (if using Redis Cluster)
+REDIS_CLUSTER_NODES=redis-node1:6379,redis-node2:6379,redis-node3:6379
+REDIS_CLUSTER_PASSWORD=your-cluster-password
+
+# =============================================================================
+# EMAIL CONFIGURATION
+# =============================================================================
+
+# SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_NAME=Automotive Chatbot
+SMTP_FROM_EMAIL=noreply@your-domain.com
+
+# Email Templates
+EMAIL_TEMPLATE_PATH=./templates/emails
+EMAIL_LOGO_URL=https://your-domain.com/logo.png
+
+# =============================================================================
+# AWS CONFIGURATION
+# =============================================================================
+
+# AWS Credentials
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_REGION=us-east-1
+AWS_ACCOUNT_ID=123456789012
+
+# S3 Configuration
+S3_BUCKET_NAME=automotive-chatbot-storage
+S3_BACKUP_BUCKET=automotive-chatbot-backups
+S3_LOGS_BUCKET=automotive-chatbot-logs
+S3_ENCRYPTION=AES256
+
+# CloudWatch Configuration
+CLOUDWATCH_LOG_GROUP=/aws/ec2/automotive-chatbot
+CLOUDWATCH_LOG_STREAM=application-logs
+CLOUDWATCH_REGION=us-east-1
+
+# =============================================================================
+# MONITORING AND LOGGING
+# =============================================================================
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FORMAT=json
+LOG_FILE_PATH=./logs/application.log
+LOG_MAX_SIZE=10MB
+LOG_MAX_FILES=5
+LOG_DATE_PATTERN=YYYY-MM-DD
+
+# Monitoring
+MONITORING_ENABLED=true
+METRICS_PORT=9090
+HEALTH_CHECK_INTERVAL=30
+PERFORMANCE_MONITORING=true
+
+# Prometheus Configuration
+PROMETHEUS_URL=http://localhost:9090
+PROMETHEUS_JOB_NAME=automotive-chatbot
+PROMETHEUS_SCRAPE_INTERVAL=15s
+
+# Grafana Configuration
+GRAFANA_URL=http://localhost:3001
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=your-grafana-password
+
+# =============================================================================
+# RASA CONFIGURATION
+# =============================================================================
+
+# RASA Core Configuration
+RASA_MODEL_PATH=./models
+RASA_ENDPOINTS_PATH=./endpoints.yml
+RASA_CREDENTIALS_PATH=./credentials.yml
+RASA_CONFIG_PATH=./config.yml
+RASA_DOMAIN_PATH=./domain.yml
+
+# RASA Actions Configuration
+RASA_ACTIONS_ENDPOINT=http://localhost:5055/webhook
+RASA_ACTION_ENDPOINT_TIMEOUT=60
+RASA_MAX_WORKERS=4
+
+# RASA Training Configuration
+RASA_TRAINING_DATA_PATH=./data
+RASA_MODEL_CONFIDENCE_THRESHOLD=0.7
+RASA_FALLBACK_THRESHOLD=0.3
+RASA_AMBIGUITY_THRESHOLD=0.1
+
+# =============================================================================
+# RATE LIMITING AND SECURITY
+# =============================================================================
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_SKIP_SUCCESSFUL_REQUESTS=false
+RATE_LIMIT_SKIP_FAILED_REQUESTS=false
+
+# API Security
+API_KEY_HEADER=X-API-Key
+API_RATE_LIMIT=1000
+API_BURST_LIMIT=50
+API_TIMEOUT=30000
+
+# Content Security Policy
+CSP_DEFAULT_SRC="'self'"
+CSP_SCRIPT_SRC="'self' 'unsafe-inline'"
+CSP_STYLE_SRC="'self' 'unsafe-inline'"
+CSP_IMG_SRC="'self' data: https:"
+CSP_CONNECT_SRC="'self'"
+
+# =============================================================================
+# SSL/TLS CONFIGURATION
+# =============================================================================
+
+# SSL Certificate Paths
+SSL_CERT_PATH=/etc/ssl/certs/automotive-chatbot.crt
+SSL_KEY_PATH=/etc/ssl/private/automotive-chatbot.key
+SSL_CA_PATH=/etc/ssl/certs/ca-bundle.crt
+
+# SSL Configuration
+SSL_PROTOCOLS=TLSv1.2,TLSv1.3
+SSL_CIPHERS=ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384
+SSL_PREFER_SERVER_CIPHERS=true
+SSL_SESSION_CACHE=shared:SSL:10m
+SSL_SESSION_TIMEOUT=10m
+
+# HSTS Configuration
+HSTS_MAX_AGE=31536000
+HSTS_INCLUDE_SUBDOMAINS=true
+HSTS_PRELOAD=true
+
+# =============================================================================
+# BACKUP AND DISASTER RECOVERY
+# =============================================================================
+
+# Backup Configuration
+BACKUP_ENABLED=true
+BACKUP_SCHEDULE=0 2 * * *
+BACKUP_RETENTION_DAYS=30
+BACKUP_ENCRYPTION_KEY=your-backup-encryption-key
+BACKUP_COMPRESSION=gzip
+
+# Database Backup
+DB_BACKUP_ENABLED=true
+DB_BACKUP_SCHEDULE=0 1 * * *
+DB_BACKUP_RETENTION_DAYS=7
+DB_BACKUP_S3_BUCKET=automotive-chatbot-db-backups
+
+# =============================================================================
+# FEATURE FLAGS
+# =============================================================================
+
+# Feature Toggles
+FEATURE_ANALYTICS=true
+FEATURE_CHAT_HISTORY=true
+FEATURE_FILE_UPLOAD=true
+FEATURE_VOICE_CHAT=false
+FEATURE_MULTILINGUAL=true
+FEATURE_ADMIN_PANEL=true
+FEATURE_API_DOCS=true
+
+# Experimental Features
+EXPERIMENTAL_AI_SUGGESTIONS=false
+EXPERIMENTAL_REAL_TIME_TRANSLATION=false
+EXPERIMENTAL_SENTIMENT_ANALYSIS=true
+
+# =============================================================================
+# THIRD-PARTY INTEGRATIONS
+# =============================================================================
+
+# Google Analytics
+GA_TRACKING_ID=UA-XXXXXXXXX-X
+GA_ANONYMIZE_IP=true
+
+# Sentry Error Tracking
+SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+SENTRY_ENVIRONMENT=production
+SENTRY_RELEASE=1.0.0
+
+# Slack Integration
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+SLACK_CHANNEL=#automotive-chatbot-alerts
+
+# =============================================================================
+# DEVELOPMENT AND TESTING
+# =============================================================================
+
+# Development Settings (only for development environment)
+DEV_AUTO_RELOAD=false
+DEV_DEBUG_MODE=false
+DEV_MOCK_EXTERNAL_APIS=false
+
+# Testing Configuration
+TEST_DATABASE_URI=mongodb://localhost:27017/automotive_chatbot_test
+TEST_REDIS_URL=redis://localhost:6379/1
+TEST_TIMEOUT=30000
+
+# =============================================================================
+# PERFORMANCE TUNING
+# =============================================================================
+
+# Node.js Performance
+NODE_OPTIONS=--max-old-space-size=4096
+UV_THREADPOOL_SIZE=128
+
+# Python Performance
+PYTHONOPTIMIZE=1
+PYTHONUNBUFFERED=1
+
+# Memory Limits
+MAX_MEMORY_USAGE=2048
+MAX_CPU_USAGE=80
+MAX_CONCURRENT_REQUESTS=100
+
+# Cache Configuration
+CACHE_TTL=3600
+CACHE_MAX_SIZE=1000
+CACHE_ENABLED=true
+
+# =============================================================================
+# DOCKER CONFIGURATION
+# =============================================================================
+
+# Docker Settings
+DOCKER_REGISTRY=your-registry.com
+DOCKER_IMAGE_TAG=latest
+DOCKER_NETWORK=automotive-chatbot-network
+
+# Container Limits
+CONTAINER_MEMORY_LIMIT=2g
+CONTAINER_CPU_LIMIT=1.0
+CONTAINER_RESTART_POLICY=unless-stopped
+
+# =============================================================================
+# NOTES
+# =============================================================================
+
+# Security Notes:
+# 1. Change all default passwords and keys
+# 2. Use strong, unique passwords for each service
+# 3. Enable SSL/TLS for all connections
+# 4. Regularly rotate secrets and keys
+# 5. Use environment-specific configurations
+# 6. Never commit sensitive data to version control
+# 7. Use AWS Secrets Manager or similar for production secrets
+# 8. Implement proper access controls and monitoring
+# 9. Regular security audits and updates
+# 10. Follow principle of least privilege

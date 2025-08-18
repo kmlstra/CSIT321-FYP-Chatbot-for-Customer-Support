@@ -1,49 +1,139 @@
-# Multi-stage build for Python FastAPI backend
-FROM python:3.9-slim AS base
+# Optimized Production Dockerfile for FastAPI Backend
+# Multi-stage build for better performance and security
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONHASHSEED=random \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Stage 1: Base Python image with system dependencies
+FROM python:3.9-slim AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
+    gcc \
+    g++ \
     curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Dependencies
+FROM base AS deps
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY ./backend/api/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Stage 3: Builder
+FROM deps AS builder
+WORKDIR /app
+
+# Copy application code
+COPY ./backend/api/ .
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/cache /app/uploads && \
+    chown -R appuser:appuser /app
+
+# Stage 4: Runner
+FROM python:3.9-slim AS runner
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    dumb-init \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd --gid 1001 appuser && \
-    useradd --uid 1001 --gid appuser --shell /bin/bash --create-home appuser
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Set work directory
-WORKDIR /app
+# Copy Python dependencies from deps stage
+COPY --from=deps /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
 
-# Install Python dependencies with better caching
-# Copy requirements first for better Docker layer caching
-COPY ./backend/requirements.txt ./requirements.txt
+# Copy application code from builder
+COPY --from=builder /app .
 
-# Use pip cache and install with timeout to prevent hanging
-RUN pip install --upgrade pip && \
-    pip install --timeout=300 --retries=3 -r requirements.txt
-
-# Copy application code
-COPY ./backend/ .
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/uploads /app/static && \
+# Create necessary directories and set permissions
+RUN mkdir -p /app/logs /app/cache /app/uploads && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
 
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV ENVIRONMENT=production
+ENV LOG_LEVEL=INFO
+
+# MongoDB Atlas configuration
+ENV MONGODB_TYPE=atlas
+ENV MONGODB_ATLAS_URI=""
+ENV MONGODB_DATABASE=automotive_chatbot
+ENV MONGODB_COLLECTION_APPOINTMENTS=appointments
+ENV MONGODB_COLLECTION_CUSTOMERS=customers
+ENV MONGODB_COLLECTION_SERVICES=services
+ENV MONGODB_COLLECTION_CHAT_HISTORY=chat_history
+
+# Database connection pool settings
+ENV DB_POOL_MIN_SIZE=5
+ENV DB_POOL_MAX_SIZE=50
+ENV DB_POOL_MAX_IDLE_TIME=30000
+ENV DB_CONNECTION_TIMEOUT=10000
+ENV DB_SERVER_SELECTION_TIMEOUT=5000
+ENV DB_RETRY_WRITES=true
+ENV DB_W=majority
+
+# Cache configuration
+ENV CACHE_ENABLED=true
+ENV CACHE_TTL=1800
+ENV CACHE_MAX_SIZE=1000
+ENV CACHE_CLEANUP_INTERVAL=300
+
+# Performance settings
+ENV UVICORN_WORKERS=4
+ENV UVICORN_MAX_REQUESTS=1000
+ENV UVICORN_MAX_REQUESTS_JITTER=100
+ENV UVICORN_TIMEOUT_KEEP_ALIVE=5
+
+# Security settings
+ENV SECRET_KEY=""
+ENV CORS_ORIGINS="http://localhost:3000,https://yourdomain.com"
+ENV ALLOWED_HOSTS="localhost,127.0.0.1,yourdomain.com"
+
+# Email configuration
+ENV SMTP_SERVER=""
+ENV SMTP_PORT=587
+ENV SMTP_USERNAME=""
+ENV SMTP_PASSWORD=""
+ENV SMTP_USE_TLS=true
+ENV EMAIL_FROM=""
+
+# Feature flags
+ENV FEATURE_APPOINTMENTS=true
+ENV FEATURE_EMAIL_NOTIFICATIONS=true
+ENV FEATURE_CHAT_HISTORY=true
+ENV FEATURE_ANALYTICS=true
+
+# Monitoring and health check settings
+ENV HEALTH_CHECK_ENABLED=true
+ENV METRICS_ENABLED=true
+ENV PROMETHEUS_PORT=9090
+
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://0.0.0.0:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the application
-CMD ["python", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application with optimized settings
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--access-log", "--log-level", "info"]

@@ -14,6 +14,7 @@ import pytz
 
 from .auto_logger import AutoLoggedAction
 from api.cache.feature_cache_manager import check_live_support_feature_enabled
+from api.middleware.intent_validation_middleware import validate_high_confidence
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class ActionLiveSupport(AutoLoggedAction):
+    """Live support action with intent validation middleware integration"""
+    
     def name(self) -> Text:
         return "action_live_support"
 
@@ -135,7 +138,8 @@ class ActionLiveSupport(AutoLoggedAction):
         except Exception:
             return "Mon-Fri 9AM-7PM, Sat 9AM-6PM, Sun 10AM-5PM"
 
-    def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+    @validate_high_confidence(confidence_threshold=0.7)
+    async def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         try:
             # Send immediate acknowledgment for better perceived performance
             dispatcher.utter_message(text="🔍 Connecting you to live support...")
@@ -151,8 +155,17 @@ class ActionLiveSupport(AutoLoggedAction):
                     )
                     return []
             
-            # Get conversation ID from tracker
-            conversation_id = tracker.sender_id
+            # Get conversation ID from unified session manager
+            session_id = tracker.sender_id
+            try:
+                from api.services.unified_session_manager import unified_session_manager
+                conversation_id = unified_session_manager.get_conversation_id(session_id)
+                if not conversation_id:
+                    # Fallback to session_id if conversation_id not found
+                    conversation_id = session_id
+            except Exception:
+                # Fallback to session_id if service unavailable
+                conversation_id = session_id
             
             # Optimized client data retrieval with early return for fresh cache
             client_data = None
@@ -233,7 +246,16 @@ class ActionLiveSupport(AutoLoggedAction):
         except Exception:
             pass
             # Fallback message
-            conversation_id = tracker.sender_id
+            session_id = tracker.sender_id
+            try:
+                from api.services.unified_session_manager import unified_session_manager
+                conversation_id = unified_session_manager.get_conversation_id(session_id)
+                if not conversation_id:
+                    # Fallback to session_id if conversation_id not found
+                    conversation_id = session_id
+            except Exception:
+                # Fallback to session_id if service unavailable
+                conversation_id = session_id
             from backend.api.cache.client_cache import get_fallback_contact_data
             fallback_data = get_fallback_contact_data()
             fallback_data['average_response_time'] = '2-5 minutes'

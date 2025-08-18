@@ -1,0 +1,137 @@
+# Optimized Production Dockerfile for RASA Actions Server
+# Multi-stage build for better performance and security
+
+# Stage 1: Base Python image
+FROM python:3.9-slim AS base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Dependencies
+FROM base AS deps
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY ./backend/api/actions/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Stage 3: Builder
+FROM deps AS builder
+WORKDIR /app
+
+# Copy actions code and utilities
+COPY ./backend/api/actions/ .
+COPY ./backend/api/utils/ ./utils/
+
+# Create non-root user for security
+RUN groupadd -r rasauser && useradd -r -g rasauser rasauser
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/cache && \
+    chown -R rasauser:rasauser /app
+
+# Stage 4: Runner
+FROM python:3.9-slim AS runner
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r rasauser && useradd -r -g rasauser rasauser
+
+# Copy Python dependencies from deps stage
+COPY --from=deps /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+
+# Copy application code from builder
+COPY --from=builder /app .
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/logs /app/cache && \
+    chown -R rasauser:rasauser /app
+
+# Switch to non-root user
+USER rasauser
+
+# Environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV ENVIRONMENT=production
+ENV LOG_LEVEL=INFO
+
+# MongoDB Atlas configuration
+ENV MONGODB_TYPE=atlas
+ENV MONGODB_ATLAS_URI=""
+ENV MONGODB_DATABASE=automotive_chatbot
+ENV MONGODB_COLLECTION_APPOINTMENTS=appointments
+ENV MONGODB_COLLECTION_CUSTOMERS=customers
+ENV MONGODB_COLLECTION_SERVICES=services
+ENV MONGODB_COLLECTION_CHAT_HISTORY=chat_history
+
+# Database connection pool settings
+ENV DB_POOL_MIN_SIZE=3
+ENV DB_POOL_MAX_SIZE=15
+ENV DB_POOL_MAX_IDLE_TIME=30000
+ENV DB_CONNECTION_TIMEOUT=10000
+ENV DB_SERVER_SELECTION_TIMEOUT=5000
+ENV DB_RETRY_WRITES=true
+ENV DB_W=majority
+
+# Cache configuration
+ENV CACHE_ENABLED=true
+ENV CACHE_TTL=1800
+ENV CACHE_MAX_SIZE=500
+ENV CACHE_CLEANUP_INTERVAL=300
+
+# Email configuration
+ENV SMTP_SERVER=""
+ENV SMTP_PORT=587
+ENV SMTP_USERNAME=""
+ENV SMTP_PASSWORD=""
+ENV SMTP_USE_TLS=true
+ENV EMAIL_FROM=""
+
+# Feature flags
+ENV FEATURE_APPOINTMENTS=true
+ENV FEATURE_EMAIL_NOTIFICATIONS=true
+ENV FEATURE_CHAT_HISTORY=true
+ENV FEATURE_ANALYTICS=true
+
+# Performance settings
+ENV RASA_ACTION_WORKERS=2
+ENV RASA_ACTION_MAX_REQUESTS=500
+ENV RASA_ACTION_TIMEOUT=60
+
+# Security settings
+ENV SECRET_KEY=""
+ENV CORS_ORIGINS="*"
+
+# Monitoring settings
+ENV HEALTH_CHECK_ENABLED=true
+ENV METRICS_ENABLED=true
+
+# Expose port
+EXPOSE 5055
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5055/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start RASA Actions server with optimized settings
+CMD ["python", "-m", "rasa_sdk", "--actions", "actions", "--port", "5055", "--cors", "*", "--debug"]

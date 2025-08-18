@@ -13,6 +13,9 @@ from abc import ABC, abstractmethod
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
 
+# Import conversation middleware for logging
+from api.middleware.conversation_middleware import ConversationTracker
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,34 +52,50 @@ class AutoLoggedAction(Action, ABC):
         try:
             user_message = tracker.latest_message.get('text', '')
             sender_id = tracker.sender_id
+            intent = tracker.latest_message.get('intent', {}).get('name')
+            entities = tracker.latest_message.get('entities', [])
             
-            pass
+            # Store user message using conversation tracker
+            ConversationTracker.store_user_message(
+                sender_id=sender_id,
+                message=user_message,
+                intent=intent,
+                entities=entities
+            )
             
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error logging user message: {e}")
     
-    def log_action_execution(self, action_name: str, tracker: Tracker) -> None:
+    def log_action_execution(self, action_name: str, tracker: Tracker, success: bool = True, error_message: str = None) -> None:
         """Log action execution details.
         
         Args:
             action_name: Name of the action being executed
             tracker: The conversation tracker
+            success: Whether action executed successfully
+            error_message: Error message if action failed
         """
         try:
             sender_id = tracker.sender_id
-            intent = tracker.latest_message.get('intent', {}).get('name', 'unknown')
             
-            pass
+            # Store action execution using conversation tracker
+            ConversationTracker.store_action_execution(
+                sender_id=sender_id,
+                action_name=action_name,
+                success=success,
+                error_message=error_message
+            )
             
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error logging action execution: {e}")
     
-    def log_bot_response(self, dispatcher: CollectingDispatcher, tracker: Tracker) -> None:
+    def log_bot_response(self, dispatcher: CollectingDispatcher, tracker: Tracker, action_name: str = None) -> None:
         """Log the bot's response.
         
         Args:
             dispatcher: The message dispatcher containing bot responses
             tracker: The conversation tracker
+            action_name: Name of the action that generated the response
         """
         try:
             sender_id = tracker.sender_id
@@ -85,10 +104,26 @@ class AutoLoggedAction(Action, ABC):
             messages = getattr(dispatcher, 'messages', [])
             
             for message in messages:
-                pass
+                # Extract text content from message
+                if isinstance(message, dict):
+                    text_content = message.get('text', '')
+                    if text_content:
+                        # Store bot response using conversation tracker
+                        ConversationTracker.store_bot_response(
+                            sender_id=sender_id,
+                            response=text_content,
+                            action_name=action_name or self.name()
+                        )
+                elif isinstance(message, str):
+                    # Store bot response using conversation tracker
+                    ConversationTracker.store_bot_response(
+                        sender_id=sender_id,
+                        response=message,
+                        action_name=action_name or self.name()
+                    )
                     
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error logging bot response: {e}")
     
     # Note: Subclasses should override the run() method directly
     # The logging methods above can be called manually if needed

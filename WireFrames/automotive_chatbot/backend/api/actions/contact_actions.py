@@ -9,6 +9,7 @@ from .auto_logger import AutoLoggedAction
 from api.utils.cache import contact_cache
 from api.cache.client_cache import get_client_cache, get_fallback_contact_data
 from api.cache.feature_cache_manager import check_live_support_feature_enabled
+from api.middleware.intent_validation_middleware import validate_medium_confidence
 import logging
 from datetime import datetime
 import pytz
@@ -26,6 +27,7 @@ class ActionSmartContact(AutoLoggedAction):
     - Intent-specific contact information delivery
     - Modern UI styling for contact information
     - Suitable for car dealership inquiries
+    - Intent validation middleware integration
     """
     
     def name(self) -> Text:
@@ -438,9 +440,16 @@ Usually responds within 5 minutes
         # Use the consolidated full contact card with context
         return self._get_full_contact_card(conversation_id, client_data, context_message, availability_note)
 
-    def run(self, dispatcher: CollectingDispatcher,
+    @validate_medium_confidence(confidence_threshold=0.6)
+    async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Log user message at the start
+        self.log_user_message(tracker)
+        
+        # Log action execution start
+        self.log_action_execution(self.name(), tracker, success=True)
         
         try:
             # Check if contact support feature is enabled for this client
@@ -451,7 +460,16 @@ Usually responds within 5 minutes
             
             # Get the user's message and conversation ID
             user_message = tracker.latest_message.get('text', '')
-            conversation_id = tracker.sender_id
+            session_id = tracker.sender_id
+            try:
+                from api.services.unified_session_manager import unified_session_manager
+                conversation_id = unified_session_manager.get_conversation_id(session_id)
+                if not conversation_id:
+                    # Fallback to session_id if conversation_id not found
+                    conversation_id = session_id
+            except Exception:
+                # Fallback to session_id if service unavailable
+                conversation_id = session_id
             
             # Check cache first for contact data
             cache_key = f"contact_data_{client_id}" if client_id else "contact_data_fallback"
@@ -546,12 +564,22 @@ Usually responds within 5 minutes
             final_response = "\n\n".join(response_parts)
             dispatcher.utter_message(text=final_response)
             
-
+            # Log bot response after sending message
+            self.log_bot_response(dispatcher, tracker, self.name())
             
         except Exception as e:
             logger.error(f"Error in ActionSmartContact: {e}")
             # Fallback response
-            conversation_id = tracker.sender_id
+            session_id = tracker.sender_id
+            try:
+                from api.services.unified_session_manager import unified_session_manager
+                conversation_id = unified_session_manager.get_conversation_id(session_id)
+                if not conversation_id:
+                    # Fallback to session_id if conversation_id not found
+                    conversation_id = session_id
+            except Exception:
+                # Fallback to session_id if service unavailable
+                conversation_id = session_id
             # Get client_id for fallback as well
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
             fallback_data = get_fallback_contact_data()
@@ -573,5 +601,11 @@ Usually responds within 5 minutes
 📍 **Address:** {fallback_data.get('address', 'Address not available')}
 🕒 **Hours:** Mon-Fri 9AM-7PM, Sat 9AM-6PM, Sun 10AM-5PM"""
             dispatcher.utter_message(text=fallback_response)
+            
+            # Log bot response for fallback case
+            self.log_bot_response(dispatcher, tracker, self.name())
+            
+            # Log action execution failure
+            self.log_action_execution(self.name(), tracker, success=False, error_message=str(e))
         
         return []

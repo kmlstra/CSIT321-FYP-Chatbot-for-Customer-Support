@@ -5,23 +5,23 @@ stories:
 - story: loan calculation request
   steps:
   - intent: calculate_loan
-  - action: action_loan_calculation_result
+  - action: action_loan_calculator
 
 - story: loan calculator help request
   steps:
   - intent: ask_loan_help
-  - action: action_loan_calculation_result
+  - action: action_loan_calculator
 
 - story: loan calculation after greeting
   steps:
   - intent: greet
   - action: utter_greet
   - intent: calculate_loan
-  - action: action_loan_calculation_result
+  - action: action_loan_calculator
 
 - story: loan help with goodbye
   steps:
   - intent: ask_loan_help
-  - action: action_loan_calculation_result
+  - action: action_loan_calculator
   - intent: goodbye
   - action: utter_goodbye

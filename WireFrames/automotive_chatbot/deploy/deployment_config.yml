@@ -1,0 +1,475 @@
+# Deployment Configuration for Automotive Chatbot
+# This file contains all deployment-related configuration parameters
+
+# Application Configuration
+application:
+  name: "automotive-chatbot"
+  version: "1.0.0"
+  environment: "production"  # development, staging, production
+  domain: "automotive-chatbot.com"
+  monitoring_domain: "monitoring.automotive-chatbot.com"
+  
+  # Service Ports
+  ports:
+    frontend: 3000
+    backend: 8000
+    rasa_core: 5005
+    rasa_actions: 5055
+    nginx: 80
+    nginx_ssl: 443
+    prometheus: 9090
+    grafana: 3001
+    alertmanager: 9093
+    redis: 6379
+
+# Infrastructure Configuration
+infrastructure:
+  # AWS Configuration
+  aws:
+    region: "us-east-1"
+    availability_zones:
+      - "us-east-1a"
+      - "us-east-1b"
+    
+    # EC2 Configuration
+    ec2:
+      instance_type: "t3.medium"  # t3.small for dev, t3.medium for staging, t3.large for production
+      ami_id: "ami-0c02fb55956c7d316"  # Ubuntu 20.04 LTS
+      key_pair: "automotive-chatbot-key"
+      security_groups:
+        - "automotive-chatbot-web"
+        - "automotive-chatbot-api"
+        - "automotive-chatbot-monitoring"
+      
+      # Auto Scaling
+      auto_scaling:
+        min_size: 1
+        max_size: 3
+        desired_capacity: 1
+        target_cpu_utilization: 70
+    
+    # Load Balancer Configuration
+    load_balancer:
+      type: "application"  # application, network
+      scheme: "internet-facing"
+      health_check:
+        path: "/health"
+        interval: 30
+        timeout: 5
+        healthy_threshold: 2
+        unhealthy_threshold: 3
+    
+    # S3 Configuration
+    s3:
+      backup_bucket: "automotive-chatbot-backups"
+      logs_bucket: "automotive-chatbot-logs"
+      static_assets_bucket: "automotive-chatbot-assets"
+      versioning: true
+      encryption: true
+    
+    # CloudWatch Configuration
+    cloudwatch:
+      log_retention_days: 30
+      metrics_retention_days: 90
+      alarms:
+        cpu_threshold: 80
+        memory_threshold: 85
+        disk_threshold: 90
+        error_rate_threshold: 5
+
+# Database Configuration
+database:
+  # MongoDB Atlas
+  mongodb:
+    cluster_tier: "M10"  # M0 for dev, M10 for staging/production
+    region: "US_EAST_1"
+    backup_enabled: true
+    monitoring_enabled: true
+    connection_pool:
+      min_size: 5
+      max_size: 50
+      max_idle_time: 30000
+    
+  # Redis Configuration
+  redis:
+    instance_type: "cache.t3.micro"  # cache.t3.micro for dev, cache.t3.small for production
+    node_type: "single"  # single, cluster
+    backup_retention_period: 7
+    maintenance_window: "sun:03:00-sun:04:00"
+
+# Security Configuration
+security:
+  # SSL/TLS Configuration
+  ssl:
+    provider: "letsencrypt"  # letsencrypt, custom
+    auto_renewal: true
+    certificate_authority: "https://acme-v02.api.letsencrypt.org/directory"
+    
+  # Firewall Configuration
+  firewall:
+    default_policy: "deny"
+    allowed_ports:
+      - port: 22
+        protocol: "tcp"
+        source: "admin_ips"
+        description: "SSH access"
+      - port: 80
+        protocol: "tcp"
+        source: "0.0.0.0/0"
+        description: "HTTP traffic"
+      - port: 443
+        protocol: "tcp"
+        source: "0.0.0.0/0"
+        description: "HTTPS traffic"
+      - port: 3000
+        protocol: "tcp"
+        source: "load_balancer"
+        description: "Frontend service"
+      - port: 8000
+        protocol: "tcp"
+        source: "load_balancer"
+        description: "Backend API"
+      - port: 5005
+        protocol: "tcp"
+        source: "internal"
+        description: "RASA Core"
+      - port: 5055
+        protocol: "tcp"
+        source: "internal"
+        description: "RASA Actions"
+      - port: 9090
+        protocol: "tcp"
+        source: "monitoring_ips"
+        description: "Prometheus"
+      - port: 3001
+        protocol: "tcp"
+        source: "monitoring_ips"
+        description: "Grafana"
+    
+  # Authentication Configuration
+  authentication:
+    jwt:
+      algorithm: "HS256"
+      expiration: 3600  # 1 hour
+      refresh_expiration: 604800  # 7 days
+    
+    session:
+      secure: true
+      http_only: true
+      same_site: "strict"
+      max_age: 3600
+    
+    rate_limiting:
+      requests_per_minute: 60
+      burst_size: 10
+      block_duration: 300  # 5 minutes
+
+# Monitoring Configuration
+monitoring:
+  # Prometheus Configuration
+  prometheus:
+    retention_time: "30d"
+    scrape_interval: "15s"
+    evaluation_interval: "15s"
+    
+    # Scrape Targets
+    targets:
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+      
+      - job_name: "node-exporter"
+        static_configs:
+          - targets: ["localhost:9100"]
+      
+      - job_name: "backend-api"
+        static_configs:
+          - targets: ["localhost:8000"]
+        metrics_path: "/metrics"
+      
+      - job_name: "rasa-core"
+        static_configs:
+          - targets: ["localhost:5005"]
+        metrics_path: "/metrics"
+      
+      - job_name: "nginx"
+        static_configs:
+          - targets: ["localhost:9113"]
+  
+  # Grafana Configuration
+  grafana:
+    admin_user: "admin"
+    admin_password: "${GRAFANA_ADMIN_PASSWORD}"
+    database_type: "sqlite3"
+    
+    # Dashboards
+    dashboards:
+      - name: "System Overview"
+        file: "system_overview.json"
+      - name: "Application Metrics"
+        file: "application_metrics.json"
+      - name: "RASA Performance"
+        file: "rasa_performance.json"
+  
+  # AlertManager Configuration
+  alertmanager:
+    smtp:
+      smarthost: "${SMTP_HOST}:${SMTP_PORT}"
+      from: "alerts@automotive-chatbot.com"
+      auth_username: "${SMTP_USERNAME}"
+      auth_password: "${SMTP_PASSWORD}"
+    
+    # Alert Routes
+    routes:
+      - match:
+          severity: "critical"
+        receiver: "critical-alerts"
+        group_wait: "10s"
+        group_interval: "10s"
+        repeat_interval: "1h"
+      
+      - match:
+          severity: "warning"
+        receiver: "warning-alerts"
+        group_wait: "30s"
+        group_interval: "5m"
+        repeat_interval: "12h"
+    
+    # Receivers
+    receivers:
+      - name: "critical-alerts"
+        email_configs:
+          - to: "admin@automotive-chatbot.com"
+            subject: "[CRITICAL] {{ .GroupLabels.alertname }}"
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              {{ end }}
+        
+        slack_configs:
+          - api_url: "${SLACK_WEBHOOK_URL}"
+            channel: "#alerts"
+            title: "Critical Alert"
+            text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
+      
+      - name: "warning-alerts"
+        email_configs:
+          - to: "team@automotive-chatbot.com"
+            subject: "[WARNING] {{ .GroupLabels.alertname }}"
+
+# Backup Configuration
+backup:
+  # Backup Schedule
+  schedule:
+    database: "0 2 * * *"  # Daily at 2 AM
+    application: "0 3 * * 0"  # Weekly on Sunday at 3 AM
+    logs: "0 1 * * *"  # Daily at 1 AM
+  
+  # Retention Policy
+  retention:
+    daily_backups: 7
+    weekly_backups: 4
+    monthly_backups: 12
+  
+  # Backup Storage
+  storage:
+    provider: "s3"
+    bucket: "automotive-chatbot-backups"
+    encryption: true
+    compression: true
+  
+  # Backup Validation
+  validation:
+    enabled: true
+    test_restore: true
+    notification_on_failure: true
+
+# Logging Configuration
+logging:
+  # Log Levels
+  levels:
+    root: "INFO"
+    application: "INFO"
+    database: "WARN"
+    security: "INFO"
+    performance: "DEBUG"
+  
+  # Log Rotation
+  rotation:
+    max_size: "100MB"
+    max_files: 10
+    max_age: 30  # days
+    compress: true
+  
+  # Log Aggregation
+  aggregation:
+    enabled: true
+    endpoint: "${LOG_AGGREGATION_ENDPOINT}"
+    api_key: "${LOG_AGGREGATION_API_KEY}"
+  
+  # Log Formats
+  formats:
+    application: "json"
+    access: "combined"
+    error: "detailed"
+
+# Performance Configuration
+performance:
+  # Caching Configuration
+  caching:
+    redis:
+      default_ttl: 3600  # 1 hour
+      max_memory: "256mb"
+      eviction_policy: "allkeys-lru"
+    
+    application:
+      intent_cache_ttl: 1800  # 30 minutes
+      response_cache_ttl: 900  # 15 minutes
+      session_cache_ttl: 3600  # 1 hour
+  
+  # Connection Pooling
+  connection_pools:
+    database:
+      min_connections: 5
+      max_connections: 50
+      connection_timeout: 30
+      idle_timeout: 300
+    
+    redis:
+      min_connections: 2
+      max_connections: 20
+      connection_timeout: 10
+      idle_timeout: 60
+  
+  # Resource Limits
+  resources:
+    cpu_limit: "2000m"  # 2 CPU cores
+    memory_limit: "4Gi"  # 4 GB RAM
+    disk_limit: "50Gi"  # 50 GB disk
+  
+  # Auto-scaling Triggers
+  auto_scaling:
+    cpu_threshold: 70
+    memory_threshold: 80
+    response_time_threshold: 2000  # 2 seconds
+    error_rate_threshold: 5  # 5%
+
+# Development Configuration
+development:
+  # Hot Reload
+  hot_reload:
+    enabled: true
+    watch_patterns:
+      - "*.py"
+      - "*.js"
+      - "*.tsx"
+      - "*.yml"
+  
+  # Debug Configuration
+  debug:
+    enabled: true
+    log_level: "DEBUG"
+    profiling: true
+  
+  # Test Configuration
+  testing:
+    unit_tests: true
+    integration_tests: true
+    e2e_tests: false
+    coverage_threshold: 80
+
+# Staging Configuration
+staging:
+  # Resource Scaling
+  resources:
+    cpu_limit: "1000m"  # 1 CPU core
+    memory_limit: "2Gi"  # 2 GB RAM
+  
+  # Database Configuration
+  database:
+    mongodb_tier: "M2"
+    redis_instance: "cache.t3.micro"
+  
+  # Monitoring
+  monitoring:
+    retention_time: "7d"
+    scrape_interval: "30s"
+
+# Production Configuration
+production:
+  # High Availability
+  high_availability:
+    enabled: true
+    multi_az: true
+    backup_region: "us-west-2"
+  
+  # Resource Scaling
+  resources:
+    cpu_limit: "4000m"  # 4 CPU cores
+    memory_limit: "8Gi"  # 8 GB RAM
+  
+  # Database Configuration
+  database:
+    mongodb_tier: "M30"
+    redis_instance: "cache.t3.medium"
+    read_replicas: 2
+  
+  # Security Hardening
+  security:
+    strict_mode: true
+    audit_logging: true
+    intrusion_detection: true
+  
+  # Performance Optimization
+  performance:
+    cdn_enabled: true
+    compression_enabled: true
+    caching_aggressive: true
+
+# Disaster Recovery Configuration
+disaster_recovery:
+  # Backup Strategy
+  backup_strategy:
+    frequency: "hourly"
+    cross_region: true
+    encryption: true
+  
+  # Recovery Objectives
+  rto: 4  # Recovery Time Objective (hours)
+  rpo: 1  # Recovery Point Objective (hours)
+  
+  # Failover Configuration
+  failover:
+    automatic: true
+    health_check_interval: 60  # seconds
+    failure_threshold: 3
+  
+  # Recovery Testing
+  recovery_testing:
+    schedule: "monthly"
+    automated: true
+    documentation: true
+
+# Compliance Configuration
+compliance:
+  # Data Protection
+  data_protection:
+    encryption_at_rest: true
+    encryption_in_transit: true
+    key_rotation: true
+    data_masking: true
+  
+  # Audit Configuration
+  audit:
+    enabled: true
+    log_all_access: true
+    retention_period: 2555  # 7 years in days
+    tamper_protection: true
+  
+  # Privacy Configuration
+  privacy:
+    gdpr_compliance: true
+    data_anonymization: true
+    consent_management: true
+    right_to_deletion: true

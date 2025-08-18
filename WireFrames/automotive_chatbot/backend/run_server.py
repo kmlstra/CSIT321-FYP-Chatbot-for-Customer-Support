@@ -23,7 +23,7 @@ try:
         print(f"Project root: {project_root}")
         # Use unified domain:port approach
         domain = os.getenv('DOMAIN', 'http://localhost')
-        backend_port = os.getenv('BACKEND_PORT', '8001')
+        backend_port = os.getenv('BACKEND_PORT', '8000')
         print(f"Server will be available at: {domain}:{backend_port}")
         print(f"API documentation: {domain}:{backend_port}/docs")
         print("\nPress Ctrl+C to stop the server\n")

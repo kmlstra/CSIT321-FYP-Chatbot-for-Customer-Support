@@ -46,12 +46,11 @@ rasa_payload = {
 Automatic capture and storage of all conversation data:
 
 ```python
-# Store user message
-conversation_storage.store_message(
+# Store user message using unified conversation service
+unified_conversation_service.store_message(
     session_id=sender_id,
-    message_type='user_message',
-    content=user_message,
-    sender='user',
+    message=user_message,
+    message_type=MessageType.USER,
     metadata={
         'timestamp': datetime.utcnow().isoformat(),
         'source': 'api_proxy',
@@ -59,13 +58,12 @@ conversation_storage.store_message(
     }
 )
 
-# Store bot responses
+# Store bot responses using unified conversation service
 for bot_response in rasa_responses:
-    conversation_storage.store_message(
+    unified_conversation_service.store_message(
         session_id=sender_id,
-        message_type='bot_response',
-        content=bot_text,
-        sender='bot',
+        message=bot_text,
+        message_type=MessageType.ASSISTANT,
         metadata={
             'timestamp': datetime.utcnow().isoformat(),
             'source': 'api_proxy',
@@ -178,12 +176,12 @@ try:
     response.raise_for_status()
 except httpx.RequestError as e:
     logger.error(f"Error connecting to RASA: {e}")
-    # Store error in conversation log
-    conversation_storage.store_message(
+    # Store error in conversation log using unified service
+    unified_conversation_service.store_message(
         session_id=sender_id,
-        message_type='error',
-        content=f"RASA connection error: {str(e)}",
-        sender='system'
+        message=f"RASA connection error: {str(e)}",
+        message_type=MessageType.ERROR,
+        metadata={'source': 'api_proxy'}
     )
     raise HTTPException(status_code=503, detail="RASA service unavailable")
 ```

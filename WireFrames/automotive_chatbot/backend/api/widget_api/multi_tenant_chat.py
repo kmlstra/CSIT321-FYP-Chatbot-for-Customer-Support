@@ -128,8 +128,8 @@ class ChatHandler:
                                 response_texts.append(rasa_resp["text"])
                         
                         if response_texts:
-                            # Join multiple responses with newlines to preserve multiline format
-                            bot_response = "\n".join(response_texts)
+                            # Join multiple responses with double newlines to preserve multiline format
+                            bot_response = "\n\n".join(response_texts)
                         else:
                             bot_response = "I'm here to help! How can I assist you today?"
                     else:

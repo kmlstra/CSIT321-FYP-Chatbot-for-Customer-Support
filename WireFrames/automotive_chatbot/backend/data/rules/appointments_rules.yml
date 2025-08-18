@@ -52,3 +52,30 @@ rules:
 #   steps:
 #   - intent: confirm_appointment
 #   - action: action_book_appointment
+
+# Form handling rules for appointment booking
+- rule: Activate appointment form
+  condition:
+  - active_loop: null
+  steps:
+  - action: appointment_form
+  - active_loop: appointment_form
+
+- rule: Submit appointment form
+  condition:
+  - active_loop: appointment_form
+  steps:
+  - action: appointment_form
+  - active_loop: null
+  - slot_was_set:
+    - requested_slot: null
+  - action: utter_appointment_confirmed
+
+- rule: Handle appointment form interruption
+  condition:
+  - active_loop: appointment_form
+  steps:
+  - intent: deny
+  - action: action_deactivate_loop
+  - active_loop: null
+  - action: utter_appointment_cancelled

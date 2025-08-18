@@ -1,0 +1,419 @@
+# AWS EC2 Configuration for Automotive Chatbot
+# This file contains all AWS-related configuration settings
+
+aws:
+  region: ap-southeast-1
+  availability_zone: ap-southeast-1a
+  
+  # EC2 Instance Configuration
+  ec2:
+    instance_type: t3.medium  # 2 vCPU, 4 GB RAM
+    ami_id: ami-0c02fb55956c7d316  # Ubuntu 20.04 LTS
+    key_pair_name: automotive-chatbot-key
+    
+    # Storage Configuration
+    storage:
+      root_volume:
+        size: 30  # GB
+        type: gp3
+        encrypted: true
+      
+    # Network Configuration
+    network:
+      vpc_id: vpc-xxxxxxxxx
+      subnet_id: subnet-xxxxxxxxx
+      security_group_ids:
+        - sg-xxxxxxxxx  # Web traffic security group
+        - sg-yyyyyyyyy  # SSH access security group
+      
+      # Elastic IP (optional)
+      allocate_eip: true
+      
+    # Tags
+    tags:
+      Name: automotive-chatbot-server
+      Environment: production
+      Project: automotive-chatbot
+      Owner: your-team
+      CostCenter: engineering
+      
+  # Security Groups Configuration
+  security_groups:
+    web_traffic:
+      name: automotive-chatbot-web
+      description: Allow web traffic for automotive chatbot
+      rules:
+        ingress:
+          - protocol: tcp
+            port: 80
+            source: 0.0.0.0/0
+            description: HTTP traffic
+          - protocol: tcp
+            port: 443
+            source: 0.0.0.0/0
+            description: HTTPS traffic
+          - protocol: tcp
+            port: 3000
+            source: 0.0.0.0/0
+            description: Frontend application
+          - protocol: tcp
+            port: 8000
+            source: 0.0.0.0/0
+            description: Backend API
+          - protocol: tcp
+            port: 5005
+            source: 0.0.0.0/0
+            description: RASA Core
+        egress:
+          - protocol: -1
+            port: -1
+            destination: 0.0.0.0/0
+            description: All outbound traffic
+    
+    ssh_access:
+      name: automotive-chatbot-ssh
+      description: SSH access for automotive chatbot
+      rules:
+        ingress:
+          - protocol: tcp
+            port: 22
+            source: your-ip/32  # Replace with your IP
+            description: SSH access
+        egress:
+          - protocol: -1
+            port: -1
+            destination: 0.0.0.0/0
+            description: All outbound traffic
+
+  # Load Balancer Configuration (for scaling)
+  load_balancer:
+    enabled: false
+    type: application
+    scheme: internet-facing
+    listeners:
+      - port: 80
+        protocol: HTTP
+        target_group: automotive-chatbot-targets
+      - port: 443
+        protocol: HTTPS
+        target_group: automotive-chatbot-targets
+        ssl_certificate_arn: arn:aws:acm:region:account:certificate/certificate-id
+    
+    target_group:
+      name: automotive-chatbot-targets
+      port: 3000
+      protocol: HTTP
+      health_check:
+        path: /health
+        interval: 30
+        timeout: 5
+        healthy_threshold: 2
+        unhealthy_threshold: 3
+
+  # Auto Scaling Configuration (for high availability)
+  auto_scaling:
+    enabled: false
+    min_size: 1
+    max_size: 3
+    desired_capacity: 1
+    
+    scaling_policies:
+      scale_up:
+        metric: CPUUtilization
+        threshold: 70
+        comparison: GreaterThanThreshold
+        evaluation_periods: 2
+        period: 300
+        adjustment_type: ChangeInCapacity
+        scaling_adjustment: 1
+      
+      scale_down:
+        metric: CPUUtilization
+        threshold: 30
+        comparison: LessThanThreshold
+        evaluation_periods: 2
+        period: 300
+        adjustment_type: ChangeInCapacity
+        scaling_adjustment: -1
+
+  # CloudWatch Configuration
+  cloudwatch:
+    enabled: true
+    log_groups:
+      - name: /aws/ec2/automotive-chatbot
+        retention_days: 30
+      - name: /aws/docker/automotive-chatbot
+        retention_days: 14
+    
+    alarms:
+      high_cpu:
+        metric: CPUUtilization
+        threshold: 80
+        comparison: GreaterThanThreshold
+        evaluation_periods: 2
+        period: 300
+        actions:
+          - sns_topic_arn: arn:aws:sns:region:account:automotive-chatbot-alerts
+      
+      high_memory:
+        metric: MemoryUtilization
+        threshold: 85
+        comparison: GreaterThanThreshold
+        evaluation_periods: 2
+        period: 300
+        actions:
+          - sns_topic_arn: arn:aws:sns:region:account:automotive-chatbot-alerts
+      
+      disk_space:
+        metric: DiskSpaceUtilization
+        threshold: 90
+        comparison: GreaterThanThreshold
+        evaluation_periods: 1
+        period: 300
+        actions:
+          - sns_topic_arn: arn:aws:sns:region:account:automotive-chatbot-alerts
+
+  # S3 Configuration (for backups and static assets)
+  s3:
+    buckets:
+      backups:
+        name: automotive-chatbot-backups
+        versioning: true
+        encryption: AES256
+        lifecycle_rules:
+          - id: delete_old_backups
+            status: Enabled
+            expiration_days: 90
+      
+      static_assets:
+        name: automotive-chatbot-assets
+        public_read: true
+        cors_enabled: true
+        website_hosting: true
+
+  # RDS Configuration (if using AWS RDS instead of MongoDB Atlas)
+  rds:
+    enabled: false
+    engine: postgres
+    engine_version: "13.7"
+    instance_class: db.t3.micro
+    allocated_storage: 20
+    storage_encrypted: true
+    multi_az: false
+    backup_retention_period: 7
+    backup_window: "03:00-04:00"
+    maintenance_window: "sun:04:00-sun:05:00"
+    
+    database:
+      name: automotive_chatbot
+      username: chatbot_user
+      password: "{{ vault_db_password }}"  # Use AWS Secrets Manager
+    
+    security_group_ids:
+      - sg-zzzzzzzzz  # Database security group
+
+# Application Configuration
+application:
+  name: automotive-chatbot
+  version: "1.0.0"
+  environment: production
+  
+  # Docker Configuration
+  docker:
+    registry: your-account.dkr.ecr.ap-southeast-1.amazonaws.com
+    images:
+      frontend: automotive-chatbot/frontend:latest
+      backend: automotive-chatbot/backend:latest
+      rasa_core: automotive-chatbot/rasa-core:latest
+      rasa_actions: automotive-chatbot/rasa-actions:latest
+  
+  # Health Check Configuration
+  health_checks:
+    frontend:
+      url: http://localhost:3000/health
+      timeout: 5
+      interval: 30
+    
+    backend:
+      url: http://localhost:8000/health
+      timeout: 5
+      interval: 30
+    
+    rasa_core:
+      url: http://localhost:5005/status
+      timeout: 10
+      interval: 60
+    
+    rasa_actions:
+      url: http://localhost:5055/health
+      timeout: 10
+      interval: 60
+  
+  # Backup Configuration
+  backups:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention_days: 30
+    s3_bucket: automotive-chatbot-backups
+    
+    items:
+      - type: docker_volumes
+        volumes:
+          - rasa_models
+          - app_logs
+      - type: application_config
+        paths:
+          - /opt/automotive-chatbot/.env
+          - /opt/automotive-chatbot/docker-compose.yml
+      - type: ssl_certificates
+        paths:
+          - /etc/letsencrypt
+
+# Monitoring and Logging
+monitoring:
+  # Prometheus Configuration
+  prometheus:
+    enabled: true
+    port: 9090
+    retention: 15d
+    
+    targets:
+      - job_name: automotive-chatbot
+        static_configs:
+          - targets:
+            - localhost:3000
+            - localhost:8000
+            - localhost:5005
+            - localhost:5055
+  
+  # Grafana Configuration
+  grafana:
+    enabled: true
+    port: 3001
+    admin_password: "{{ vault_grafana_password }}"
+    
+    dashboards:
+      - name: System Metrics
+        file: dashboards/system-metrics.json
+      - name: Application Metrics
+        file: dashboards/app-metrics.json
+      - name: RASA Metrics
+        file: dashboards/rasa-metrics.json
+  
+  # Log Aggregation
+  logging:
+    driver: awslogs
+    options:
+      awslogs-group: /aws/docker/automotive-chatbot
+      awslogs-region: ap-southeast-1
+      awslogs-stream-prefix: automotive-chatbot
+
+# Security Configuration
+security:
+  # SSL/TLS Configuration
+  ssl:
+    enabled: true
+    certificate_source: letsencrypt  # or aws_acm
+    domains:
+      - yourdomain.com
+      - www.yourdomain.com
+    
+    # Let's Encrypt Configuration
+    letsencrypt:
+      email: admin@yourdomain.com
+      staging: false
+  
+  # Firewall Configuration
+  firewall:
+    enabled: true
+    default_policy: deny
+    
+    allowed_ports:
+      - 22    # SSH
+      - 80    # HTTP
+      - 443   # HTTPS
+      - 3000  # Frontend
+      - 8000  # Backend API
+      - 5005  # RASA Core
+  
+  # Fail2Ban Configuration
+  fail2ban:
+    enabled: true
+    ban_time: 3600
+    find_time: 600
+    max_retry: 5
+    
+    jails:
+      - name: sshd
+        enabled: true
+      - name: nginx-http-auth
+        enabled: true
+      - name: nginx-limit-req
+        enabled: true
+
+# Performance Optimization
+performance:
+  # System Optimization
+  system:
+    swap_size: 2G
+    max_open_files: 65536
+    tcp_keepalive: true
+    
+    # Kernel Parameters
+    kernel_params:
+      net.core.somaxconn: 65535
+      net.ipv4.tcp_max_syn_backlog: 65535
+      vm.swappiness: 10
+  
+  # Docker Optimization
+  docker:
+    log_driver: json-file
+    log_opts:
+      max-size: 10m
+      max-file: 3
+    
+    # Resource Limits
+    resource_limits:
+      frontend:
+        memory: 512m
+        cpus: 0.5
+      backend:
+        memory: 1g
+        cpus: 1.0
+      rasa_core:
+        memory: 2g
+        cpus: 1.0
+      rasa_actions:
+        memory: 1g
+        cpus: 0.5
+
+# Deployment Configuration
+deployment:
+  strategy: rolling_update
+  max_unavailable: 0
+  max_surge: 1
+  
+  # Pre-deployment Checks
+  pre_checks:
+    - health_check_all_services
+    - verify_database_connection
+    - check_disk_space
+    - validate_configuration
+  
+  # Post-deployment Actions
+  post_actions:
+    - run_smoke_tests
+    - update_monitoring_dashboards
+    - send_deployment_notification
+    - create_deployment_backup
+  
+  # Rollback Configuration
+  rollback:
+    enabled: true
+    automatic: false
+    health_check_timeout: 300
+    
+    triggers:
+      - health_check_failure
+      - high_error_rate
+      - memory_leak_detection

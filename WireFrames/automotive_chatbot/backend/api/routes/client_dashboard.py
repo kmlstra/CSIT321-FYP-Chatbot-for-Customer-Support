@@ -191,25 +191,76 @@ async def get_conversation_details(
     client_id = current_user["client"]["id"]
     
     try:
-        # Get the specific conversation
-        conversation = await security_manager.db.conversations.find_one({
-            "client_id": client_id,
-            "$or": [
-                {"_id": ObjectId(conversation_id) if ObjectId.is_valid(conversation_id) else None},
-                {"conversation_id": conversation_id},
-                {"session_id": conversation_id}
-            ]
-        })
+        # Get all messages for this conversation_id
+        query_conditions = [
+            {"conversation_id": conversation_id},
+            {"session_id": conversation_id}
+        ]
         
-        if not conversation:
+        # Only add ObjectId query if conversation_id is a valid ObjectId
+        if ObjectId.is_valid(conversation_id):
+            query_conditions.append({"_id": ObjectId(conversation_id)})
+        
+        # Find all messages for this conversation
+        messages_cursor = security_manager.db.unified_conversations.find({
+            "client_id": client_id,
+            "$or": query_conditions
+        }).sort("timestamp", 1)  # Sort by timestamp ascending
+        
+        messages = await messages_cursor.to_list(length=None)
+        
+        if not messages:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Conversation not found"
             )
         
-        # Convert ObjectId to string
-        if "_id" in conversation:
-            conversation["_id"] = str(conversation["_id"])
+        # Convert ObjectId to string and format messages
+        formatted_messages = []
+        conversation_info = None
+        
+        for msg in messages:
+            if "_id" in msg:
+                msg["_id"] = str(msg["_id"])
+            
+            # Format message for frontend
+            message_type = msg.get("message_type", "user")
+            # Map message_type to role for frontend compatibility
+            # Ensure proper role mapping: user messages -> "user", assistant/bot messages -> "assistant"
+            if message_type.lower() in ["user", "customer"]:
+                role = "user"
+            elif message_type.lower() in ["assistant", "bot", "system"]:
+                role = "assistant"
+            else:
+                # Default fallback - if message_type is unclear, default to user for safety
+                role = "user"
+            
+            formatted_msg = {
+                "id": msg.get("message_id", str(msg.get("_id", ""))),
+                "content": msg.get("message", ""),
+                "type": message_type,  # Keep original type for backward compatibility
+                "role": role,  # Add role field for frontend Dashboard
+                "timestamp": msg.get("timestamp"),
+                "metadata": msg.get("metadata", {})
+            }
+            formatted_messages.append(formatted_msg)
+            
+            # Use first message to get conversation info
+            if conversation_info is None:
+                conversation_info = {
+                    "conversation_id": msg.get("conversation_id", conversation_id),
+                    "session_id": msg.get("session_id"),
+                    "client_id": msg.get("client_id"),
+                    "created_at": msg.get("created_at") or msg.get("timestamp"),
+                    "updated_at": messages[-1].get("timestamp") if messages else msg.get("timestamp")
+                }
+        
+        # Create conversation object with messages array
+        conversation = {
+            **conversation_info,
+            "messages": formatted_messages,
+            "total_messages": len(formatted_messages)
+        }
         
         # Return the conversation with messages
         return {
@@ -492,6 +543,14 @@ async def update_features_config(
                 }
             }
         )
+        
+        # Clear feature cache to ensure immediate effect
+        try:
+            from api.cache.feature_cache_manager import get_feature_cache_manager
+            cache_manager = get_feature_cache_manager()
+            cache_manager.invalidate_client(client_id)
+        except Exception as cache_error:
+            print(f"Warning: Failed to clear feature cache: {cache_error}")
         
         return {"message": "Features updated successfully"}
         
