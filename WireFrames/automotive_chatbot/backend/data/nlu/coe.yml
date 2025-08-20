@@ -280,6 +280,10 @@ nlu:
   examples: |
     - coe renewal
     - renew coe
+    - how to renew coe
+    - how to renew my coe
+    - how do i renew coe
+    - how can i renew coe
     - coe expiry
     - what happens when coe expires
     - extend coe
@@ -287,6 +291,11 @@ nlu:
     - 10 year coe
     - renewing certificate
     - parf rebate
+    - renew my coe
+    - renewal process
+    - coe renewal process
+    - how to extend coe
+    - coe renewal procedure
 
 - intent: ask_coe_renewal_assistance
   examples: |

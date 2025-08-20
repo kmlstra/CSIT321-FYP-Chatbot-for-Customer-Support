@@ -99,6 +99,15 @@ nlu:
     - when do you operate
     - operation timings
     - store hours
+    - what are your operating hours
+    - what are the operating hours
+    - when do you open
+    - when do you close
+    - what time are you open
+    - what time are you closed
+    - your operating hours
+    - operating time
+    - operation hours
 
 - intent: ask_business_hours
   examples: |
@@ -112,6 +121,14 @@ nlu:
     - corporate hours
     - professional hours
     - work hours
+    - what are your business hours
+    - what are the business hours
+    - your business hours
+    - business operating hours
+    - office operating hours
+    - work schedule
+    - business schedule
+    - office schedule
 
 - intent: ask_public_holiday_hours
   examples: |

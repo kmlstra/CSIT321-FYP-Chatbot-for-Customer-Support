@@ -16,7 +16,7 @@ from .live_support_actions import ActionLiveSupport
 from .contact_actions import ActionSmartContact
 
 # Import Appointment actions
-from .appointment_actions import ActionValidateIntent, ActionBookAppointment, ActionViewAppointments, ActionCancelAppointment
+from .appointment_actions import ActionValidateIntent, ActionBookAppointment, ActionViewAppointments, ActionCancelAppointment, AppointmentForm
 
 # Import Loan Calculator actions
 from .loan_calculator_actions import ActionLoanCalculator
@@ -52,6 +52,7 @@ __all__ = [
     'ActionBookAppointment',
     'ActionViewAppointments',
     'ActionCancelAppointment',
+    'AppointmentForm',
     
     # Loan Calculator Actions
     'ActionLoanCalculator'

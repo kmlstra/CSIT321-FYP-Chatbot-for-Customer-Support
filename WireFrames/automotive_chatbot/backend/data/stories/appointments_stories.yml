@@ -2,45 +2,105 @@ version: "3.1"
 
 stories:
 
-# Enhanced appointment booking flow - using new calculator format
-- story: book appointment simple
+- story: simple appointment booking
   steps:
   - intent: book_appointment
   - action: action_book_appointment
 
-# Appointment booking with some initial details
-- story: book appointment with details
+- story: appointment booking with service type
   steps:
   - intent: book_appointment
     entities:
     - service_type: "test drive"
   - action: action_book_appointment
 
-# Appointment booking with sales consultation
-- story: book appointment sales consultation
+- story: appointment form completion flow
   steps:
-  - intent: book_appointment
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: service_type
+  - intent: inform
     entities:
-    - service_type: "sales consultation"
-    - date: "tomorrow"
-  - action: action_book_appointment
+    - service_type: "test drive"
+  - action: appointment_form
+  - slot_was_set:
+    - requested_slot: customer_name
+  - intent: inform
+    entities:
+    - customer_name: "John Doe"
+  - action: appointment_form
+  - slot_was_set:
+    - requested_slot: customer_phone
+  - intent: inform
+    entities:
+    - customer_phone: "91234567"
+  - action: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_date
+  - intent: inform
+    entities:
+    - appointment_date: "tomorrow"
+  - action: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
+    entities:
+    - appointment_time: "2pm"
+  - action: appointment_form
+  - active_loop: null
+  - slot_was_set:
+    - requested_slot: null
+  - action: action_submit_appointment_form
 
-# Appointment booking with financing discussion
-- story: book appointment financing
+- story: appointment form time input - 2pm
   steps:
-  - intent: book_appointment
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
     entities:
-    - service_type: "financing discussion"
-    - time: "afternoon"
-  - action: action_book_appointment
+    - appointment_time: "2pm"
+  - action: appointment_form
 
-# Appointment booking with date preference
-- story: book appointment with date
+- story: appointment form time input - 2:00 PM
   steps:
-  - intent: book_appointment
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
     entities:
-    - appointment_date: "Monday"
-  - action: action_book_appointment
+    - appointment_time: "2:00 PM"
+  - action: appointment_form
+
+- story: appointment form time input - 14:00
+  steps:
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
+    entities:
+    - appointment_time: "14:00"
+  - action: appointment_form
+
+- story: appointment form time input - afternoon
+  steps:
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
+    entities:
+    - appointment_time: "afternoon"
+  - action: appointment_form
+
+- story: appointment form time input - o'clock
+  steps:
+  - active_loop: appointment_form
+  - slot_was_set:
+    - requested_slot: appointment_time
+  - intent: inform
+    entities:
+    - appointment_time: "2 o'clock"
+  - action: appointment_form
 
 # Legacy appointment booking flow - for backward compatibility
 - story: book appointment legacy

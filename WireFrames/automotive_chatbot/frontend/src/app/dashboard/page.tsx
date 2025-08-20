@@ -165,7 +165,7 @@ export default function ClientDashboard() {
   const [features, setFeatures] = useState({
     coe_prices: true,
     loan_calculator: true,
-    appointment_booking: false,  // Default to false, enable based on client configuration
+    appointment_booking: true,  // Enable appointment booking functionality
     maintenance_tips: true,
     vehicle_search: true,
     live_support: true
@@ -1341,7 +1341,7 @@ export default function ClientDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={getAnalyticsData('daily_users')}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="period" />
+                        <XAxis dataKey="period" interval={0} />
                         <YAxis />
                         <Tooltip />
                         <Legend />
@@ -1366,7 +1366,7 @@ export default function ClientDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={getAnalyticsData('conversations')}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="period" />
+                        <XAxis dataKey="period" interval={0} />
                         <YAxis />
                         <Tooltip />
                         <Legend />
@@ -1391,7 +1391,7 @@ export default function ClientDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={getAnalyticsData('appointments')}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="period" />
+                        <XAxis dataKey="period" interval={0} />
                         <YAxis />
                         <Tooltip />
                         <Legend />

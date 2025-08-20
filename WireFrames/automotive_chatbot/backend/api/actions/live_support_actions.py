@@ -141,9 +141,6 @@ class ActionLiveSupport(AutoLoggedAction):
     @validate_high_confidence(confidence_threshold=0.7)
     async def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         try:
-            # Send immediate acknowledgment for better perceived performance
-            dispatcher.utter_message(text="🔍 Connecting you to live support...")
-            
             # Get client_id from tracker metadata
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
             

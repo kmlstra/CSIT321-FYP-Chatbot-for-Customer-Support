@@ -6,10 +6,10 @@ Optimized with async processing, database connection pooling, and enhanced cachi
 import os
 import logging
 import asyncio
-from typing import Any, Text, Dict, List, Optional
+from typing import Any, Text, Dict, List, Optional, Tuple, Union
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
-from rasa_sdk.events import SlotSet, FollowupAction
+from rasa_sdk.events import SlotSet, FollowupAction, ActiveLoop
 from rasa_sdk.forms import FormValidationAction, REQUESTED_SLOT
 from rasa_sdk.types import DomainDict
 from .auto_logger import AutoLoggedAction
@@ -60,9 +60,8 @@ if not logger.handlers:
     logger.addHandler(console_handler)
     logger.propagate = False
 
-# Initialize global instances
+# Initialize global database pool instance
 database_pool = get_database_pool()
-db_pool = DatabasePool()
 
 # Async MongoDB connection helpers
 async def get_mongo_collection(collection_name: str) -> Optional[AsyncIOMotorCollection]:
@@ -84,7 +83,7 @@ async def get_database_stats() -> Dict[str, Any]:
 async def get_mongodb_client():
     """Get MongoDB client connection using connection pool"""
     try:
-        db = await db_pool.get_database()
+        db = await database_pool.get_database()
         if not db:
             logger.error("Failed to get database from connection pool")
             return None
@@ -141,7 +140,8 @@ async def get_client_data_from_db(client_id: str):
             return None
     
     # Use enhanced cache with 5-minute TTL
-    return await cache_get_or_set(cache_key, fetch_client_data, ttl=300)
+    cache = get_cache()
+    return await cache.get_or_set(cache_key, fetch_client_data, ttl=300)
 
 @cache_result(ttl=600, key_prefix="appointment_types")
 async def get_appointment_types_from_db() -> List[Dict[str, Any]]:
@@ -265,9 +265,8 @@ class AsyncActionViewAppointments(AutoLoggedAction):
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
             if client_id:
                 if not check_appointment_feature_enabled(client_id):
-                    dispatcher.utter_message(
-                        text="I'm sorry, but appointment viewing is currently not available. Please contact our support team for assistance."
-                    )
+                    response_message = "I'm sorry, but appointment viewing is currently not available. Please contact our support team for assistance."
+                    dispatcher.utter_message(text=response_message)
                     return []
             
             # Get customer phone number to find appointments
@@ -283,17 +282,24 @@ class AsyncActionViewAppointments(AutoLoggedAction):
                     return [SlotSet("customer_phone", customer_phone)]
             
             if not customer_phone:
+                # Single response with auto-fill functionality
+                response_message = "📱 **Let me help you check your appointments!**\n\nTo view your booking history and upcoming appointments, I'll need your phone number. Please provide the number you used when making your bookings."
                 dispatcher.utter_message(
-                    text="📱 **Let me help you check your appointments!**\n\nTo view your booking history and upcoming appointments, I'll need your phone number. Please provide the number you used when making your bookings."
+                    text=response_message,
+                    buttons=[
+                        {
+                            "title": "Enter Phone Number",
+                            "payload": "autofill:my phone number is "
+                        }
+                    ]
                 )
                 return []
             
             appointments = await self._get_customer_appointments_async(customer_phone)
             
             if not appointments:
-                dispatcher.utter_message(
-                    text="🔍 **No Appointments Found**\n\nI couldn't find any appointments linked to this phone number in our system.\n\n💡 **Possible reasons:**\n• Different phone number was used for booking\n• Appointments were made under a different contact\n• No appointments have been scheduled yet\n\n🚗 **Ready to get started?** I'd be happy to help you book your first appointment! Just let me know what service you need."
-                )
+                response_message = "🔍 **No Appointments Found**\n\nI couldn't find any appointments linked to this phone number in our system.\n\n💡 **Possible reasons:**\n• Different phone number was used for booking\n• Appointments were made under a different contact\n• No appointments have been scheduled yet\n\n🚗 **Ready to get started?** I'd be happy to help you book your first appointment! Just let me know what service you need."
+                dispatcher.utter_message(text=response_message)
                 return []
             
             # Separate upcoming and past appointments
@@ -317,7 +323,7 @@ class AsyncActionViewAppointments(AutoLoggedAction):
             dispatcher.utter_message(text=fallback_message)
             
             # Log action execution failure and bot response
-            self.log_action_execution("AsyncActionViewAppointments", tracker, success=False, error=str(e))
+            self.log_action_execution("AsyncActionViewAppointments", tracker, success=False, error_message=str(e))
             self.log_bot_response(dispatcher, tracker, "AsyncActionViewAppointments")
             
             return []
@@ -381,7 +387,8 @@ class AsyncActionViewAppointments(AutoLoggedAction):
                 return []
         
         # Cache for 2 minutes (shorter TTL for appointment data)
-        return await cache_get_or_set(cache_key, fetch_appointments, ttl=120)
+        cache = get_cache()
+        return await cache.get_or_set(cache_key, fetch_appointments, ttl=120)
 
     async def _format_appointments_message_async(self, upcoming: List[Dict], past: List[Dict]) -> str:
         """Format appointments into a readable message"""
@@ -389,65 +396,36 @@ class AsyncActionViewAppointments(AutoLoggedAction):
         
         # Add header message
         total_appointments = len(upcoming) + len(past)
-        message_parts.append(f"""<div style="margin-bottom: 20px; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; text-align: center;">
-<h2 style="margin: 0 0 8px 0; font-size: 24px;">🗓️ Your Appointment Dashboard</h2>
-<p style="margin: 0; opacity: 0.9;">Found {total_appointments} appointment{'s' if total_appointments != 1 else ''} in your booking history</p>
-</div>""")
+        message_parts.append(f"🗓️ **Your Appointment Dashboard**\n\nFound {total_appointments} appointment{'s' if total_appointments != 1 else ''} in your booking history\n")
 
         if upcoming:
-            message_parts.append("<div style='margin-bottom: 20px;'>")
-            message_parts.append("<h3 style='color: #059669; margin-bottom: 12px;'>📅 Upcoming Appointments</h3>")
+            message_parts.append("\n📅 **Upcoming Appointments:**\n")
             
             for apt in upcoming:
                 formatted_date = apt['appointment_datetime'].strftime('%B %d, %Y')
                 formatted_time = apt['appointment_datetime'].strftime('%I:%M %p')
                 
-                message_parts.append(f"""
-<div style="
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-">
-    <p style="margin: 0 0 8px 0; font-weight: bold; color: #059669;">ID: {apt['appointment_id'][:8]}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Date:</strong> {formatted_date}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Time:</strong> {formatted_time}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Service:</strong> {apt['service_type']}</p>
-    <p style="margin: 0;"><strong>Status:</strong> {apt['status'].title()}</p>
-</div>
-""")
-
-            message_parts.append("</div>")
+                message_parts.append(f"\n• **ID:** {apt['appointment_id'][:8]}\n")
+                message_parts.append(f"  **Date:** {formatted_date}\n")
+                message_parts.append(f"  **Time:** {formatted_time}\n")
+                message_parts.append(f"  **Service:** {apt['service_type']}\n")
+                message_parts.append(f"  **Status:** {apt['status'].title()}\n")
         
         if past:
-            message_parts.append("<div style='margin-bottom: 20px;'>")
-            message_parts.append("<h3 style='color: #6b7280; margin-bottom: 12px;'>📋 Past Appointments</h3>")
+            message_parts.append("\n📋 **Past Appointments:**\n")
             
             for apt in past[:3]:  # Show only last 3 past appointments
                 formatted_date = apt['appointment_datetime'].strftime('%B %d, %Y')
                 formatted_time = apt['appointment_datetime'].strftime('%I:%M %p')
                 
-                message_parts.append(f"""
-<div style="
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-">
-    <p style="margin: 0 0 8px 0; font-weight: bold; color: #6b7280;">ID: {apt['appointment_id'][:8]}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Date:</strong> {formatted_date}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Time:</strong> {formatted_time}</p>
-    <p style="margin: 0 0 4px 0;"><strong>Service:</strong> {apt['service_type']}</p>
-    <p style="margin: 0;"><strong>Status:</strong> {apt['status'].title()}</p>
-</div>
-""")
+                message_parts.append(f"\n• **ID:** {apt['appointment_id'][:8]}\n")
+                message_parts.append(f"  **Date:** {formatted_date}\n")
+                message_parts.append(f"  **Time:** {formatted_time}\n")
+                message_parts.append(f"  **Service:** {apt['service_type']}\n")
+                message_parts.append(f"  **Status:** {apt['status'].title()}\n")
 
             if len(past) > 3:
-                message_parts.append(f"<p style='color: #6b7280; font-style: italic;'>... and {len(past) - 3} more past appointments</p>")
-            
-            message_parts.append("</div>")
+                message_parts.append(f"\n... and {len(past) - 3} more past appointments\n")
         
         if not upcoming and not past:
             return "No appointments found."
@@ -480,32 +458,46 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
         try:
             # Check if appointment booking feature is enabled for this client
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
-            if client_id:
-                if not check_appointment_feature_enabled(client_id):
+            
+            # If no client_id, use default 'test_client' for testing or fallback
+            if not client_id:
+                client_id = 'test_client'
+            
+            if not check_appointment_feature_enabled(client_id):
+                response_message = "I'm sorry, but appointment management is currently not available. Please contact our support team for assistance."
+                dispatcher.utter_message(text=response_message)
+                return []
+            
+            customer_phone = tracker.get_slot("customer_phone")
+            
+            if not customer_phone:
+                # Try to extract from latest message
+                latest_message = tracker.latest_message.get('text', '')
+                phone_match = re.search(r'\b\d{8,}\b', latest_message)
+                if phone_match:
+                    customer_phone = phone_match.group()
+                else:
+                    # Auto-fill phone number in input box directly
+                    response_message = "📱 I'd be happy to help you cancel your appointment! For security purposes, I'll need to verify your phone number before proceeding."
                     dispatcher.utter_message(
-                        text="I'm sorry, but appointment management is currently not available. Please contact our support team for assistance."
+                        text=response_message,
+                        json_message={
+                            "autofill": "cancel appointment for "
+                        }
                     )
                     return []
             
-            appointment_id = tracker.get_slot("appointment_id")
-            customer_phone = tracker.get_slot("customer_phone")
-            
-            if not appointment_id:
-                dispatcher.utter_message(
-                    text="🔍 I'd be happy to help you cancel your appointment! To proceed, I'll need your appointment ID. You can find this in your booking confirmation."
-                )
-                return []
-            
-            if not customer_phone:
-                dispatcher.utter_message(
-                    text="📱 For security purposes, I'll need to verify your phone number before cancelling the appointment. Could you please provide the phone number used for booking?"
-                )
-                return []
-            
-            success, cancelled_appointment = await self._cancel_appointment_async(appointment_id, customer_phone)
+            success, cancelled_appointment = await self._cancel_appointment_async(customer_phone)
             
             if success:
-                success_message = f"✅ **Appointment Successfully Cancelled!**\n\nYour appointment (ID: {appointment_id[:8]}) has been cancelled and removed from our system. \n\n💡 **What's next?**\n• Need to reschedule? I can help you find a new time slot\n• Have questions? Feel free to ask me anything\n• Want to book a different service? Just let me know!\n\nThank you for letting us know in advance! 😊"
+                # Format appointment details for confirmation
+                apt_time = cancelled_appointment.get('appointment_datetime')
+                if isinstance(apt_time, str):
+                    apt_time = datetime.fromisoformat(apt_time.replace('Z', '+00:00'))
+                formatted_time = apt_time.strftime('%B %d, %Y at %I:%M %p') if apt_time else 'Unknown time'
+                service_type = cancelled_appointment.get('service_type', 'Unknown service')
+                
+                success_message = f"✅ **Appointment Cancelled Successfully!** Your {service_type} appointment on {formatted_time} has been cancelled. Need to reschedule or book a different service? Just let me know! 😊"
                 dispatcher.utter_message(text=success_message)
                 
                 # Log bot response
@@ -544,7 +536,7 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
                 await cache.delete(f"customer_appointments:{customer_phone}")
                 
             else:
-                not_found_message = f"🔍 **Appointment Not Found**\n\nI couldn't locate an appointment with ID **{appointment_id[:8]}** for your phone number.\n\n💡 **Please check:**\n• Is the appointment ID correct? (Check your confirmation message)\n• Did you use the same phone number for booking?\n• Has the appointment already been cancelled?\n\nIf you're still having trouble, I can help you view all your appointments to find the right ID! 📋"
+                not_found_message = "🔍 **No Appointment Found** - Sorry, I couldn't find any active appointment records for your phone number. The appointment may have already been cancelled or the phone number might not match. I can help you view all your appointment records! 📋"
                 dispatcher.utter_message(text=not_found_message)
                 
                 # Log bot response
@@ -558,13 +550,13 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
             dispatcher.utter_message(text=fallback_message)
             
             # Log action execution failure and bot response
-            self.log_action_execution("AsyncActionCancelAppointment", tracker, success=False, error=str(e))
+            self.log_action_execution("AsyncActionCancelAppointment", tracker, success=False, error_message=str(e))
             self.log_bot_response(dispatcher, tracker, "AsyncActionCancelAppointment")
             
             return []
 
-    async def _cancel_appointment_async(self, appointment_id: str, customer_phone: str) -> tuple[bool, Optional[Dict]]:
-        """Cancel appointment in database and return appointment data for email"""
+    async def _cancel_appointment_async(self, customer_phone: str) -> Tuple[bool, Optional[Dict]]:
+        """Cancel the most recent active appointment for the customer"""
         try:
             db = await get_mongodb_client()
             if not db:
@@ -572,12 +564,14 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
             
             collection = db.appointments
             
-            # First, find the appointment to get its data for email
-            appointment = await collection.find_one({
-                "appointment_id": appointment_id,
-                "customer_phone": customer_phone,
-                "status": {"$in": ["confirmed", "pending"]}
-            })
+            # Find the most recent active appointment for this customer
+            appointment = await collection.find_one(
+                {
+                    "customer_phone": customer_phone,
+                    "status": {"$in": ["confirmed", "pending"]}
+                },
+                sort=[("appointment_datetime", -1)]  # Get the most recent appointment
+            )
             
             if not appointment:
                 return False, None
@@ -586,7 +580,7 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
             current_time = datetime.now(pytz.timezone('Asia/Singapore'))
             result = await collection.update_one(
                 {
-                    "appointment_id": appointment_id,
+                    "_id": appointment["_id"],
                     "customer_phone": customer_phone,
                     "status": {"$in": ["confirmed", "pending"]}
                 },
@@ -608,25 +602,34 @@ class AsyncActionCancelAppointment(AutoLoggedAction):
             logger.error(f"Error cancelling appointment: {e}")
             return False, None
 
-class ActionViewAppointments(Action):
+class ActionViewAppointments(AutoLoggedAction):
     """Action to view customer appointments"""
     
     def name(self) -> Text:
         return "action_view_appointments"
     
-    def run(self, dispatcher: CollectingDispatcher,
+    @validate_medium_confidence(confidence_threshold=0.6)
+    async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Log user message and action execution
+        self.log_user_message(tracker)
+        self.log_action_execution("ActionViewAppointments", tracker)
         
         try:
             # Check if appointment feature is enabled
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
+            
+            # If no client_id, use default 'test_client' for testing or fallback
             if not client_id:
-                dispatcher.utter_message(text="抱歉，预约功能目前不可用。请稍后再试。")
-                return []
+                client_id = 'test_client'
             
             if not check_appointment_feature_enabled(client_id):
-                dispatcher.utter_message(text="抱歉，预约功能目前不可用。请稍后再试。")
+                response_message = "Sorry, appointment functionality is currently unavailable. Please try again later."
+                dispatcher.utter_message(text=response_message)
+                # Log bot response
+                self.log_bot_response(dispatcher, tracker, "ActionViewAppointments")
                 return []
             
             # Get customer phone number from slot or latest message
@@ -639,14 +642,26 @@ class ActionViewAppointments(Action):
                 if phone_match:
                     phone_number = phone_match.group()
                 else:
-                    dispatcher.utter_message(text="请提供您的电话号码以查看预约信息。")
+                    # Auto-fill phone number in input box directly - SINGLE RESPONSE
+                    response_message = "Please provide your phone number to view your appointment information."
+                    dispatcher.utter_message(
+                        text=response_message,
+                        json_message={
+                            "autofill": "i want to view appointment details of "
+                        }
+                    )
+                    # Log bot response
+                    self.log_bot_response(dispatcher, tracker, "ActionViewAppointments")
                     return [SlotSet("requested_slot", "phone_number")]
             
             # Get customer appointments
-            appointments = self._get_customer_appointments(phone_number)
+            appointments = await self._get_customer_appointments(phone_number)
             
             if not appointments:
-                dispatcher.utter_message(text="您目前没有任何预约记录。")
+                response_message = "You currently have no appointment records."
+                dispatcher.utter_message(text=response_message)
+                # Log bot response
+                self.log_bot_response(dispatcher, tracker, "ActionViewAppointments")
                 return []
             
             # Separate upcoming and past appointments
@@ -668,58 +683,67 @@ class ActionViewAppointments(Action):
             message_parts = []
             
             if upcoming_appointments:
-                message_parts.append("📅 **即将到来的预约:**")
+                message_parts.append("📅 **Upcoming Appointments:**")
                 for apt in upcoming_appointments:
                     apt_time = apt['appointment_datetime']
                     if isinstance(apt_time, str):
                         apt_time = datetime.fromisoformat(apt_time.replace('Z', '+00:00'))
                     
-                    formatted_time = apt_time.strftime('%Y年%m月%d日 %H:%M')
+                    formatted_time = apt_time.strftime('%B %d, %Y at %I:%M %p')
                     message_parts.append(
-                        f"• {apt.get('service_type', '未知服务')} - {formatted_time}\n"
-                        f"  状态: {apt.get('status', '未知')}\n"
-                        f"  预约ID: {apt.get('_id', 'N/A')}"
+                        f"• {apt.get('service_type', 'Unknown Service')} - {formatted_time}\n"
+                        f"  Status: {apt.get('status', 'Unknown').title()}\n"
+                        f"  Appointment ID: {apt.get('_id', 'N/A')}"
                     )
             
             if past_appointments:
-                message_parts.append("\n📋 **历史预约:**")
+                message_parts.append("\n📋 **Past Appointments:**")
                 for apt in past_appointments[-3:]:  # Show last 3 past appointments
                     apt_time = apt['appointment_datetime']
                     if isinstance(apt_time, str):
                         apt_time = datetime.fromisoformat(apt_time.replace('Z', '+00:00'))
                     
-                    formatted_time = apt_time.strftime('%Y年%m月%d日 %H:%M')
+                    formatted_time = apt_time.strftime('%B %d, %Y at %I:%M %p')
                     message_parts.append(
-                        f"• {apt.get('service_type', '未知服务')} - {formatted_time}\n"
-                        f"  状态: {apt.get('status', '未知')}"
+                        f"• {apt.get('service_type', 'Unknown Service')} - {formatted_time}\n"
+                        f"  Status: {apt.get('status', 'Unknown').title()}"
                     )
             
-            final_message = "\n\n".join(message_parts)
+            # FIXED: Single unified response instead of multiple parts
+            final_message = " ".join(message_parts)
             dispatcher.utter_message(text=final_message)
+            
+            # Log bot response
+            self.log_bot_response(dispatcher, tracker, "ActionViewAppointments")
             
             return [SlotSet("phone_number", phone_number)]
             
         except Exception as e:
             logger.error(f"Error in ActionViewAppointments: {e}")
-            dispatcher.utter_message(text="抱歉，查看预约时出现错误。请稍后再试。")
+            dispatcher.utter_message(text="Sorry, there was an error viewing appointments. Please try again later.")
             return []
     
-    def _get_customer_appointments(self, phone_number: str) -> List[Dict[str, Any]]:
-        """Get customer appointments from database"""
+    async def _get_customer_appointments(self, phone_number: str) -> List[Dict[str, Any]]:
+        """Get customer appointments from database using async connection"""
         try:
-            client = get_mongo_client()
-            if not client:
+            db = await get_mongodb_client()
+            if not db:
                 return []
             
-            db = client[os.getenv('DATABASE_NAME', 'automotive_chatbot_saas')]
-            appointments_collection = db['appointments']
+            appointments_collection = db.appointments
             
             # Find appointments by phone number
-            appointments = list(appointments_collection.find(
+            cursor = appointments_collection.find(
                 {"customer_phone": phone_number}
-            ).sort("appointment_datetime", -1))
+            ).sort("appointment_datetime", -1)
             
-            client.close()
+            appointments = await cursor.to_list(length=None)
+            
+            # Convert ObjectId to string for JSON serialization
+            for appointment in appointments:
+                if '_id' in appointment:
+                    appointment['_id'] = str(appointment['_id'])
+            
             return appointments
             
         except Exception as e:
@@ -751,18 +775,15 @@ class ActionValidateIntent(Action):
             intent_detected = any(keyword in latest_message for keyword in appointment_keywords)
             
             if intent_detected:
-                dispatcher.utter_message(
-                    text="I understand you'd like to book an appointment. Let me help you with that!"
-                )
+                # Don't send message here - let action_book_appointment handle it
                 return [FollowupAction("action_book_appointment")]
             else:
-                dispatcher.utter_message(
-                    text="I'm here to help! Could you please clarify what you'd like to do?"
-                )
+                # Don't send generic response - let other actions handle it
                 return []
                 
         except Exception as e:
             logger.error(f"Error in ActionValidateIntent: {e}")
+            # Single error response
             dispatcher.utter_message(
                 text="Sorry, there was an error processing your request. Please try again."
             )
@@ -781,13 +802,14 @@ class ActionBookAppointment(Action):
         try:
             # Check if appointment feature is enabled
             client_id = tracker.latest_message.get('metadata', {}).get('client_id')
-            if not client_id:
-                dispatcher.utter_message(
-                    text="Sorry, appointment booking is currently not available. Please try again later."
-                )
-                return []
             
+            # If no client_id, use default 'test_client' for testing or fallback
+            if not client_id:
+                client_id = 'test_client'
+            
+            # Check if appointment feature is enabled for this client
             if not check_appointment_feature_enabled(client_id):
+                # FIXED: Single response for feature disabled
                 dispatcher.utter_message(
                     text="Sorry, appointment booking is currently not available. Please try again later."
                 )
@@ -826,30 +848,30 @@ class ActionBookAppointment(Action):
                     FollowupAction("appointment_form")
                 ]
             
-            # If no service type detected, show options with buttons
+            # If no service type detected, show options with buttons - SINGLE RESPONSE
             try:
                 # Use synchronous version with buttons to avoid event loop conflicts
                 appointment_options = self._get_appointment_options_with_buttons_sync()
                 
-                # Send message with buttons and activate the form
+                # FIXED: Send single unified message with buttons
                 dispatcher.utter_message(
                     text=appointment_options["text"],
                     buttons=appointment_options["buttons"]
                 )
-                # Activate the appointment form to collect user details
-                return [FollowupAction("appointment_form")]
+                # Don't activate form yet - wait for user selection
+                return []
             except Exception as e:
                 logger.error(f"Error getting appointment options: {e}")
-                # Fallback to basic sync version if buttons fail
+                # FIXED: Fallback to basic sync version if buttons fail - single response
                 appointment_options = self._get_appointment_options_sync()
                 dispatcher.utter_message(text=appointment_options)
-                return [SlotSet("requested_slot", "service_type")]
+                return []
                 
         except Exception as e:
             logger.error(f"Error in ActionBookAppointment: {e}")
-            dispatcher.utter_message(
-                text="Sorry, there was an error with appointment booking. Please try again."
-            )
+            # FIXED: Single response for error
+            response_message = "Sorry, there was an error with appointment booking. Please try again."
+            dispatcher.utter_message(text=response_message)
             return []
     
     def _get_appointment_options_with_buttons_sync(self) -> Dict[str, Any]:
@@ -886,7 +908,7 @@ class ActionBookAppointment(Action):
                 icon = apt_type.get('icon', '🔧')
                 buttons.append({
                     "title": f"{icon} {apt_type['name']}",
-                    "payload": apt_type['name'].lower()
+                    "payload": apt_type['name']
                 })
             
             return {
@@ -951,8 +973,43 @@ class AppointmentForm(FormValidationAction):
         """A list of required slots that the form has to fill"""
         return ["service_type", "customer_name", "customer_phone", "appointment_date", "appointment_time"]
     
+    def slot_mappings(self) -> Dict[Text, Union[Dict, List[Dict]]]:
+        """A dictionary to map required slots to
+            - an extracted entity
+            - intent: value pairs
+            - a whole message
+            or a list of them, where a first match will be picked"""
+        return {
+            "service_type": [
+                self.from_entity(entity="service_type"),
+                self.from_text(intent="inform"),
+                self.from_text(intent="provide_appointment_details")
+            ],
+            "customer_name": [
+                self.from_entity(entity="customer_name"),
+                self.from_text(intent="inform"),
+                self.from_text(intent="nlu_fallback"),
+                self.from_text(intent="provide_appointment_details")
+            ],
+            "customer_phone": [
+                self.from_entity(entity="customer_phone"),
+                self.from_text(intent="inform"),
+                self.from_text(intent="nlu_fallback"),
+                self.from_text(intent="provide_appointment_details")
+            ],
+            "appointment_date": [
+                self.from_entity(entity="appointment_date"),
+                self.from_text(intent="inform"),
+                self.from_text(intent="provide_appointment_details")
+            ],
+            "appointment_time": [
+                self.from_entity(entity="appointment_time"),
+                self.from_text(intent="inform"),
+                self.from_text(intent="nlu_fallback"),
+                self.from_text(intent="provide_appointment_details")
+            ]
+        }
 
-    
     def validate_service_type(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> Dict[Text, Any]:
         """Validate service_type value."""
         service_type = tracker.get_slot('service_type')
@@ -973,7 +1030,7 @@ class AppointmentForm(FormValidationAction):
             # If not found in predefined list, use the original value
             return {"service_type": service_type}
         else:
-            dispatcher.utter_message(text="Please select a service type: Test Drive, Sales Consultation, or Trade-in Evaluation.")
+            # Don't send message here - let the form handle it
             return {"service_type": None}
     
     def validate_customer_name(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> Dict[Text, Any]:
@@ -982,7 +1039,7 @@ class AppointmentForm(FormValidationAction):
         if customer_name and len(customer_name.strip()) >= 2:
             return {"customer_name": customer_name.strip()}
         else:
-            dispatcher.utter_message(text="Please provide your full name (at least 2 characters).")
+            # Don't send message here - let the form handle it
             return {"customer_name": None}
     
     def validate_customer_phone(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> Dict[Text, Any]:
@@ -998,35 +1055,226 @@ class AppointmentForm(FormValidationAction):
             elif len(phone_digits) == 10 and phone_digits.startswith('65'):
                 return {"customer_phone": phone_digits[2:]}
             else:
-                dispatcher.utter_message(text="Please provide a valid Singapore phone number (8 digits starting with 8 or 9).")
+                # Don't send message here - let the form handle it
                 return {"customer_phone": None}
         else:
-            dispatcher.utter_message(text="Please provide your phone number.")
+            # Don't send message here - let the form handle it
             return {"customer_phone": None}
     
     def validate_appointment_date(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> Dict[Text, Any]:
-        """Validate appointment_date value."""
+        """Validate appointment_date value with natural language processing."""
+        from datetime import datetime, timedelta
+        import re
+        
         appointment_date = tracker.get_slot('appointment_date')
-        if appointment_date:
-            return {"appointment_date": appointment_date}
-        else:
-            dispatcher.utter_message(text="Please provide your preferred appointment date (e.g., 'tomorrow', 'Monday', '2024-01-15').")
+        if not appointment_date:
             return {"appointment_date": None}
+        
+        date_input = appointment_date.lower().strip()
+        today = datetime.now().date()
+        
+        # Handle relative date expressions
+        if '今天' in date_input or 'today' in date_input:
+            formatted_date = today.strftime('%Y-%m-%d')
+            return {"appointment_date": formatted_date}
+        elif '明天' in date_input or 'tomorrow' in date_input:
+            tomorrow = today + timedelta(days=1)
+            formatted_date = tomorrow.strftime('%Y-%m-%d')
+            return {"appointment_date": formatted_date}
+        elif '后天' in date_input or 'day after tomorrow' in date_input:
+            day_after = today + timedelta(days=2)
+            formatted_date = day_after.strftime('%Y-%m-%d')
+            return {"appointment_date": formatted_date}
+        elif '下周' in date_input or 'next week' in date_input:
+            next_week = today + timedelta(days=7)
+            formatted_date = next_week.strftime('%Y-%m-%d')
+            return {"appointment_date": formatted_date}
+        
+        # Handle specific date formats
+        date_patterns = [
+            r'(\d{4})[-/](\d{1,2})[-/](\d{1,2})',  # YYYY-MM-DD or YYYY/MM/DD
+            r'(\d{1,2})[-/](\d{1,2})[-/](\d{4})',  # MM-DD-YYYY or MM/DD/YYYY
+            r'(\d{1,2})月(\d{1,2})日',  # Chinese format: X月Y日
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, date_input)
+            if match:
+                try:
+                    groups = match.groups()
+                    if len(groups) == 3:
+                        if '月' in pattern:  # Chinese format
+                            month, day = int(groups[0]), int(groups[1])
+                            year = today.year
+                            parsed_date = datetime(year, month, day).date()
+                        elif pattern.startswith(r'(\d{4})'):
+                            year, month, day = int(groups[0]), int(groups[1]), int(groups[2])
+                            parsed_date = datetime(year, month, day).date()
+                        else:
+                            month, day, year = int(groups[0]), int(groups[1]), int(groups[2])
+                            parsed_date = datetime(year, month, day).date()
+                        
+                        # Validate date is not in the past
+                        if parsed_date >= today:
+                            formatted_date = parsed_date.strftime('%Y-%m-%d')
+                            return {"appointment_date": formatted_date}
+                        else:
+                            dispatcher.utter_message(text="Please choose a date that is today or in the future.")
+                            return {"appointment_date": None}
+                except ValueError:
+                    continue
+        
+        # If no pattern matches, return the original value (might be already formatted)
+        return {"appointment_date": appointment_date}
     
     def validate_appointment_time(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> Dict[Text, Any]:
-        """Validate appointment_time value."""
+        """Validate appointment_time value with proper time format handling."""
+        import re
+        from datetime import datetime
+        
         appointment_time = tracker.get_slot('appointment_time')
-        if appointment_time:
-            return {"appointment_time": appointment_time}
-        else:
-            dispatcher.utter_message(text="Please provide your preferred appointment time (e.g., '2pm', '10:30 AM', 'morning').")
+        
+        if not appointment_time:
+            # Don't send message here - let the form handle it
             return {"appointment_time": None}
+        
+        # Normalize the input
+        time_input = appointment_time.lower().strip()
+        
+        # Define time patterns and their corresponding 24-hour formats
+        time_patterns = [
+            # 12-hour format with am/pm (e.g., "2pm", "2:30 PM", "2 pm")
+            (r'^(\d{1,2})\s*:?\s*(\d{0,2})\s*(am|pm)$', self._convert_12_to_24),
+            # 24-hour format (e.g., "14:00", "14:30")
+            (r'^(\d{1,2})\s*:?\s*(\d{2})$', self._convert_24_hour),
+            # Simple hour format (e.g., "2", "14")
+            (r'^(\d{1,2})$', self._convert_simple_hour),
+            # O'clock format (e.g., "2 o'clock", "2o'clock")
+            (r'^(\d{1,2})\s*o\'?clock$', self._convert_oclock),
+            # Common time expressions
+            (r'^(morning|afternoon|evening)$', self._convert_time_period)
+        ]
+        
+        # Try to match and convert time
+        for pattern, converter in time_patterns:
+            match = re.match(pattern, time_input)
+            if match:
+                try:
+                    groups = match.groups()
+                    converted_time = converter(*groups)
+                    
+                    # Validate the converted time
+                    if self._is_valid_business_time(converted_time):
+                        # Convert back to user-friendly format
+                        formatted_time = self._format_display_time(converted_time)
+                        return {"appointment_time": formatted_time}
+                    else:
+                        dispatcher.utter_message(text=f"Sorry, {converted_time} is outside our business hours (9:00 AM - 6:00 PM). Please choose a time between 9 AM and 6 PM.")
+                        return {"appointment_time": None}
+                except (ValueError, KeyError) as e:
+                    logger.error(f"Error converting time '{time_input}': {e}")
+                    continue
+        
+        # If no pattern matches, ask for clarification
+        dispatcher.utter_message(text=f"I couldn't understand the time '{appointment_time}'. Please provide a time like '2pm', '14:00', '2:30 PM', or 'afternoon'.")
+        return {"appointment_time": None}
+    
+    def _convert_12_to_24(self, hour, minute, period):
+        """Convert 12-hour format to 24-hour format."""
+        hour = int(hour)
+        minute = minute or '00'
+        minute = minute.zfill(2)  # Ensure 2 digits
+        
+        if period.lower() == 'am':
+            if hour == 12:
+                hour = 0
+        else:  # pm
+            if hour != 12:
+                hour += 12
+        
+        return f"{hour:02d}:{minute}"
+    
+    def _convert_24_hour(self, hour, minute, *args):
+        """Validate and format 24-hour time."""
+        hour = int(hour)
+        minute = int(minute)
+        
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return f"{hour:02d}:{minute:02d}"
+        else:
+            raise ValueError("Invalid 24-hour time format")
+    
+    def _convert_simple_hour(self, hour, *args):
+        """Convert simple hour to appropriate time (assume PM for business hours)."""
+        hour = int(hour)
+        
+        # For business context, assume PM for hours 1-6, AM for hours 7-12
+        if 1 <= hour <= 6:
+            return f"{hour + 12:02d}:00"  # Convert to PM
+        elif 7 <= hour <= 12:
+            if hour == 12:
+                return "12:00"  # 12 PM
+            else:
+                return f"{hour:02d}:00"  # AM hours
+        else:
+            raise ValueError("Invalid hour range")
+    
+    def _convert_oclock(self, hour, *args):
+        """Convert o'clock format."""
+        hour = int(hour)
+        
+        # Same logic as simple hour
+        if 1 <= hour <= 6:
+            return f"{hour + 12:02d}:00"  # Convert to PM
+        elif 7 <= hour <= 12:
+            if hour == 12:
+                return "12:00"  # 12 PM
+            else:
+                return f"{hour:02d}:00"  # AM hours
+        else:
+            raise ValueError("Invalid hour range")
+    
+    def _convert_time_period(self, period, *args):
+        """Convert time period to specific time."""
+        period_map = {
+            'morning': '09:00',
+            'afternoon': '14:00', 
+            'evening': '18:00'
+        }
+        return period_map.get(period.lower(), '14:00')
+    
+    def _is_valid_business_time(self, time_str):
+        """Check if time is within business hours (9 AM - 6 PM)."""
+        try:
+            hour, minute = map(int, time_str.split(':'))
+            # Business hours: 9:00 AM (09:00) to 6:00 PM (18:00)
+            return 9 <= hour <= 18 and 0 <= minute <= 59
+        except:
+            return False
+    
+    def _format_display_time(self, time_24):
+        """Convert 24-hour format to user-friendly 12-hour format."""
+        try:
+            hour, minute = map(int, time_24.split(':'))
+            if hour == 0:
+                return f"12:{minute:02d} AM"
+            elif hour < 12:
+                return f"{hour}:{minute:02d} AM"
+            elif hour == 12:
+                return f"12:{minute:02d} PM"
+            else:
+                return f"{hour-12}:{minute:02d} PM"
+        except:
+            return time_24
     
 
     
     def submit(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         """Define what the form has to do after all required slots are filled"""
         
+        from rasa_sdk.events import SlotSet, ActiveLoop
+        
+        # 直接在submit方法中处理提交逻辑
         # Get all the collected information
         service_type = tracker.get_slot('service_type')
         customer_name = tracker.get_slot('customer_name')
@@ -1034,20 +1282,15 @@ class AppointmentForm(FormValidationAction):
         appointment_date = tracker.get_slot('appointment_date')
         appointment_time = tracker.get_slot('appointment_time')
         
+        logger.info(f"Submit method called with slots: service_type={service_type}, customer_name={customer_name}, customer_phone={customer_phone}, appointment_date={appointment_date}, appointment_time={appointment_time}")
+        
+        # Validate all required slots are filled
+        if not all([service_type, customer_name, customer_phone, appointment_date, appointment_time]):
+            dispatcher.utter_message(text="Sorry, some appointment information is missing. Please try booking again.")
+            return []
+        
         # Create appointment confirmation message
-        confirmation_message = f"""🎉 **Appointment Confirmed!** 
-
-📋 **Appointment Details:**
-• **Service:** {service_type}
-• **Customer:** {customer_name}
-• **Phone:** {customer_phone}
-• **Date:** {appointment_date}
-• **Time:** {appointment_time}
-
-✅ **Your appointment has been successfully booked!**
-📱 **You'll receive a confirmation message shortly.**
-
-🤝 **Need to make changes?** Just let me know and I'll help you reschedule!"""
+        confirmation_message = f"🎉 **Appointment Confirmed!** Your {service_type} appointment for {customer_name} on {appointment_date} at {appointment_time} has been booked successfully! 📱 You'll receive a confirmation message shortly."
         
         dispatcher.utter_message(text=confirmation_message)
         
@@ -1076,13 +1319,79 @@ class AppointmentForm(FormValidationAction):
         except Exception as e:
             logger.error(f"Error saving appointment: {e}")
         
-        # Clear the form slots
+        # Clear the form slots and deactivate the form
         return [
             SlotSet("service_type", None),
             SlotSet("customer_name", None), 
             SlotSet("customer_phone", None),
             SlotSet("appointment_date", None),
-            SlotSet("appointment_time", None)
+            SlotSet("appointment_time", None),
+            ActiveLoop(None)  # 停用表单循环
+        ]
+
+class ActionSubmitAppointmentForm(Action):
+    """Action to handle appointment form submission after all slots are filled"""
+    
+    def name(self) -> Text:
+        return "action_submit_appointment_form"
+    
+    async def run(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        """Execute the appointment submission logic"""
+        
+        from rasa_sdk.events import SlotSet, ActiveLoop
+        
+        # Get all the collected information
+        service_type = tracker.get_slot('service_type')
+        customer_name = tracker.get_slot('customer_name')
+        customer_phone = tracker.get_slot('customer_phone')
+        appointment_date = tracker.get_slot('appointment_date')
+        appointment_time = tracker.get_slot('appointment_time')
+        
+        logger.info(f"ActionSubmitAppointmentForm called with slots: service_type={service_type}, customer_name={customer_name}, customer_phone={customer_phone}, appointment_date={appointment_date}, appointment_time={appointment_time}")
+        
+        # Validate all required slots are filled
+        if not all([service_type, customer_name, customer_phone, appointment_date, appointment_time]):
+            dispatcher.utter_message(text="Sorry, some appointment information is missing. Please try booking again.")
+            return []
+        
+        # Create appointment confirmation message
+        confirmation_message = f"🎉 **Appointment Confirmed!** Your {service_type} appointment for {customer_name} on {appointment_date} at {appointment_time} has been booked successfully! 📱 You'll receive a confirmation message shortly."
+        
+        dispatcher.utter_message(text=confirmation_message)
+        
+        # Save appointment to database
+        try:
+            from ..config.database import get_collection
+            import uuid
+            from datetime import datetime
+            
+            collection = get_collection('appointments')
+            if collection:
+                appointment_data = {
+                    'appointment_id': f"APT-{str(uuid.uuid4())[:8].upper()}",
+                    'service_type': service_type,
+                    'customer_name': customer_name,
+                    'customer_phone': customer_phone,
+                    'appointment_date': appointment_date,
+                    'appointment_time': appointment_time,
+                    'status': 'confirmed',
+                    'created_at': datetime.utcnow(),
+                    'conversation_id': tracker.sender_id
+                }
+                
+                collection.insert_one(appointment_data)
+                logger.info(f"Appointment saved successfully: {appointment_data['appointment_id']}")
+        except Exception as e:
+            logger.error(f"Error saving appointment: {e}")
+        
+        # Clear the form slots and deactivate the form
+        return [
+            SlotSet("service_type", None),
+            SlotSet("customer_name", None), 
+            SlotSet("customer_phone", None),
+            SlotSet("appointment_date", None),
+            SlotSet("appointment_time", None),
+            ActiveLoop(None)  # 停用表单循环
         ]
 
 # Legacy class aliases for backward compatibility

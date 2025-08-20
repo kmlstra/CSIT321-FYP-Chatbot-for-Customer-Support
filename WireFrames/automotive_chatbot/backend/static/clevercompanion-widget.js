@@ -17,6 +17,8 @@
             this.isOpen = false;
             this.messages = [];
             this.isProcessing = false;
+            this.isProcessingButton = false; // 防止按钮重复点击的标志
+            this.lastButtonClickTime = 0; // 上次按钮点击时间戳
             this.menuOpen = false;
             this.lastInteractionTime = new Date().toISOString();
             
@@ -242,11 +244,8 @@
                 menuDropdown.innerHTML = this.generateMenuItems();
             }
             
-            // Re-inject CSS with updated branding
-            const existingStyle = document.getElementById('cc-widget-styles');
-            if (existingStyle) {
-                existingStyle.textContent = this.getWidgetCSS();
-            }
+            // Safely update CSS with improved injection mechanism
+            this.updateWidgetCSS();
         }
 
         // Session management with expiry (30 minutes to match backend)
@@ -371,8 +370,54 @@
             
             const style = document.createElement('style');
             style.id = 'cc-widget-styles';
+            style.setAttribute('data-widget-version', '1.0');
             style.textContent = this.getWidgetCSS();
             document.head.appendChild(style);
+        }
+
+        // New method for safely updating CSS without losing styles
+        updateWidgetCSS() {
+            const existingStyle = document.getElementById('cc-widget-styles');
+            if (existingStyle) {
+                // Create a temporary style element to test the new CSS
+                const tempStyle = document.createElement('style');
+                tempStyle.id = 'cc-widget-styles-temp';
+                tempStyle.setAttribute('data-widget-version', '1.0');
+                tempStyle.textContent = this.getWidgetCSS();
+                
+                // Insert the temporary style after the existing one
+                existingStyle.parentNode.insertBefore(tempStyle, existingStyle.nextSibling);
+                
+                // Use requestAnimationFrame to ensure smooth transition
+                requestAnimationFrame(() => {
+                    // Remove the old style
+                    if (existingStyle.parentNode) {
+                        existingStyle.remove();
+                    }
+                    
+                    // Rename the temporary style to the permanent ID
+                    tempStyle.id = 'cc-widget-styles';
+                    
+                    // Clean up any duplicate styles
+                    this.ensureSingleWidgetStyle();
+                });
+            } else {
+                // If no existing style, inject normally
+                this.injectCSS();
+            }
+        }
+
+        // Prevent CSS conflicts by ensuring only one widget style exists
+        ensureSingleWidgetStyle() {
+            const existingStyles = document.querySelectorAll('style[id^="cc-widget-styles"]');
+            if (existingStyles.length > 1) {
+                // Keep only the most recent style element
+                for (let i = 0; i < existingStyles.length - 1; i++) {
+                    if (existingStyles[i].parentNode) {
+                        existingStyles[i].remove();
+                    }
+                }
+            }
         }
 
         generateWidgetHTML() {
@@ -3204,13 +3249,79 @@
             this.scrollToLatestMessage();
         }
 
-        // Handle button click and send payload
+        // Handle button click and send payload with enhanced anti-double-click protection
         sendButtonPayload(payload) {
+            // Enhanced double-click prevention with timestamp tracking
+            const now = Date.now();
+            const minClickInterval = 1000; // Minimum 1 second between clicks
+            
+            // Check if we're already processing or if click is too soon
+            if (this.isProcessingButton || (this.lastButtonClickTime && (now - this.lastButtonClickTime) < minClickInterval)) {
+                console.log('[ANTI-SPAM] Button click ignored - too frequent or already processing');
+                return;
+            }
+            
+            // Update last click timestamp and set processing flag
+            this.lastButtonClickTime = now;
+            this.isProcessingButton = true;
+            
+            // Check if payload is for auto-fill functionality
+            if (payload.startsWith('autofill:')) {
+                // Extract the text to auto-fill
+                const autoFillText = payload.replace('autofill:', '');
+                
+                // Get the input element and set its value
+                const input = document.getElementById('cc-input');
+                if (input) {
+                    input.value = autoFillText;
+                    input.focus(); // Focus on the input for user convenience
+                }
+                
+                // Reset processing flag with delay to prevent rapid auto-fill clicks
+                setTimeout(() => {
+                    this.isProcessingButton = false;
+                }, 500);
+                // Don't send this as a message to Rasa
+                return;
+            }
+            
+            // Disable all buttons immediately with visual feedback
+            const buttons = document.querySelectorAll('.cc-button');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+                btn.style.pointerEvents = 'none'; // Extra protection
+                btn.style.cursor = 'not-allowed';
+            });
+            
             // Add user message showing the selected option
             this.addMessage(payload, 'user');
             
-            // Send the payload to Rasa through proxy
-            this.sendMessageToRasa(payload);
+            // Send the payload to Rasa through proxy with timeout protection
+            const sendPromise = this.sendMessageToRasa(payload);
+            
+            // Set a maximum timeout for the request
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 second timeout
+            });
+            
+            Promise.race([sendPromise, timeoutPromise])
+                .catch(error => {
+                    console.error('Error or timeout in sendMessageToRasa:', error);
+                    this.addMessage('Request timed out. Please try again.', 'bot');
+                })
+                .finally(() => {
+                    // Reset processing flag and re-enable buttons after response
+                    setTimeout(() => {
+                        this.isProcessingButton = false;
+                        buttons.forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.pointerEvents = 'auto';
+                            btn.style.cursor = 'pointer';
+                        });
+                    }, 500); // Additional 500ms delay to prevent rapid re-clicking
+                });
         }
 
         // Send message through integrated multi-tenant chat handler
@@ -3571,7 +3682,7 @@
                 // Restore messages with plain text content only
                 for (const message of messages) {
                     if (message.sender && message.timestamp && message.text) {
-                        this.addMessage(message.text, message.sender === 'user', message.timestamp);
+                        this.addMessage(message.text, message.sender);
                     }
                 }
                 

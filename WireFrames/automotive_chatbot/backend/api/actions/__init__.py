@@ -34,6 +34,10 @@ from .rasa_actions import (
     ActionLoanCalculator
 )
 
+from .appointment_actions import (
+    ActionSubmitAppointmentForm
+)
+
 # External integrations package
 
 __all__ = [
@@ -66,6 +70,7 @@ __all__ = [
     'ActionBookAppointment',
     'ActionViewAppointments',
     'ActionCancelAppointment',
+    'ActionSubmitAppointmentForm',
     
     # Loan Calculator Actions
     'ActionLoanCalculator'

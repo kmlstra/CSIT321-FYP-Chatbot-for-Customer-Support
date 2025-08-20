@@ -1435,6 +1435,79 @@ async def get_widget_client_config(client_id: str):
             "error": f"Error getting widget client config: {str(e)}"
         }, status_code=500)
 
+# Client configuration endpoint by domain (for test scripts)
+@app.get("/api/client/{client_domain}/config")
+async def get_client_config_by_domain(client_domain: str):
+    """Get client configuration by domain - used by test scripts"""
+    try:
+        global admin_db
+        if not admin_db:
+            return JSONResponse(content={
+                "success": False,
+                "error": "Database not available"
+            }, status_code=500)
+        
+        # Find client by domain
+        client = await admin_db.clients.find_one({"domain": client_domain})
+        
+        if not client:
+            # Return default configuration with appointment_booking enabled
+            default_config = {
+                "client_id": client_domain,
+                "domain": client_domain,
+                "branding": {
+                    "logo_url": "/static/media/images/CleverCompanion-logo.png",
+                    "company_name": "CleverCompanion",
+                    "primary_color": "#007bff",
+                    "secondary_color": "#6c757d"
+                },
+                "features": {
+                    "coe_prices": True,
+                    "appointment_booking": {
+                        "enabled": True
+                    },
+                    "loan_calculator": True,
+                    "live_support": True
+                },
+                "contact_info": {
+                    "phone": "+65 6123 4567",
+                    "email": "support@clevercompanion.com",
+                    "address": "Singapore"
+                }
+            }
+            return JSONResponse(content=default_config)
+        
+        # Return client configuration with proper appointment_booking structure
+        settings = client.get("settings", {})
+        features = settings.get("features", {})
+        
+        # Ensure appointment_booking has the expected structure
+        appointment_booking = features.get("appointment_booking", True)
+        if isinstance(appointment_booking, bool):
+            appointment_booking = {"enabled": appointment_booking}
+        elif isinstance(appointment_booking, dict) and "enabled" not in appointment_booking:
+            appointment_booking["enabled"] = True
+        
+        config = {
+            "client_id": client.get("client_id", client_domain),
+            "domain": client.get("domain", client_domain),
+            "branding": settings.get("branding", {}),
+            "features": {
+                **features,
+                "appointment_booking": appointment_booking
+            },
+            "contact_info": settings.get("contact_info", {})
+        }
+        
+        return JSONResponse(content=config)
+        
+    except Exception as e:
+        logger.error(f"Error getting client config by domain: {str(e)}")
+        return JSONResponse(content={
+            "success": False,
+            "error": f"Error getting client config by domain: {str(e)}"
+        }, status_code=500)
+
 # RASA Proxy for conversation logging
 from .rasa_proxy import router as rasa_proxy_router
 app.include_router(rasa_proxy_router)

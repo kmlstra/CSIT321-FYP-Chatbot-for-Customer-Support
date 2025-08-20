@@ -50,12 +50,12 @@ class DatabasePool:
         self.mongodb_url = os.getenv('MONGODB_URL')
         self.database_name = os.getenv('DATABASE_NAME', 'automotive_chatbot_saas')
         
-        # Connection pool settings
-        self.max_pool_size = int(os.getenv('MONGODB_MAX_POOL_SIZE', '50'))
-        self.min_pool_size = int(os.getenv('MONGODB_MIN_POOL_SIZE', '5'))
-        self.max_idle_time_ms = int(os.getenv('MONGODB_MAX_IDLE_TIME_MS', '30000'))
-        self.connect_timeout_ms = int(os.getenv('MONGODB_CONNECT_TIMEOUT_MS', '10000'))
-        self.server_selection_timeout_ms = int(os.getenv('MONGODB_SERVER_SELECTION_TIMEOUT_MS', '5000'))
+        # Connection pool settings - 优化超时设置
+        self.max_pool_size = int(os.getenv('MONGODB_MAX_POOL_SIZE', '10'))  # 减少连接池大小
+        self.min_pool_size = int(os.getenv('MONGODB_MIN_POOL_SIZE', '2'))
+        self.max_idle_time_ms = int(os.getenv('MONGODB_MAX_IDLE_TIME_MS', '10000'))  # 减少空闲时间
+        self.connect_timeout_ms = int(os.getenv('MONGODB_CONNECT_TIMEOUT_MS', '3000'))  # 减少连接超时
+        self.server_selection_timeout_ms = int(os.getenv('MONGODB_SERVER_SELECTION_TIMEOUT_MS', '3000'))  # 减少服务器选择超时
         
         # Connection state
         self._client: Optional[AsyncIOMotorClient] = None
@@ -83,7 +83,6 @@ class DatabasePool:
             'retryReads': True,
             'w': 'majority',
             'readPreference': 'primaryPreferred',
-            'readConcern': {'level': 'majority'},
             'compressors': ['zstd', 'zlib', 'snappy'],
             'zlibCompressionLevel': 6
         }

@@ -440,7 +440,7 @@ Usually responds within 5 minutes
         # Use the consolidated full contact card with context
         return self._get_full_contact_card(conversation_id, client_data, context_message, availability_note)
 
-    @validate_medium_confidence(confidence_threshold=0.6)
+    # @validate_medium_confidence(confidence_threshold=0.6)
     async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:

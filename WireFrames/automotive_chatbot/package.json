@@ -12,7 +12,7 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:static": "cd frontend && node static-server.js",
     "dev:backend": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload",
-    "dev:rasa": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run --enable-api --cors \"*\" --port 5005 -i localhost --endpoints endpoints.yml",
+    "dev:rasa": "cd backend && \"..\\.venv\\Scripts\\python.exe\" -m rasa run --enable-api --cors \"*\" --port 5005 -i localhost --endpoints endpoints.yml",
     "dev:actions": "cd backend && \"../.venv/Scripts/python.exe\" -m rasa run actions --actions actions --port 5055",
     "clean-start": "powershell -Command \"Get-Process -Name python,node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep 3; echo 'Ports cleared, starting services...'\"; npm run dev:all",
     "kill-ports": "powershell -Command \"Get-Process -Name python,node -ErrorAction SilentlyContinue | Stop-Process -Force; echo 'All processes killed'\"",

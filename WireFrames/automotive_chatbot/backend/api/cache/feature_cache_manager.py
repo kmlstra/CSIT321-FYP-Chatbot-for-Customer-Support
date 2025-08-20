@@ -81,7 +81,19 @@ class FeatureCacheManager:
                 if not collection:
                     return self._feature_defaults.copy()
                 
-                client = collection.find_one({'_id': ObjectId(client_id)})
+                # Try to find client by ObjectId first (for existing clients)
+                client = None
+                try:
+                    if ObjectId.is_valid(client_id):
+                        client = collection.find_one({'_id': ObjectId(client_id)})
+                except Exception:
+                    pass
+                
+                # If not found by ObjectId, try to find by domain field (for test clients)
+                if not client:
+                    client = collection.find_one({'domain': client_id})
+                
+                # If still not found, return defaults (feature enabled by default)
                 if not client:
                     return self._feature_defaults.copy()
                 

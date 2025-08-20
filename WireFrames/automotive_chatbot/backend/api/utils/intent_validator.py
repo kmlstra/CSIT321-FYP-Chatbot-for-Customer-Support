@@ -57,7 +57,7 @@ class IntentValidator:
     """Enhanced intent validator with confidence and context awareness"""
     
     def __init__(self):
-        self.confidence_threshold = 0.7
+        self.confidence_threshold = 0.5  # 降低默认阈值以减少fallback触发
         self.context_weight = 0.3
         self.intent_patterns = self._load_intent_patterns()
         self.context_rules = self._load_context_rules()
@@ -69,9 +69,26 @@ class IntentValidator:
             'book_appointment': 0.75,
             'cancel_appointment': 0.8,  # Higher threshold for destructive actions
             'view_appointments': 0.65,
-            'ask_contact': 0.6,
+            'ask_contact': 0.6,  # Contact information queries
+            'ask_operating_hours': 0.55,  # Operating hours queries
+            'ask_business_hours': 0.55,  # Business hours queries
+            'ask_public_holiday_hours': 0.6,  # Holiday hours queries
             'calculate_loan': 0.6,  # Lowered to match action decorator
-            'get_coe_prices': 0.65,
+            'ask_coe_prices': 0.6,  # COE price queries
+            'ask_coe_category': 0.6,  # COE category queries
+            'ask_coe_category_a': 0.6,
+            'ask_coe_category_b': 0.6,
+            'ask_coe_category_c': 0.6,
+            'ask_coe_category_d': 0.6,
+            'ask_coe_category_e': 0.6,
+            'ask_coe_bidding_process': 0.65,
+            'ask_coe_trends': 0.65,
+            'ask_coe_prediction': 0.65,
+            'ask_coe_timing_recommendation': 0.65,
+            'ask_coe_renewal': 0.6,  # COE renewal queries
+            'ask_coe_renewal_assistance': 0.6,
+            'ask_coe_bidding_assistance': 0.65,
+            'ask_pqp_checker': 0.65,
             'greet': 0.5,
             'goodbye': 0.5,
             'affirm': 0.6,
@@ -82,13 +99,18 @@ class IntentValidator:
         
         # Context-aware intent transitions
         self.valid_transitions = {
-            'greet': ['book_appointment', 'view_appointments', 'ask_contact', 'calculate_loan', 'get_coe_prices'],
+            'greet': ['book_appointment', 'view_appointments', 'ask_contact', 'ask_operating_hours', 'calculate_loan', 'ask_coe_prices', 'ask_coe_renewal'],
             'book_appointment': ['book_appointment', 'cancel_appointment', 'view_appointments', 'goodbye'],
             'cancel_appointment': ['view_appointments', 'book_appointment', 'goodbye'],
             'view_appointments': ['book_appointment', 'cancel_appointment', 'goodbye'],
-            'ask_contact': ['book_appointment', 'goodbye'],
-            'calculate_loan': ['book_appointment', 'get_coe_prices', 'goodbye'],
-            'get_coe_prices': ['calculate_loan', 'book_appointment', 'goodbye'],
+            'ask_contact': ['book_appointment', 'ask_operating_hours', 'goodbye'],
+            'ask_operating_hours': ['book_appointment', 'ask_contact', 'goodbye'],
+            'ask_business_hours': ['book_appointment', 'ask_contact', 'goodbye'],
+            'calculate_loan': ['book_appointment', 'ask_coe_prices', 'goodbye'],
+            'ask_coe_prices': ['calculate_loan', 'book_appointment', 'ask_coe_renewal', 'ask_coe_trends', 'goodbye'],
+            'ask_coe_renewal': ['ask_coe_prices', 'book_appointment', 'goodbye'],
+            'ask_coe_trends': ['ask_coe_prices', 'ask_coe_timing_recommendation', 'goodbye'],
+            'ask_coe_timing_recommendation': ['ask_coe_prices', 'ask_coe_trends', 'goodbye'],
             'affirm': ['book_appointment', 'cancel_appointment', 'view_appointments'],
             'deny': ['book_appointment', 'goodbye'],
             'out_of_scope': ['greet', 'ask_contact', 'goodbye'],
@@ -109,19 +131,57 @@ class IntentValidator:
                 r'\b(change of plans|can\'t make it)\b'
             ],
             'view_appointments': [
-                r'\b(view|see|show|check)\b.*\b(appointment|booking)\b',
-                r'\b(what|when)\b.*\b(appointment|booking)\b',
-                r'\b(my|existing)\b.*\b(appointment|booking)\b'
+                r'\b(view|see|show|check|display|list)\b.*\b(appointment|booking)s?\b',
+                r'\b(what|when|which)\b.*\b(appointment|booking)s?\b',
+                r'\b(my|existing|current|scheduled)\b.*\b(appointment|booking)s?\b',
+                r'\b(appointment|booking)s?\b.*\b(list|schedule|calendar)\b',
+                r'\b(do i have|have i got)\b.*\b(appointment|booking)s?\b',
+                r'^\s*(appointment|booking)s?\s*$',  # 单独的"appointments"
+                r'\b(upcoming|future|next)\b.*\b(appointment|booking)s?\b'
             ],
             'calculate_loan': [
                 r'\b(calculate|compute|estimate)\b.*\b(loan|financing)\b',
                 r'\b(how much|what would)\b.*\b(monthly|payment)\b',
                 r'\b(loan|financing|payment)\b.*\b(calculator|calculation)\b'
             ],
-            'get_coe_prices': [
+            'ask_coe_prices': [
                 r'\b(coe|certificate of entitlement)\b.*\b(price|cost|rate)\b',
                 r'\b(current|latest|today)\b.*\b(coe)\b',
-                r'\b(how much|what is)\b.*\b(coe)\b'
+                r'\b(how much|what is)\b.*\b(coe)\b',
+                r'\b(coe)\b.*\b(pricing|rates|fees)\b'
+            ],
+            'ask_operating_hours': [
+                r'\b(operating|business|opening|office)\b.*\b(hours|time)\b',
+                r'\b(what time|when)\b.*\b(open|close)\b',
+                r'\b(hours|time)\b.*\b(operation|business)\b',
+                r'\b(open|close)\b.*\b(time|hours)\b',
+                r'\b(what.*your)\b.*\b(operating|business)\b.*\b(hour|time)\b'
+            ],
+            'ask_business_hours': [
+                r'\b(business|working)\b.*\b(hours|time)\b',
+                r'\b(when.*open|when.*close)\b',
+                r'\b(store|shop)\b.*\b(hours|timing)\b'
+            ],
+            'ask_contact': [
+                r'\b(contact|phone|email|address)\b.*\b(information|details)\b',
+                r'\b(how to|where to)\b.*\b(contact|reach)\b',
+                r'\b(phone|email|address)\b.*\b(number|details)\b'
+            ],
+            'ask_coe_renewal': [
+                r'\b(renew|renewal)\b.*\b(coe)\b',
+                r'\b(how to)\b.*\b(renew)\b.*\b(coe)\b',
+                r'\b(coe)\b.*\b(renewal|renew)\b',
+                r'\b(extend|extension)\b.*\b(coe)\b'
+            ],
+            'ask_coe_trends': [
+                r'\b(coe)\b.*\b(trend|trends|market)\b',
+                r'\b(market)\b.*\b(analysis|trend)\b.*\b(coe)\b',
+                r'\b(good time|best time)\b.*\b(buy|purchase)\b.*\b(coe)\b'
+            ],
+            'ask_coe_timing_recommendation': [
+                r'\b(good time|best time|when)\b.*\b(buy|purchase|bid)\b.*\b(coe)\b',
+                r'\b(should i|when to)\b.*\b(buy|bid)\b.*\b(coe)\b',
+                r'\b(timing|when)\b.*\b(coe)\b.*\b(purchase|buy)\b'
             ]
         }
     
@@ -182,7 +242,7 @@ class IntentValidator:
         )
         
         # Determine if intent is valid
-        is_valid = validation_score['overall_score'] >= 0.6
+        is_valid = validation_score['overall_score'] >= 0.4
         
         # Generate suggestions if needed
         suggestions = []
@@ -233,7 +293,7 @@ class IntentValidator:
     async def _validate_context(self, intent: str, context: ConversationContext) -> bool:
         """Validate intent against conversation context"""
         # Check if intent makes sense in current conversation stage
-        if context.conversation_stage == 'greeting' and intent not in ['greet', 'ask_contact', 'out_of_scope', 'calculate_loan', 'get_coe_prices', 'book_appointment', 'view_appointments']:
+        if context.conversation_stage == 'greeting' and intent not in ['greet', 'ask_contact', 'out_of_scope', 'calculate_loan', 'get_coe_prices', 'ask_coe_prices', 'ask_coe_renewal', 'ask_coe_trends', 'ask_coe_timing_recommendation', 'ask_operating_hours', 'ask_business_hours', 'book_appointment', 'view_appointments']:
             return False
         
         # Check entity requirements for specific flows

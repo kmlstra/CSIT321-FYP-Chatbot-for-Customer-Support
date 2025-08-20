@@ -25,7 +25,7 @@ class ActionDefaultFallback(AutoLoggedAction):
     def name(self) -> Text:
         return "action_default_fallback"
 
-    @validate_medium_confidence(confidence_threshold=0.5)
+    # @validate_medium_confidence(confidence_threshold=0.5)
     async def run(self, dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:

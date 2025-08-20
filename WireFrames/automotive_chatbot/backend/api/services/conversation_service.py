@@ -117,7 +117,8 @@ class UnifiedConversationService:
             logger.error(f"[UNIFIED_CONVERSATION] Missing conversation_id or client_id for session: {session_id}")
             return False
         
-        current_time = datetime.now(self.singapore_tz)
+        # Store UTC time in database for consistency
+        current_time_utc = datetime.now(pytz.UTC)
         message_id = str(uuid.uuid4())
         
         message_data = {
@@ -127,8 +128,8 @@ class UnifiedConversationService:
             'client_id': client_id,
             'message': message,
             'message_type': message_type.value,
-            'timestamp': current_time,
-            'created_at': current_time,
+            'timestamp': current_time_utc,
+            'created_at': current_time_utc,
             'metadata': metadata or {},
             'processed': True,
             'version': '2.0'  # Version for tracking unified system messages
@@ -211,7 +212,11 @@ class UnifiedConversationService:
                 for message in messages:
                     if 'timestamp' in message and isinstance(message['timestamp'], datetime):
                         if message['timestamp'].tzinfo is None:
-                            message['timestamp'] = message['timestamp'].replace(tzinfo=self.singapore_tz)
+                            # Assume UTC if no timezone info, then convert to Singapore time
+                            message['timestamp'] = pytz.UTC.localize(message['timestamp']).astimezone(self.singapore_tz)
+                        else:
+                            # Convert to Singapore time if timezone info exists
+                            message['timestamp'] = message['timestamp'].astimezone(self.singapore_tz)
                         message['timestamp'] = message['timestamp'].isoformat()
                 
                 logger.info(f"[UNIFIED_CONVERSATION] Retrieved {len(messages)} messages for conversation: {conversation_id}")
@@ -266,7 +271,11 @@ class UnifiedConversationService:
                 for message in messages:
                     if 'timestamp' in message and isinstance(message['timestamp'], datetime):
                         if message['timestamp'].tzinfo is None:
-                            message['timestamp'] = message['timestamp'].replace(tzinfo=self.singapore_tz)
+                            # Assume UTC if no timezone info, then convert to Singapore time
+                            message['timestamp'] = pytz.UTC.localize(message['timestamp']).astimezone(self.singapore_tz)
+                        else:
+                            # Convert to Singapore time if timezone info exists
+                            message['timestamp'] = message['timestamp'].astimezone(self.singapore_tz)
                         message['timestamp'] = message['timestamp'].isoformat()
                 
                 logger.info(f"[UNIFIED_CONVERSATION] Retrieved {len(messages)} messages for conversation by ID: {conversation_id}")
@@ -341,6 +350,26 @@ class UnifiedConversationService:
                     duration = last_message_time - first_message_time
                     duration_minutes = duration.total_seconds() / 60
                 
+                # Convert times to Singapore timezone before formatting
+                first_message_sg = None
+                last_message_sg = None
+                
+                if first_message_time:
+                    if first_message_time.tzinfo is None:
+                        # Assume UTC if no timezone info, then convert to Singapore time
+                        first_message_sg = pytz.UTC.localize(first_message_time).astimezone(self.singapore_tz)
+                    else:
+                        # Convert to Singapore time if timezone info exists
+                        first_message_sg = first_message_time.astimezone(self.singapore_tz)
+                
+                if last_message_time:
+                    if last_message_time.tzinfo is None:
+                        # Assume UTC if no timezone info, then convert to Singapore time
+                        last_message_sg = pytz.UTC.localize(last_message_time).astimezone(self.singapore_tz)
+                    else:
+                        # Convert to Singapore time if timezone info exists
+                        last_message_sg = last_message_time.astimezone(self.singapore_tz)
+                
                 summary = {
                     'conversation_id': conversation_id,
                     'session_id': session_id,
@@ -348,8 +377,8 @@ class UnifiedConversationService:
                     'message_counts': message_counts,
                     'total_messages': sum(message_counts.values()),
                     'duration_minutes': round(duration_minutes, 2),
-                    'first_message_at': first_message_time.isoformat() if first_message_time else None,
-                    'last_message_at': last_message_time.isoformat() if last_message_time else None,
+                    'first_message_at': first_message_sg.isoformat() if first_message_sg else None,
+                    'last_message_at': last_message_sg.isoformat() if last_message_sg else None,
                     'session_created_at': session_info.get('created_at'),
                     'session_status': session_info.get('status'),
                     'session_expires_at': session_info.get('expires_at')
@@ -387,7 +416,8 @@ class UnifiedConversationService:
             logger.error(f"[UNIFIED_CONVERSATION] No conversation_id in session: {session_id}")
             return False
         
-        current_time = datetime.now(self.singapore_tz)
+        # Store UTC time in database for consistency
+        current_time_utc = datetime.now(pytz.UTC)
         
         with DatabaseContext('unified_conversations') as conversations:
             if not conversations:
@@ -400,7 +430,7 @@ class UnifiedConversationService:
                     {
                         '$set': {
                             'status': ConversationStatus.ARCHIVED.value,
-                            'archived_at': current_time,
+                            'archived_at': current_time_utc,
                             'archive_reason': archive_reason
                         }
                     }
@@ -424,7 +454,8 @@ class UnifiedConversationService:
         """
         logger.info(f"[UNIFIED_CONVERSATION] Starting cleanup of conversations older than {days_old} days")
         
-        cutoff_date = datetime.now(self.singapore_tz) - timedelta(days=days_old)
+        # Use UTC for database operations
+        cutoff_date = datetime.now(pytz.UTC) - timedelta(days=days_old)
         
         with DatabaseContext('unified_conversations') as conversations:
             if not conversations:
@@ -440,14 +471,14 @@ class UnifiedConversationService:
                     {
                         '$set': {
                             'status': ConversationStatus.ARCHIVED.value,
-                            'archived_at': datetime.now(self.singapore_tz),
+                            'archived_at': datetime.now(pytz.UTC),
                             'archive_reason': 'automatic_cleanup'
                         }
                     }
                 )
                 
                 # Then delete very old archived conversations (older than 90 days)
-                very_old_cutoff = datetime.now(self.singapore_tz) - timedelta(days=90)
+                very_old_cutoff = datetime.now(pytz.UTC) - timedelta(days=90)
                 delete_result = conversations.delete_many({
                     'created_at': {'$lt': very_old_cutoff},
                     'status': ConversationStatus.ARCHIVED.value
@@ -507,16 +538,36 @@ class UnifiedConversationService:
                 
                 conversation_summaries = list(conversations.aggregate(pipeline))
                 
-                # Format the results
+                # Format the results with proper timezone conversion
                 formatted_conversations = []
                 for conv in conversation_summaries:
+                    # Convert times to Singapore timezone
+                    first_message_sg = None
+                    last_message_sg = None
+                    
+                    if conv['first_message']:
+                        if conv['first_message'].tzinfo is None:
+                            # Assume UTC if no timezone info, then convert to Singapore time
+                            first_message_sg = pytz.UTC.localize(conv['first_message']).astimezone(self.singapore_tz)
+                        else:
+                            # Convert to Singapore time if timezone info exists
+                            first_message_sg = conv['first_message'].astimezone(self.singapore_tz)
+                    
+                    if conv['last_message']:
+                        if conv['last_message'].tzinfo is None:
+                            # Assume UTC if no timezone info, then convert to Singapore time
+                            last_message_sg = pytz.UTC.localize(conv['last_message']).astimezone(self.singapore_tz)
+                        else:
+                            # Convert to Singapore time if timezone info exists
+                            last_message_sg = conv['last_message'].astimezone(self.singapore_tz)
+                    
                     formatted_conv = {
                         'conversation_id': conv['_id'],
                         'session_id': conv['session_id'],
                         'client_id': conv['client_id'],
                         'message_count': conv['message_count'],
-                        'first_message_at': conv['first_message'].isoformat() if conv['first_message'] else None,
-                        'last_message_at': conv['last_message'].isoformat() if conv['last_message'] else None,
+                        'first_message_at': first_message_sg.isoformat() if first_message_sg else None,
+                        'last_message_at': last_message_sg.isoformat() if last_message_sg else None,
                         'status': conv.get('status', ConversationStatus.ACTIVE.value)
                     }
                     formatted_conversations.append(formatted_conv)
@@ -541,7 +592,9 @@ class UnifiedConversationService:
                 return {'error': 'MongoDB not available'}
             
             try:
-                current_time = datetime.now(self.singapore_tz)
+                # Use UTC for database queries and convert to Singapore time for display
+                current_time_utc = datetime.now(pytz.UTC)
+                current_time_sg = current_time_utc.astimezone(self.singapore_tz)
                 
                 # Count total messages
                 total_messages = conversations.count_documents({})
@@ -556,15 +609,15 @@ class UnifiedConversationService:
                 # Count unique conversations
                 unique_conversations = len(conversations.distinct('conversation_id'))
                 
-                # Count messages in last 24 hours
-                last_24h = current_time - timedelta(hours=24)
+                # Count messages in last 24 hours (use UTC for database query)
+                last_24h_utc = current_time_utc - timedelta(hours=24)
                 recent_messages = conversations.count_documents({
-                    'created_at': {'$gt': last_24h}
+                    'created_at': {'$gt': last_24h_utc}
                 })
                 
                 # Count active conversations (with messages in last 24 hours)
                 active_conversations = len(conversations.distinct('conversation_id', {
-                    'created_at': {'$gt': last_24h}
+                    'created_at': {'$gt': last_24h_utc}
                 }))
                 
                 stats = {
@@ -573,7 +626,7 @@ class UnifiedConversationService:
                     'unique_conversations': unique_conversations,
                     'active_conversations_24h': active_conversations,
                     'recent_messages_24h': recent_messages,
-                    'timestamp': current_time.isoformat()
+                    'timestamp': current_time_sg.isoformat()
                 }
                 
                 logger.info(f"[UNIFIED_CONVERSATION] Conversation statistics: {stats}")

@@ -152,6 +152,8 @@ intents:
   # Loan calculator intents
   - calculate_loan
   - ask_loan_help
+  # General inform intent
+  - inform
 
 
 responses:
@@ -187,6 +189,22 @@ responses:
 
   utter_availability_info:
   - text: "📅 **Let me check availability for you.**\n\n⏰ **I'll help you find the best available time slot.**"
+
+  # Form asking responses for appointment_form
+  utter_ask_service_type:
+  - text: "🔧 **What type of service would you like to book?**\n\nPlease choose from:\n• Test Drive\n• Sales Consultation\n• Trade-in Evaluation"
+
+  utter_ask_customer_name:
+  - text: "👤 **What's your full name?** Please provide your name for the appointment booking."
+
+  utter_ask_customer_phone:
+  - text: "📱 **What's your phone number?**\n\nPlease provide a Singapore phone number (8 digits starting with 8 or 9)."
+
+  utter_ask_appointment_date:
+  - text: "📅 **When would you like to schedule your appointment?**\n\nYou can say things like:\n• Tomorrow\n• Monday\n• Next week\n• 2024-01-15"
+
+  utter_ask_appointment_time:
+  - text: "⏰ **What time would you prefer?**\n\nYou can say things like:\n• 2pm\n• 10:30 AM\n• Morning\n• Afternoon"
 
   # utter_appointment_booking_started:
   # - text: "📅 **Great! Let's get your appointment scheduled.**\n\n🔧 **I'll help you book the perfect time slot for your automotive service.**\n\n💬 **What type of service would you like to schedule today?**"
@@ -231,6 +249,7 @@ actions:
   - action_book_appointment
   - action_view_appointments
   - action_cancel_appointment
+  - action_submit_appointment_form
   # Loan calculator actions
   - action_loan_calculator
   # - action_loan_calculation_result

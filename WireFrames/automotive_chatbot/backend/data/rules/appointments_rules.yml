@@ -54,14 +54,27 @@ rules:
 #   - action: action_book_appointment
 
 # Form handling rules for appointment booking
-- rule: Activate appointment form
-  condition:
-  - active_loop: null
-  steps:
-  - action: appointment_form
-  - active_loop: appointment_form
+# The appointment form is activated by action_book_appointment when needed
+# Removed problematic rules that directly activate appointment_form
+# These were causing conflicts with action_book_appointment logic
 
-- rule: Submit appointment form
+# - rule: Activate appointment form
+#   condition:
+#   - active_loop: null
+#   steps:
+#   - action: appointment_form
+#   - active_loop: appointment_form
+
+# - rule: Handle inform intent during appointment booking
+#   condition:
+#   - active_loop: null
+#   steps:
+#   - intent: inform
+#   - action: appointment_form
+#   - active_loop: appointment_form
+
+# Form submission rule - ensures submit action is called when form is complete
+- rule: Submit appointment form when complete
   condition:
   - active_loop: appointment_form
   steps:
@@ -69,7 +82,7 @@ rules:
   - active_loop: null
   - slot_was_set:
     - requested_slot: null
-  - action: utter_appointment_confirmed
+  - action: action_submit_appointment_form
 
 - rule: Handle appointment form interruption
   condition:
