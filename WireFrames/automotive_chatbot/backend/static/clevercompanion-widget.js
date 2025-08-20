@@ -3448,9 +3448,19 @@
                     // Old format - just text
                     this.addMessage(response, 'bot');
                 } else if (typeof response === 'object') {
-                    // New format - object with text and buttons
+                    // New format - object with text, buttons, and custom fields
                     const text = response.text || '';
                     const buttons = response.buttons || [];
+                    const custom = response.custom || {};
+                    
+                    // Handle autofill functionality
+                    if (custom.autofill) {
+                        const inputElement = document.getElementById('cc-input');
+                        if (inputElement) {
+                            inputElement.value = custom.autofill;
+                            inputElement.focus();
+                        }
+                    }
                     
                     if (buttons.length > 0) {
                         // Message with buttons

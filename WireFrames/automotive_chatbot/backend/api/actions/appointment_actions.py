@@ -282,16 +282,13 @@ class AsyncActionViewAppointments(AutoLoggedAction):
                     return [SlotSet("customer_phone", customer_phone)]
             
             if not customer_phone:
-                # Single response with auto-fill functionality
+                # Single response with auto-fill functionality using json_message (consistent with cancel appointment)
                 response_message = "📱 **Let me help you check your appointments!**\n\nTo view your booking history and upcoming appointments, I'll need your phone number. Please provide the number you used when making your bookings."
                 dispatcher.utter_message(
                     text=response_message,
-                    buttons=[
-                        {
-                            "title": "Enter Phone Number",
-                            "payload": "autofill:my phone number is "
-                        }
-                    ]
+                    json_message={
+                        "autofill": "view appointments for "
+                    }
                 )
                 return []
             
@@ -647,7 +644,7 @@ class ActionViewAppointments(AutoLoggedAction):
                     dispatcher.utter_message(
                         text=response_message,
                         json_message={
-                            "autofill": "i want to view appointment details of "
+                            "autofill": "view appointments for "
                         }
                     )
                     # Log bot response
