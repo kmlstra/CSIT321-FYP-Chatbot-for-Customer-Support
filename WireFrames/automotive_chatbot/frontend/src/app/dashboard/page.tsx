@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { API_ENDPOINTS, API_CONFIG, getAuthHeaders } from '@/config/api';
+import { API_ENDPOINTS, API_CONFIG, getAuthHeaders } from '../../config/api';
 import {
   LineChart,
   Line,
@@ -118,6 +118,8 @@ interface Appointment {
   notes?: string;
   created_at: string;
   updated_at?: string;
+  cancelled_time?: string;
+  completed_time?: string;
 }
 
 export default function ClientDashboard() {
@@ -986,16 +988,16 @@ export default function ClientDashboard() {
     const embedCode = `<!-- CleverCompanion Chatbot Widget -->
 <script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
 <script async>
-    window.DOMAIN = window.DOMAIN || 'http://localhost';
+    window.DOMAIN = window.DOMAIN || 'http://13.215.240.173';
     // Dynamically load scripts with domain configuration and cache-busting
     const timestamp = Date.now();
     const script1 = document.createElement('script');
-    script1.src = (window.DOMAIN || 'http://localhost') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/clevercompanion-widget.js?v=' + timestamp;
     script1.async = true;
     document.head.appendChild(script1);
     
     const script2 = document.createElement('script');
-    script2.src = (window.DOMAIN || 'http://localhost') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/page-interactions.js?v=' + timestamp;
     script2.async = true;
     document.head.appendChild(script2);
 </script>
@@ -2633,16 +2635,16 @@ export default function ClientDashboard() {
                     <pre>{`<!-- CleverCompanion Chatbot Widget -->
 <script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
 <script async>
-    window.DOMAIN = window.DOMAIN || 'http://localhost';
+    window.DOMAIN = window.DOMAIN || 'http://13.215.240.173';
     // Dynamically load scripts with domain configuration and cache-busting
     const timestamp = Date.now();
     const script1 = document.createElement('script');
-    script1.src = (window.DOMAIN || 'http://localhost') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/clevercompanion-widget.js?v=' + timestamp;
     script1.async = true;
     document.head.appendChild(script1);
     
     const script2 = document.createElement('script');
-    script2.src = (window.DOMAIN || 'http://localhost') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/page-interactions.js?v=' + timestamp;
     script2.async = true;
     document.head.appendChild(script2);
 </script>

@@ -22,7 +22,7 @@ CONFIG_TEMPLATES = {
         "ssl_enabled": False
     },
     "ec2": {
-        "domain": "http://54.254.180.103",
+        "domain": "http://13.215.240.173",
         "frontend_port": "3000",
         "backend_port": "8000",
         "rasa_port": "5005",
@@ -198,7 +198,7 @@ def get_config_name(config):
     domain = config['domain']
     if 'localhost' in domain:
         return "localhost"
-    elif '54.254.180.103' in domain:
+    elif '13.215.240.173' in domain:
         return "ec2"
     else:
         return "production"

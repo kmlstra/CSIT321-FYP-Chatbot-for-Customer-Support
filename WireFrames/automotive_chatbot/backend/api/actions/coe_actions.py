@@ -21,10 +21,10 @@ from datetime import datetime, timedelta
 import random
 
 # Import visualization utilities
-from ..utils.visualization_utils import get_chart_for_coe_response
+from api.utils.visualization_utils import get_chart_for_coe_response
 
 # Import optimized feature cache manager
-from ..cache.feature_cache_manager import check_coe_feature_enabled
+from api.cache.feature_cache_manager import check_coe_feature_enabled
 
 logger = logging.getLogger(__name__)
 

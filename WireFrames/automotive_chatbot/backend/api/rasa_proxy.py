@@ -146,9 +146,20 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
         for attempt in range(max_retries):
             try:
                 async with httpx.AsyncClient() as client:
-                    domain = os.getenv('DOMAIN', 'http://localhost')
-                    rasa_port = os.getenv('RASA_PORT', '5005')
-                    rasa_url = f"{domain}:{rasa_port}/webhooks/rest/webhook"
+                    # Check if running in Docker container
+                    import socket
+                    try:
+                        # Try to resolve 'rasa' hostname (Docker container name)
+                        socket.gethostbyname('rasa')
+                        # If successful, we're in Docker environment
+                        rasa_url = "http://rasa:5005/webhooks/rest/webhook"
+                        logger.info("Using Docker container name for RASA connection")
+                    except socket.gaierror:
+                        # Not in Docker, use external domain
+                        domain = os.getenv('DOMAIN', 'http://localhost')
+                        rasa_port = os.getenv('RASA_PORT', '5005')
+                        rasa_url = f"{domain}:{rasa_port}/webhooks/rest/webhook"
+                        logger.info("Using external domain for RASA connection")
                     
                     logger.info(f"Attempting RASA connection (attempt {attempt + 1}/{max_retries})")
                     response = await client.post(
@@ -165,19 +176,56 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                 logger.warning(f"RASA connection attempt {attempt + 1} failed: {e}")
                 
                 if attempt == max_retries - 1:  # Last attempt failed
-                    logger.error(f"All RASA connection attempts failed. Providing fallback response.")
-                    # Provide fallback response instead of crashing
-                    fallback_response = {
-                        'text': "I'm sorry, I'm having trouble connecting to our chat service right now. Please try again in a moment, or contact our support team for immediate assistance.",
-                        'buttons': []
-                    }
+                    logger.error(f"All RASA connection attempts failed. Checking Actions service and providing fallback response.")
+                    
+                    # Check if Actions service is available for enhanced fallback
+                    actions_available = False
+                    try:
+                        async with httpx.AsyncClient() as actions_client:
+                            # Check if running in Docker container for Actions service
+                            import socket
+                            try:
+                                socket.gethostbyname('rasa-actions')
+                                actions_url = "http://rasa-actions:5055/health"
+                            except socket.gaierror:
+                                domain = os.getenv('DOMAIN', 'http://localhost')
+                                rasa_actions_port = os.getenv('RASA_ACTIONS_PORT', '5055')
+                                actions_url = f"{domain}:{rasa_actions_port}/health"
+                            
+                            actions_response = await actions_client.get(actions_url, timeout=10.0)
+                            actions_response.raise_for_status()
+                            actions_available = True
+                            logger.info("RASA Actions service is available despite core service failure")
+                    except Exception as actions_e:
+                        logger.warning(f"RASA Actions service also unavailable: {actions_e}")
+                    
+                    # Provide enhanced fallback response based on service availability
+                    if actions_available:
+                        fallback_response = {
+                            'text': "I'm experiencing some technical difficulties with my main chat service, but my action handlers are still working. Please try a simple question or contact our support team for immediate assistance.",
+                            'buttons': [
+                                {'title': 'Contact Support', 'payload': '/contact_support'},
+                                {'title': 'Try Again', 'payload': '/restart'}
+                            ]
+                        }
+                        fallback_reason = 'rasa_core_failed_actions_available'
+                    else:
+                        fallback_response = {
+                            'text': "I'm sorry, I'm having trouble connecting to our chat service right now. Please try again in a moment, or contact our support team for immediate assistance.",
+                            'buttons': [
+                                {'title': 'Contact Support', 'payload': '/contact_support'},
+                                {'title': 'Retry', 'payload': '/restart'}
+                            ]
+                        }
+                        fallback_reason = 'all_rasa_services_failed'
                     
                     # Store fallback response
                     bot_metadata = {
                         'timestamp': datetime.now(pytz.timezone('Asia/Singapore')).isoformat(),
-                        'source': 'fallback_response',
-                        'reason': 'rasa_connection_failed',
-                        'has_buttons': False
+                        'source': 'enhanced_fallback_response',
+                        'reason': fallback_reason,
+                        'has_buttons': len(fallback_response['buttons']) > 0,
+                        'actions_service_status': 'available' if actions_available else 'unavailable'
                     }
                     
                     # Include client_id in fallback response metadata
@@ -192,7 +240,11 @@ async def chat_with_rasa(chat_request: ChatMessage, background_tasks: Background
                         "user_message": user_message,
                         "bot_responses": [fallback_response],
                         "fallback": True,
-                        "error": "RASA service temporarily unavailable"
+                        "error": "RASA service temporarily unavailable",
+                        "service_status": {
+                            "rasa_core": "unavailable",
+                            "rasa_actions": "available" if actions_available else "unavailable"
+                        }
                     })
                 else:
                     # Wait before retrying
@@ -248,9 +300,20 @@ async def rasa_status():
     """Check RASA service status with improved timeout and error handling."""
     try:
         async with httpx.AsyncClient() as client:
-            domain = os.getenv('DOMAIN', 'http://localhost')
-            rasa_port = os.getenv('RASA_PORT', '5005')
-            rasa_status_url = f"{domain}:{rasa_port}/status"
+            # Check if running in Docker container
+            import socket
+            try:
+                # Try to resolve 'rasa' hostname (Docker container name)
+                socket.gethostbyname('rasa')
+                # If successful, we're in Docker environment
+                rasa_status_url = "http://rasa:5005/status"
+                logger.info("Using Docker container name for RASA status check")
+            except socket.gaierror:
+                # Not in Docker, use external domain
+                domain = os.getenv('DOMAIN', 'http://localhost')
+                rasa_port = os.getenv('RASA_PORT', '5005')
+                rasa_status_url = f"{domain}:{rasa_port}/status"
+                logger.info("Using external domain for RASA status check")
             
             logger.info("Checking RASA service status")
             response = await client.get(
@@ -271,5 +334,133 @@ async def rasa_status():
                 "rasa_status": "unavailable",
                 "error": str(e),
                 "message": "RASA service is temporarily unavailable"
+            }
+        )
+
+@router.get("/actions/status")
+async def rasa_actions_status():
+    """Check RASA Actions service status (port 5055) with improved timeout and error handling."""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Check if running in Docker container
+            import socket
+            try:
+                # Try to resolve 'rasa-actions' hostname (Docker container name)
+                socket.gethostbyname('rasa-actions')
+                # If successful, we're in Docker environment
+                rasa_actions_status_url = "http://rasa-actions:5055/health"
+                logger.info("Using Docker container name for RASA Actions status check")
+            except socket.gaierror:
+                # Not in Docker, use external domain
+                domain = os.getenv('DOMAIN', 'http://localhost')
+                rasa_actions_port = os.getenv('RASA_ACTIONS_PORT', '5055')
+                rasa_actions_status_url = f"{domain}:{rasa_actions_port}/health"
+                logger.info("Using external domain for RASA Actions status check")
+            
+            logger.info("Checking RASA Actions service status")
+            response = await client.get(
+                rasa_actions_status_url,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            logger.info("RASA Actions service status check successful")
+            return JSONResponse(content={
+                "rasa_actions_status": "available",
+                "rasa_actions_response": response.json() if response.content else {"status": "healthy"}
+            })
+    except (httpx.RequestError, httpx.HTTPStatusError, httpx.ReadTimeout) as e:
+        logger.warning(f"RASA Actions status check failed: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={
+                "rasa_actions_status": "unavailable",
+                "error": str(e),
+                "message": "RASA Actions service is temporarily unavailable"
+            }
+        )
+
+@router.get("/health")
+async def combined_health_check():
+    """Combined health check for both RASA core (5005) and Actions (5055) services."""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Check if running in Docker container
+            import socket
+            docker_mode = False
+            try:
+                socket.gethostbyname('rasa')
+                docker_mode = True
+                logger.info("Running in Docker environment")
+            except socket.gaierror:
+                logger.info("Running in external environment")
+            
+            # Prepare URLs based on environment
+            if docker_mode:
+                rasa_status_url = "http://rasa:5005/status"
+                rasa_actions_status_url = "http://rasa-actions:5055/health"
+            else:
+                domain = os.getenv('DOMAIN', 'http://localhost')
+                rasa_port = os.getenv('RASA_PORT', '5005')
+                rasa_actions_port = os.getenv('RASA_ACTIONS_PORT', '5055')
+                rasa_status_url = f"{domain}:{rasa_port}/status"
+                rasa_actions_status_url = f"{domain}:{rasa_actions_port}/health"
+            
+            # Check both services concurrently
+            results = {
+                "rasa_core": {"status": "unknown", "error": None},
+                "rasa_actions": {"status": "unknown", "error": None},
+                "overall_status": "unknown"
+            }
+            
+            # Check RASA Core (5005)
+            try:
+                logger.info("Checking RASA Core service")
+                rasa_response = await client.get(rasa_status_url, timeout=15.0)
+                rasa_response.raise_for_status()
+                results["rasa_core"]["status"] = "available"
+                results["rasa_core"]["response"] = rasa_response.json()
+                logger.info("RASA Core service is available")
+            except Exception as e:
+                results["rasa_core"]["status"] = "unavailable"
+                results["rasa_core"]["error"] = str(e)
+                logger.warning(f"RASA Core service check failed: {e}")
+            
+            # Check RASA Actions (5055)
+            try:
+                logger.info("Checking RASA Actions service")
+                actions_response = await client.get(rasa_actions_status_url, timeout=15.0)
+                actions_response.raise_for_status()
+                results["rasa_actions"]["status"] = "available"
+                results["rasa_actions"]["response"] = actions_response.json() if actions_response.content else {"status": "healthy"}
+                logger.info("RASA Actions service is available")
+            except Exception as e:
+                results["rasa_actions"]["status"] = "unavailable"
+                results["rasa_actions"]["error"] = str(e)
+                logger.warning(f"RASA Actions service check failed: {e}")
+            
+            # Determine overall status
+            if results["rasa_core"]["status"] == "available" and results["rasa_actions"]["status"] == "available":
+                results["overall_status"] = "healthy"
+                status_code = 200
+            elif results["rasa_core"]["status"] == "available" or results["rasa_actions"]["status"] == "available":
+                results["overall_status"] = "partial"
+                status_code = 206  # Partial Content
+            else:
+                results["overall_status"] = "unhealthy"
+                status_code = 503  # Service Unavailable
+            
+            return JSONResponse(
+                status_code=status_code,
+                content=results
+            )
+            
+    except Exception as e:
+        logger.error(f"Combined health check failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "overall_status": "error",
+                "error": str(e),
+                "message": "Health check system error"
             }
         )

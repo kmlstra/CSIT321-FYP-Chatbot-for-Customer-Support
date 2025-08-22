@@ -554,6 +554,60 @@ npm run build
 .venv\Scripts\Activate.ps1
 ```
 
+### 🚨 AWS Server Troubleshooting
+
+**Server Status Check:**
+```bash
+# Quick service health check
+python quick_service_check.py
+```
+
+**Common AWS Issues:**
+
+**Issue: Only port 8000 working, Rasa and Frontend not responding**
+- **Symptoms**: Backend API accessible, but frontend returns 502 or connection refused
+- **Cause**: Docker containers stopped or failed to start properly
+- **Solution**: 
+  1. Check AWS EC2 instance status in AWS Console
+  2. Restart instance if stopped
+  3. Wait 3-5 minutes for all services to start
+  4. Run health check: `python quick_service_check.py`
+
+**Issue: SSH Connection Failed**
+- **Symptoms**: `Connection closed by server` or `Connection timeout`
+- **Cause**: Security group misconfiguration or instance stopped
+- **Solution**:
+  1. Check EC2 instance status (should be "running")
+  2. Verify security group allows SSH (port 22) from your IP
+  3. Ensure SSH key (`cc.pem`) has correct permissions
+  4. Try AWS Systems Manager Session Manager as alternative
+
+**Issue: Nginx returns 502 Bad Gateway**
+- **Symptoms**: Nginx accessible but returns 502 for all services
+- **Cause**: Backend Docker containers not running
+- **Solution**:
+  ```bash
+  # Via SSH or Systems Manager:
+  sudo docker ps -a  # Check container status
+  sudo docker-compose -f docker-compose.prod.yml restart
+  ```
+
+**Emergency Recovery Steps:**
+1. **AWS Console**: EC2 > Instances > Select instance > Instance State > Restart
+2. **Wait**: 3-5 minutes for all services to initialize
+3. **Verify**: Run `python quick_service_check.py`
+4. **Manual Fix**: If issues persist, see `AWS_SERVICE_REPAIR_GUIDE.md`
+
+**Service Health Check URLs:**
+- Frontend: `http://13.215.240.173/`
+- Backend: `http://13.215.240.173:8000/health`
+- API Docs: `http://13.215.240.173:8000/docs`
+- Rasa: `http://13.215.240.173/webhooks/rest/webhook`
+
+**For detailed AWS troubleshooting, see:**
+- `AWS_SERVICE_REPAIR_GUIDE.md` - Comprehensive repair instructions
+- `quick_service_check.py` - Automated service health checker
+
 ## 📞 Support & Documentation
 
 ### Getting Help

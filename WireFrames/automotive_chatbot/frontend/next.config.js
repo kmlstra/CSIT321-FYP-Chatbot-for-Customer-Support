@@ -15,6 +15,7 @@ const defaultRasaPort = process.env.NEXT_PUBLIC_RASA_PORT || '5005';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   eslint: {
     // Disable ESLint during builds
     ignoreDuringBuilds: true,

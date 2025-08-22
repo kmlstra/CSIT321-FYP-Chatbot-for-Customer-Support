@@ -60,7 +60,7 @@ function Show-InteractiveMenu {
     Write-Host ""
     Write-ColoredOutput "Choose your deployment target:" "Yellow"
     Write-Host "  1. Localhost (Development)"
-    Write-Host "  2. EC2 Instance (54.254.180.103)"
+    Write-Host "  2. EC2 Instance (13.215.240.173)"
     Write-Host "  3. Production (Custom Domain)"
     Write-Host "  4. Custom Domain/IP"
     Write-Host "  5. Show current configuration"
@@ -121,7 +121,7 @@ if ($Interactive -or (-not $Target -and -not $CustomDomain)) {
             }
             "2" {
                 Write-Host ""
-                Write-ColoredOutput "Configuring for EC2 instance (54.254.180.103)..." "Yellow"
+                Write-ColoredOutput "Configuring for EC2 instance (13.215.240.173)..." "Yellow"
                 $success = Invoke-ConfigurationScript "--target ec2"
                 if ($success) {
                     Write-ColoredOutput "✅ Configuration updated successfully!" "Green"

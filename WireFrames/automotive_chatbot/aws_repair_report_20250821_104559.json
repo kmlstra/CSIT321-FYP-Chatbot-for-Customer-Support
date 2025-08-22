@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-08-21T10:45:26.441219",
+  "server_ip": "13.215.240.173",
+  "repair_actions": [
+    {
+      "action": "nginx_running",
+      "timestamp": "2025-08-21T10:45:59.071097"
+    }
+  ],
+  "service_status": {
+    "frontend_via_nginx": {
+      "status": "reachable_with_issues",
+      "status_code": 502,
+      "response_time": 1.333602
+    },
+    "backend_via_nginx": {
+      "status": "connection_failed",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=80): Read timed out. (read timeout=5)"
+    },
+    "rasa_via_nginx": {
+      "status": "reachable_with_issues",
+      "status_code": 502,
+      "response_time": 4.466881
+    },
+    "backend_direct": {
+      "status": "connection_failed",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=8000): Read timed out. (read timeout=5)"
+    },
+    "backend_docs": {
+      "status": "connection_failed",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=8000): Read timed out. (read timeout=5)"
+    },
+    "backend": {
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=8000): Read timed out. (read timeout=10)"
+    },
+    "nginx": {
+      "status": "running",
+      "status_code": 502
+    }
+  },
+  "success": false,
+  "manual_fix_instructions": [
+    {
+      "priority": "high",
+      "action": "后端服务异常，需要重启所有服务",
+      "commands": [
+        "# 通过AWS控制台重启EC2实例，或者SSH连接后执行:",
+        "sudo docker-compose -f docker-compose.prod.yml down",
+        "sudo docker-compose -f docker-compose.prod.yml up -d"
+      ]
+    },
+    {
+      "priority": "critical",
+      "action": "修复SSH连接问题",
+      "commands": [
+        "# 检查AWS安全组设置:",
+        "1. 登录AWS控制台",
+        "2. 检查EC2实例的安全组",
+        "3. 确保22端口对您的IP开放",
+        "4. 检查实例状态是否为'running'",
+        "5. 如果实例停止，重新启动实例"
+      ]
+    },
+    {
+      "priority": "high",
+      "action": "修复服务端口问题",
+      "commands": [
+        "# 检查Docker容器状态:",
+        "sudo docker ps -a",
+        "# 重启特定服务:",
+        "sudo docker restart automotive-frontend  # 修复3000端口",
+        "sudo docker restart automotive-rasa     # 修复5005端口",
+        "sudo docker restart automotive-rasa-actions # 修复5055端口"
+      ]
+    }
+  ]
+}

@@ -17,7 +17,7 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY ./backend/api/requirements.txt .
+COPY ./backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -28,7 +28,7 @@ FROM deps AS builder
 WORKDIR /app
 
 # Copy application code
-COPY ./backend/api/ .
+COPY ./backend/ .
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -136,4 +136,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application with optimized settings
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--access-log", "--log-level", "info"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--access-log", "--log-level", "info"]

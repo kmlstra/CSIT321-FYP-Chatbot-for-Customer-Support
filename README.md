@@ -138,5 +138,52 @@ CSIT321-FYP-Chatbot-for-Customer-Support/
 - [Backend Setup](WireFrames/automotive_chatbot/backend/README.md)
 - [MongoDB Setup](WireFrames/automotive_chatbot/docs/MONGODB_SETUP.md)
 
+## 🚀 AWS Deployment Configuration
+
+### Production Deployment Files
+The following files have been synchronized from AWS production environment for future deployments:
+
+#### 1. Docker Compose Configuration
+- **File:** `docker-compose.production.yml`
+- **Purpose:** Complete production deployment configuration including all services
+- **Services Included:**
+  - Backend API (FastAPI) - Port 8000
+  - Rasa Core - Port 5005
+  - Rasa Actions - Port 5055
+  - Frontend (React) - Port 3000
+  - Nginx Reverse Proxy - Port 80
+
+#### 2. Nginx Configuration
+- **File:** `nginx_default.conf`
+- **Purpose:** Nginx reverse proxy configuration for production
+- **Features:**
+  - Frontend routing to port 3000
+  - API routing to backend port 8000
+  - Test client widget routing
+  - Proper CORS headers
+
+#### 3. Rasa Endpoints Configuration
+- **File:** `endpoints-aws.yml`
+- **Purpose:** AWS-specific Rasa endpoints configuration
+- **Configuration:** Action endpoint pointing to rasa-actions:5055
+
+### Deployment Commands
+```bash
+# Build and start all services in production
+docker-compose -f docker-compose.production.yml up -d --build
+
+# Check service status
+docker-compose -f docker-compose.production.yml ps
+
+# View logs
+docker-compose -f docker-compose.production.yml logs -f [service_name]
+```
+
+### Service Health Checks
+- **Backend API:** `http://localhost:8000/health`
+- **Rasa Core:** `http://localhost:5005/version`
+- **Frontend:** `http://localhost:3000`
+- **Test Widget:** `http://localhost/test-client-widget.html`
+
 ---
-**Last Updated:** January 2025 - Fixed Unicode encoding and PyCharm configuration issues 
+**Last Updated:** January 2025 - Added AWS deployment configuration sync and fixed Unicode encoding issues

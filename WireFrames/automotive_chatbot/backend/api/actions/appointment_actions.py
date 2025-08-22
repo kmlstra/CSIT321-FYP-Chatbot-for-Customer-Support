@@ -35,8 +35,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Import our enhanced utilities
-from ..utils.database_pool import get_database_pool
-from ..middleware.intent_validation_middleware import validate_medium_confidence, validate_high_confidence
+from api.utils.database_pool import get_database_pool
+from api.middleware.intent_validation_middleware import validate_medium_confidence, validate_high_confidence
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent.parent.parent / '.env')
@@ -924,7 +924,7 @@ class ActionBookAppointment(Action):
     def _get_appointment_options_sync(self) -> str:
         """Get appointment options synchronously"""
         try:
-            from ..config.database import get_collection
+            from api.config.database import get_collection
             
             # Get appointment types from database
             collection = get_collection('appointment_types')
@@ -1293,7 +1293,7 @@ class AppointmentForm(FormValidationAction):
         
         # Save appointment to database
         try:
-            from ..config.database import get_collection
+            from api.config.database import get_collection
             import uuid
             from datetime import datetime
             
@@ -1358,7 +1358,7 @@ class ActionSubmitAppointmentForm(Action):
         
         # Save appointment to database
         try:
-            from ..config.database import get_collection
+            from api.config.database import get_collection
             import uuid
             from datetime import datetime
             

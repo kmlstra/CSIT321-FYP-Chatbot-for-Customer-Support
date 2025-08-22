@@ -17,7 +17,7 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY ./backend/api/actions/requirements.txt .
+COPY ./backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \

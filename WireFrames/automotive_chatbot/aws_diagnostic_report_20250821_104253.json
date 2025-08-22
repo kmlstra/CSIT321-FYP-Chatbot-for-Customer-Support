@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-08-21T10:41:59.768546",
+  "server_ip": "13.215.240.173",
+  "connectivity": {
+    "ping": {
+      "status": "failed",
+      "output": ""
+    },
+    "ssh": {
+      "status": "failed",
+      "output": "Warning: Identity file ../../../cc.pem not accessible: No such file or directory.\nConnection timed out during banner exchange\nConnection to 13.215.240.173 port 22 timed out\n"
+    }
+  },
+  "port_status": {
+    "80": {
+      "service": "Nginx/HTTP",
+      "status": "open"
+    },
+    "3000": {
+      "service": "Frontend (Next.js)",
+      "status": "closed"
+    },
+    "5005": {
+      "service": "Rasa Server",
+      "status": "closed"
+    },
+    "5055": {
+      "service": "Rasa Actions",
+      "status": "closed"
+    },
+    "8000": {
+      "service": "Backend API",
+      "status": "open"
+    }
+  },
+  "docker_status": {},
+  "service_health": {
+    "backend": {
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=8000): Read timed out. (read timeout=10)"
+    },
+    "rasa": {
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=5005): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002E7EB4E9550>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+    },
+    "frontend": {
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='13.215.240.173', port=3000): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002E7EB5100A0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "issue": "服务器无法ping通",
+      "solution": "检查EC2实例状态，确保实例正在运行且安全组配置正确"
+    },
+    {
+      "priority": "critical",
+      "issue": "SSH连接失败",
+      "solution": "检查SSH密钥权限，确保安全组开放22端口"
+    },
+    {
+      "priority": "high",
+      "issue": "前端服务端口3000关闭",
+      "solution": "重启前端容器: sudo docker restart automotive-frontend"
+    },
+    {
+      "priority": "high",
+      "issue": "Rasa服务端口5005关闭",
+      "solution": "重启Rasa容器: sudo docker restart automotive-rasa"
+    },
+    {
+      "priority": "medium",
+      "issue": "Rasa Actions端口5055关闭",
+      "solution": "检查Rasa Actions服务状态并重启相关容器"
+    },
+    {
+      "priority": "high",
+      "issue": "backend服务不健康",
+      "solution": "检查backend服务日志: sudo docker logs automotive-backend"
+    },
+    {
+      "priority": "high",
+      "issue": "rasa服务不健康",
+      "solution": "检查rasa服务日志: sudo docker logs automotive-rasa"
+    },
+    {
+      "priority": "high",
+      "issue": "frontend服务不健康",
+      "solution": "检查frontend服务日志: sudo docker logs automotive-frontend"
+    }
+  ]
+}

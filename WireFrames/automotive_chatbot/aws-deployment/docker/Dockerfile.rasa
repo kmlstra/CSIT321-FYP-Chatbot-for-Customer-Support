@@ -16,13 +16,20 @@ FROM base AS builder
 WORKDIR /app
 
 # Copy RASA configuration and training data
-COPY ./rasa/ .
+COPY ./backend/ .
 
-# Copy custom actions requirements
-COPY ./backend/api/actions/requirements.txt ./actions/requirements.txt
+# Copy actions requirements
+COPY ./backend/requirements.txt ./requirements.txt
 
 # Install custom actions dependencies
-RUN pip install --no-cache-dir -r ./actions/requirements.txt
+RUN pip install --no-cache-dir -r ./requirements.txt
+
+# Force reinstall packaging==20.9 to fix LegacyVersion import issue
+RUN pip install packaging==20.9 --force-reinstall --no-deps
+# Also ensure pyparsing compatibility
+RUN pip install pyparsing==2.4.7 --force-reinstall --no-deps
+# Fix JWT dependency to resolve InvalidKeyError import issue
+RUN pip install PyJWT==2.4.0 --force-reinstall
 
 # Stage 3: Runner
 FROM base AS runner
@@ -40,9 +47,6 @@ COPY ./backend/api/actions/ ./actions/
 # Create necessary directories
 RUN mkdir -p /app/logs /app/models /app/cache && \
     chown -R 1001:1001 /app
-
-# Switch to RASA user
-USER 1001
 
 # Environment variables for RASA
 ENV RASA_MODEL_SERVER=http://localhost:5005
@@ -103,6 +107,16 @@ ENV RASA_JWT_METHOD=HS256
 ENV HEALTH_CHECK_ENABLED=true
 ENV METRICS_ENABLED=true
 
+# Copy and set up startup scripts
+USER root
+COPY ./start-rasa-fixed.sh /app/start-rasa.sh
+COPY ./start-rasa-actions.sh /app/start-rasa-actions.sh
+COPY ./endpoints.yml /app/endpoints.yml
+RUN chmod +x /app/start-rasa.sh /app/start-rasa-actions.sh && chown 1001:1001 /app/start-rasa.sh /app/start-rasa-actions.sh /app/endpoints.yml
+
+# Switch to RASA user
+USER 1001
+
 # Expose ports
 EXPOSE 5005
 
@@ -110,30 +124,7 @@ EXPOSE 5005
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:5005/status || exit 1
 
-# Create startup script
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-# Check if model exists\n\
-if [ ! -f "/app/models/$(ls /app/models 2>/dev/null | head -1)" ]; then\n\
-    echo "No trained model found. Training model..."\n\
-    rasa train --config config.yml --domain domain.yml --data data/ --out models/\n\
-fi\n\
-\n\
-# Start RASA server with optimized settings\n\
-exec rasa run \\\n\
-    --model models/ \\\n\
-    --endpoints endpoints.yml \\\n\
-    --credentials credentials.yml \\\n\
-    --cors "*" \\\n\
-    --enable-api \\\n\
-    --log-level INFO \\\n\
-    --port 5005 \\\n\
-    --interface 0.0.0.0' > /app/start-rasa.sh && \
-    chmod +x /app/start-rasa.sh
-
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start RASA server
-CMD ["/app/start-rasa.sh"]
+# Completely override the base image's ENTRYPOINT to avoid argument parsing issues
+# The base rasa image has ENTRYPOINT ["rasa"] which causes argument parsing conflicts
+ENTRYPOINT []
+CMD ["/usr/bin/dumb-init", "--", "/bin/bash", "/app/start-rasa.sh"]

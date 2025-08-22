@@ -8,6 +8,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "3000:3000"
+      - "5005:5005"
+      - "5055:5055"
+      - "8000:8000"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
@@ -15,6 +19,8 @@ services:
     depends_on:
       - frontend
       - backend
+      - rasa
+      - rasa-actions
     networks:
       - automotive-network
     restart: unless-stopped
@@ -33,11 +39,11 @@ services:
       retries: 3
       start_period: 10s
 
-  # Frontend Service (Scaled)
+  # Frontend Service
   frontend:
     build:
-      context: ../../frontend
-      dockerfile: ../aws-deployment/docker/Dockerfile.frontend
+      context: ../../
+      dockerfile: aws-deployment/docker/Dockerfile.frontend
     environment:
       - NODE_ENV=production
       # Use unified domain:port approach
@@ -71,11 +77,11 @@ services:
       retries: 3
       start_period: 30s
 
-  # Backend API Service (Scaled)
+  # Backend Service
   backend:
     build:
-      context: ../../backend
-      dockerfile: ../aws-deployment/docker/Dockerfile.backend
+      context: ../../
+      dockerfile: aws-deployment/docker/Dockerfile.backend
     environment:
       - ENVIRONMENT=production
       - MONGODB_URI=${MONGODB_URI}
@@ -118,11 +124,11 @@ services:
       retries: 3
       start_period: 60s
 
-  # RASA NLU/Core Service
+  # RASA Service
   rasa:
     build:
-      context: ../../backend
-      dockerfile: ../aws-deployment/docker/Dockerfile.rasa
+      context: ../../
+      dockerfile: aws-deployment/docker/Dockerfile.rasa
     environment:
       - RASA_MODEL_PATH=/app/models
       - RASA_ENDPOINTS_PATH=/app/endpoints.yml
@@ -148,6 +154,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
+
+  # RASA Actions Service
+  rasa-actions:
+    build:
+      context: ../../
+      dockerfile: aws-deployment/docker/Dockerfile.rasa-actions
+    environment:
+      - RASA_SDK_ENDPOINT_URL=http://rasa-actions:5055/webhook
+      - MONGODB_URI=${MONGODB_URI}
+      - ENVIRONMENT=production
+    volumes:
+      - rasa_logs:/app/logs
+    networks:
+      - automotive-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:5055/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Redis Cache Service
   redis:

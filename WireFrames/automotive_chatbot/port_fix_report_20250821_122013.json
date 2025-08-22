@@ -1,0 +1,39 @@
+{
+  "timestamp": "20250821_122013",
+  "server_ip": "13.215.240.173",
+  "port_test_results": {
+    "80": {
+      "service": "nginx",
+      "accessible": false,
+      "status_code": null
+    },
+    "3000": {
+      "service": "frontend",
+      "accessible": false,
+      "status_code": null
+    },
+    "5005": {
+      "service": "rasa",
+      "accessible": false,
+      "status_code": null
+    },
+    "5055": {
+      "service": "rasa-actions",
+      "accessible": false,
+      "status_code": null
+    },
+    "8000": {
+      "service": "backend",
+      "accessible": false,
+      "status_code": null
+    }
+  },
+  "accessible_ports": [],
+  "inaccessible_ports": [
+    80,
+    3000,
+    5005,
+    5055,
+    8000
+  ]
+}

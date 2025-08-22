@@ -34,7 +34,7 @@ class ChatHandler:
     
     def __init__(self, db):
         self.db = db
-        self.rasa_url = "http://localhost:5005"
+        self.rasa_url = "http://rasa:5005"
     
     async def get_client_context(self, client_id: Optional[str], client_domain: Optional[str]) -> Optional[Dict[str, Any]]:
         """Get client context from database"""

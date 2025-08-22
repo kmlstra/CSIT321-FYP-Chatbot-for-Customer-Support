@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # Unified Automotive Chatbot Service
+  automotive-chatbot:
+    image: automotive-chatbot-unified:latest
+    container_name: automotive-chatbot-unified
+    ports:
+      - "80:80"        # Frontend (Nginx)
+      - "8000:8000"    # Backend API
+      - "5005:5005"    # Rasa
+      - "6379:6379"    # Redis
+    environment:
+      # Frontend Environment Variables
+      - NODE_ENV=production
+      - NEXT_PUBLIC_DOMAIN=http://13.215.240.173
+      - NEXT_PUBLIC_API_URL=http://13.215.240.173:8000
+      - NEXT_PUBLIC_RASA_URL=http://13.215.240.173:5005
+      - NEXT_PUBLIC_WIDGET_URL=http://13.215.240.173
+      - NEXT_PUBLIC_FRONTEND_URL=http://13.215.240.173
+      - NEXT_PUBLIC_BACKEND_URL=http://13.215.240.173:8000
+      - NEXT_PUBLIC_FRONTEND_PORT=80
+      - NEXT_PUBLIC_BACKEND_PORT=8000
+      - NEXT_PUBLIC_RASA_PORT=5005
+      - NEXT_PUBLIC_DEBUG=false
+      - NEXT_PUBLIC_ENV=production
+      
+      # Backend Environment Variables
+      - ENVIRONMENT=production
+      - MONGODB_URI=${MONGODB_URI}
+      - RASA_SERVER_URL=http://localhost:5005
+      - REDIS_URL=redis://localhost:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      
+      # Rasa Environment Variables
+      - RASA_MODEL_PATH=/app/rasa/models
+      - RASA_ENDPOINTS_PATH=/app/rasa/endpoints-aws.yml
+      - RASA_ENV=aws
+      
+      # Redis Environment Variables
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - chatbot_logs:/app/logs
+      - chatbot_cache:/app/cache
+      - chatbot_uploads:/app/backend/uploads
+      - chatbot_models:/app/rasa/models
+      - ./endpoints-aws.yml:/app/rasa/endpoints-aws.yml:ro
+    networks:
+      - automotive-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health", "&&", "curl", "-f", "http://localhost:8000/health", "&&", "curl", "-f", "http://localhost:5005/status"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: automotive-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - automotive-network
+    restart: unless-stopped
+    depends_on:
+      - automotive-chatbot
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: automotive-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - automotive-network
+    restart: unless-stopped
+    depends_on:
+      - automotive-chatbot
+
+volumes:
+  chatbot_logs:
+  chatbot_cache:
+  chatbot_uploads:
+  chatbot_models:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  automotive-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

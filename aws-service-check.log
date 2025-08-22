@@ -1,0 +1,3 @@
+[2025-08-21 10:14:52] [INFO] Starting AWS service status check
+[2025-08-21 10:14:52] [INFO] Executing: Test SSH connection
+[2025-08-21 10:19:52] [ERROR] Command failed: echo 'SSH connection successful', Error: Connection closed by 13.215.240.173 port 22

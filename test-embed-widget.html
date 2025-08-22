@@ -1,0 +1,96 @@
+i'm <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CleverCompanion Widget</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-info {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>CleverCompanion Widget Test Page</h1>
+        
+        <div class="test-info">
+            <h3>Test Information:</h3>
+            <p><strong>Widget Source:</strong> http://13.215.240.173:8000/static/clevercompanion-widget.js</p>
+            <p><strong>Client ID:</strong> test-client</p>
+            <p><strong>Test Purpose:</strong> Verify embed code functionality and image display</p>
+        </div>
+        
+        <div id="status-container">
+            <div class="status info">Loading widget...</div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>Test Content:</h3>
+            <p>This is a test page to verify that the CleverCompanion widget loads correctly and displays images properly when embedded in external websites.</p>
+            <p>The widget should appear in the bottom-right corner of the page.</p>
+        </div>
+    </div>
+
+    <!-- CleverCompanion Widget Configuration -->
+    <script>
+        window.CleverCompanionConfig = {
+            clientId: 'test-client',
+            apiUrl: 'http://13.215.240.173:8000/api/widget'
+        };
+        
+        // Status tracking
+        function updateStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            container.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Track widget loading
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                if (window.cleverCompanionWidget) {
+                    updateStatus('✅ Widget loaded successfully!', 'success');
+                } else {
+                    updateStatus('❌ Widget failed to load', 'error');
+                }
+            }, 3000);
+        });
+        
+        // Error handling
+        window.addEventListener('error', function(e) {
+            updateStatus(`❌ Error: ${e.message}`, 'error');
+        });
+    </script>
+    
+    <!-- Load CleverCompanion Widget -->
+    <script async src="http://13.215.240.173:8000/static/clevercompanion-widget.js"></script>
+</body>
+</html>

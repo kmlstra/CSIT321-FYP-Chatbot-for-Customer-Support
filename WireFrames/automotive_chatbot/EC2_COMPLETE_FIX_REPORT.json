@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-08-21T13:25:59.192843",
+  "host": "13.215.240.173",
+  "fixes_applied": [
+    "停止所有Docker容器",
+    "删除有问题的容器"
+  ],
+  "port_status": {
+    "80": {
+      "status": "accessible",
+      "service": "Nginx (前端)",
+      "response_code": "000FAILED"
+    },
+    "3000": {
+      "status": "accessible",
+      "service": "Frontend",
+      "response_code": "000FAILED"
+    },
+    "5005": {
+      "status": "accessible",
+      "service": "Rasa",
+      "response_code": "000FAILED"
+    },
+    "5055": {
+      "status": "accessible",
+      "service": "Rasa Actions",
+      "response_code": "000FAILED"
+    },
+    "8000": {
+      "status": "accessible",
+      "service": "Backend API",
+      "response_code": "000FAILED"
+    }
+  },
+  "errors": [
+    "更新Nginx配置文件: tee: /home/ubuntu/CSIT321-FYP-Chatbot-for-Customer-Support/WireFrames/automotive_chatbot/nginx/nginx.conf: No such file or directory\n",
+    "进入项目目录: bash: line 1: cd: /home/ubuntu/CSIT321-FYP-Chatbot-for-Customer-Support/WireFrames/automotive_chatbot: No such file or directory\n",
+    "进入项目目录: bash: line 1: cd: /home/ubuntu/CSIT321-FYP-Chatbot-for-Customer-Support/WireFrames/automotive_chatbot: No such file or directory\n"
+  ],
+  "success": true,
+  "docker_status": "NAMES     STATUS    PORTS\n"
+}

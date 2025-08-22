@@ -38,7 +38,7 @@ else:
     print("⚠️ Warning: backend/.env file not found. API may not function properly.")
 
 # Import existing modules
-from .config import Settings
+from .config.settings import Settings
 from .middleware.conversation_middleware import ConversationAPI
 from .middleware.auto_logger import ConversationLogger
 from .auth.client_auth import get_current_client_user

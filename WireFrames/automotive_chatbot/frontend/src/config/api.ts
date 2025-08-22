@@ -10,7 +10,7 @@ const envType = process.env.NEXT_PUBLIC_ENV || 'development';
 const getBaseDomain = () => {
   // Check if we're in production build
   if (isProduction || envType === 'production') {
-    return process.env.NEXT_PUBLIC_DOMAIN || 'http://54.254.180.103';
+    return process.env.NEXT_PUBLIC_DOMAIN || 'http://13.215.240.173';
   }
   // Default to localhost for development
   return process.env.NEXT_PUBLIC_DOMAIN || 'http://localhost';

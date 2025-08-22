@@ -9,18 +9,28 @@ WORKDIR /app
 # Copy package files
 COPY ./frontend/package.json ./frontend/package-lock.json* ./
 
-# Install dependencies with npm ci for faster, reliable builds
-RUN npm ci --only=production --ignore-scripts
+# Install dependencies
+RUN npm install --only=production --ignore-scripts
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# Copy package files and install all dependencies (including dev dependencies for build)
+COPY ./frontend/package.json ./
+RUN npm install --ignore-scripts
 
-# Copy source code
-COPY ./frontend/ .
+# Copy all configuration files for proper path resolution and build setup
+COPY ./frontend/package.json ./frontend/tsconfig.json ./frontend/next.config.js ./
+COPY ./frontend/.eslintrc.json ./frontend/postcss.config.js ./frontend/tailwind.config.js ./
+
+# Copy source code and ensure all directories are included
+COPY ./frontend/src ./src
+COPY ./frontend/public ./public
+COPY ./frontend/next-env.d.ts ./next-env.d.ts
+
+# Verify source code structure
+    RUN ls -la ./src/
 
 # Environment variables for build time
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -12,7 +12,7 @@
             // Simplified configuration - only requires client_id
             this.config = window.CleverCompanionConfig || {};
             this.clientId = this.config.clientId || this.detectClientId();
-            this.apiUrl = this.config.apiUrl || (window.CLEVERCOMPANION_BACKEND_URL || window.BACKEND_URL || window.DOMAIN + ':8000' || 'http://localhost:8000') + '/api/widget';
+            this.apiUrl = this.config.apiUrl || (window.CLEVERCOMPANION_BACKEND_URL || window.BACKEND_URL || window.DOMAIN + ':8000' || 'http://13.215.240.173:8000') + '/api/widget';
             this.sessionId = this.generateSessionId();
             this.isOpen = false;
             this.messages = [];
@@ -3150,7 +3150,7 @@
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
                 // Set default fallback URL
-                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
+                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://13.215.240.173'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
                 
                 // Fetch environment config asynchronously and cache the result (non-blocking)
                 fetch(`${this.apiUrl.replace('/api/widget', '/api/config/env')}`)
@@ -3208,7 +3208,7 @@
             
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
-                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://localhost'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
+                this.cachedUserAvatarUrl = `${window.DOMAIN || 'http://13.215.240.173'}:${window.BACKEND_PORT || '8000'}/static/boy.png`;
             }
             
             const avatar = sender === 'bot' ? `<img src="${logoUrl}" alt="Bot" />` : `<img src="${this.cachedUserAvatarUrl}" alt="User" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;" />`;
@@ -3363,6 +3363,41 @@
             }
         }
 
+        // Get dynamic RASA URL based on environment
+        getRasaUrl() {
+            // Priority order for RASA URL configuration:
+            // 1. Window global variable (highest priority)
+            // 2. Environment-based detection
+            // 3. Backend domain with RASA port
+            // 4. Localhost fallback
+            
+            if (window.CLEVERCOMPANION_RASA_URL) {
+                return window.CLEVERCOMPANION_RASA_URL;
+            }
+            
+            if (window.RASA_URL) {
+                return window.RASA_URL;
+            }
+            
+            // Use backend domain for RASA URL
+            const backendDomain = window.CLEVERCOMPANION_BACKEND_URL || window.BACKEND_URL || window.DOMAIN;
+            if (backendDomain) {
+                // Extract domain without port and add RASA port
+                const domain = backendDomain.replace(/:\d+$/, ''); // Remove existing port
+                return `${domain}:5005`;
+            }
+            
+            // Environment-based detection
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://13.215.240.173:5005';
+            } else {
+                // For production, use the same protocol and hostname with RASA port
+                const protocol = window.location.protocol;
+                return `${protocol}//${hostname}:5005`;
+            }
+        }
+
         // Determine client context for chat processing
         async determineClientContext() {
             return {
@@ -3385,7 +3420,10 @@
                 }
             };
 
-            const response = await fetch('http://localhost:5005/webhooks/rest/webhook', {
+            // Dynamic RASA URL configuration
+            const rasaUrl = this.getRasaUrl();
+            
+            const response = await fetch(`${rasaUrl}/webhooks/rest/webhook`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

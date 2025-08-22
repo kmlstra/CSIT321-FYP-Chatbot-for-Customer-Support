@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-08-21T11:09:27.606728",
+  "server_ip": "13.215.240.173",
+  "repair_status": "completed",
+  "test_results": {
+    "nginx": {
+      "status": "正常",
+      "port": 80,
+      "status_code": 502
+    },
+    "frontend": {
+      "status": "异常",
+      "port": 3000,
+      "status_code": null
+    },
+    "rasa": {
+      "status": "异常",
+      "port": 5005,
+      "status_code": null
+    },
+    "rasa_actions": {
+      "status": "异常",
+      "port": 5055,
+      "status_code": null
+    },
+    "backend": {
+      "status": "正常",
+      "port": 8000,
+      "status_code": 200
+    }
+  },
+  "summary": {
+    "total_services": 5,
+    "working_services": 2,
+    "failed_services": 3,
+    "success_rate": 40.0
+  }
+}

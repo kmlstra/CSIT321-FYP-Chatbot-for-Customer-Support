@@ -1,0 +1,102 @@
+{
+  "timestamp": "2025-08-21T13:46:21.091716",
+  "operation": "cleanup_temp_files",
+  "files_processed": [
+    "verify_fix_status.py",
+    "restart_all_services.py",
+    "final_fix_remaining_issues.py",
+    "simple_service_fix.py",
+    "fix_docker_compose.py",
+    "core_services_fix.py",
+    "nginx_port_fix.py",
+    "final_verification.py",
+    "cleanup_temp_files.py",
+    "fix_verification_report.json",
+    "service_restart_report.json",
+    "final_fix_report.json",
+    "simple_fix_report.json",
+    "docker_compose_fix_report.json",
+    "core_services_fix_report.json",
+    "nginx_fix_report.json",
+    "final_verification_report.json",
+    "temp_fix.log",
+    "debug.log",
+    "error.log"
+  ],
+  "files_deleted": [
+    {
+      "file": "verify_fix_status.py",
+      "size": 8367
+    },
+    {
+      "file": "restart_all_services.py",
+      "size": 10060
+    },
+    {
+      "file": "final_fix_remaining_issues.py",
+      "size": 15640
+    },
+    {
+      "file": "simple_service_fix.py",
+      "size": 14697
+    },
+    {
+      "file": "fix_docker_compose.py",
+      "size": 14199
+    },
+    {
+      "file": "core_services_fix.py",
+      "size": 13655
+    },
+    {
+      "file": "nginx_port_fix.py",
+      "size": 11188
+    },
+    {
+      "file": "final_verification.py",
+      "size": 6905
+    },
+    {
+      "file": "cleanup_temp_files.py",
+      "size": 4704
+    },
+    {
+      "file": "fix_verification_report.json",
+      "size": 2635
+    },
+    {
+      "file": "service_restart_report.json",
+      "size": 20840
+    },
+    {
+      "file": "final_fix_report.json",
+      "size": 242
+    },
+    {
+      "file": "simple_fix_report.json",
+      "size": 775
+    },
+    {
+      "file": "docker_compose_fix_report.json",
+      "size": 212
+    },
+    {
+      "file": "core_services_fix_report.json",
+      "size": 1704
+    },
+    {
+      "file": "nginx_fix_report.json",
+      "size": 538
+    },
+    {
+      "file": "final_verification_report.json",
+      "size": 2070
+    }
+  ],
+  "files_not_found": [
+    "temp_fix.log",
+    "debug.log",
+    "error.log"
+  ],
+  "errors": []
+}
