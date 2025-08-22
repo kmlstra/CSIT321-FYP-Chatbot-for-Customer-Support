@@ -16,7 +16,7 @@
     "autoprefixer": "^10.4.17",
     "axios": "^1.6.7",
     "concurrently": "^8.2.2",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "lucide-react": "^0.514.0",
     "next": "15.3.3",
     "postcss": "^8.4.35",

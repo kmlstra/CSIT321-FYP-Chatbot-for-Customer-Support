@@ -38,13 +38,13 @@ class Settings(BaseSettings):
     LTA_MIN_REQUEST_INTERVAL: int = 10  # Minimum 10 seconds between requests
     CACHE_EXPIRY_MINUTES: int = 30      # Cache COE data for 30 minutes
 
-    # Frontend URLs (for CORS)
-    # URLs Configuration
-    DOMAIN: str = "http://localhost"
-    FRONTEND_URL: str = f"{DOMAIN}:3000"
-    BACKEND_URL: str = f"{DOMAIN}:8000"
-    RASA_URL: str = f"{DOMAIN}:5005"
-    RASA_ACTIONS_URL: str = f"{DOMAIN}:5055"
+    # Frontend URLs (for CORS) - Hardcoded to AWS IP
+    # URLs Configuration - All hardcoded to AWS server IP 13.215.240.173
+    DOMAIN: str = "http://13.215.240.173"
+    FRONTEND_URL: str = "http://13.215.240.173:3000"
+    BACKEND_URL: str = "http://13.215.240.173:8000"
+    RASA_URL: str = "http://13.215.240.173:5005"
+    RASA_ACTIONS_URL: str = "http://13.215.240.173:5055"
     class Config:
         env_file = "backend/.env"
         case_sensitive = True

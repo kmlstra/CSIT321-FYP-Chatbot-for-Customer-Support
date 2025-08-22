@@ -152,7 +152,7 @@ server {
     
     # Serve public static files
     location /static/ {
-        alias /app/frontend/public/;
+        alias /app/backend/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
         try_files $uri $uri/ @frontend;
@@ -267,7 +267,7 @@ directory=/app/frontend
 autostart=true
 autorestart=true
 user=appuser
-environment=NODE_ENV="production",PORT="3000",HOSTNAME="0.0.0.0",NEXT_PUBLIC_ENV="production",NEXT_PUBLIC_DOMAIN="http://13.215.240.173",NEXT_PUBLIC_API_URL="http://127.0.0.1:8000",NEXT_PUBLIC_RASA_URL="http://127.0.0.1:5005",NEXT_PUBLIC_FRONTEND_URL="http://13.215.240.173",NEXT_PUBLIC_BACKEND_URL="http://127.0.0.1:8000"
+environment=NODE_ENV="production",PORT="3000",HOSTNAME="0.0.0.0",NEXT_PUBLIC_ENV="production",NEXT_PUBLIC_DOMAIN="http://13.215.240.173",NEXT_PUBLIC_API_URL="http://13.215.240.173:8000",NEXT_PUBLIC_RASA_URL="http://13.215.240.173:5005",NEXT_PUBLIC_FRONTEND_URL="http://13.215.240.173",NEXT_PUBLIC_BACKEND_URL="http://13.215.240.173:8000"
 stdout_logfile=/app/logs/frontend.log
 stderr_logfile=/app/logs/frontend.log
 
@@ -317,8 +317,10 @@ ENV FEATURE_ANALYTICS=true
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
 
-# Expose port
-EXPOSE 80
+# Expose ports
+# 80: Nginx reverse proxy
+# 5055: RASA Actions server
+EXPOSE 80 5055
 
 # Start all services with supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

@@ -731,19 +731,23 @@ async def get_embed_code(
     
     embed_code = f"""<!-- CleverCompanion Chatbot Widget -->
 <script>window.CleverCompanionConfig = {{ clientId: '{client["id"]}' }};</script>
-<script>
-        window.DOMAIN = window.DOMAIN || '{api_url.replace(':8000', '')}';
-        // Dynamically load scripts with domain configuration
-        const script1 = document.createElement('script');
-        script1.src = (window.DOMAIN || '{api_url.replace(':8000', '')}') + ':8000/clevercompanion-widget.js?t=' + Date.now();
-        script1.async = true;
-        document.head.appendChild(script1);
-        
-        const script2 = document.createElement('script');
-        script2.src = (window.DOMAIN || '{api_url.replace(':8000', '')}') + ':8000/page-interactions.js?t=' + Date.now();
-        script2.async = true;
-        document.head.appendChild(script2);
-    </script>
+<script async>
+    // Force use AWS server for backend services (RASA and API)
+    // Frontend runs on localhost:3000, but backend services are on AWS
+    window.DOMAIN = 'http://13.215.240.173';
+    
+    // Dynamically load scripts with domain configuration and cache-busting
+    const timestamp = Date.now();
+    const script1 = document.createElement('script');
+    script1.src = window.DOMAIN + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.async = true;
+    document.head.appendChild(script1);
+    
+    const script2 = document.createElement('script');
+    script2.src = window.DOMAIN + ':8000/page-interactions.js?v=' + timestamp;
+    script2.async = true;
+    document.head.appendChild(script2);
+</script>
 <!-- End CleverCompanion Widget -->"""
     
     return {

@@ -185,5 +185,40 @@ docker-compose -f docker-compose.production.yml logs -f [service_name]
 - **Frontend:** `http://localhost:3000`
 - **Test Widget:** `http://localhost/test-client-widget.html`
 
+## 🌐 Frontend API Configuration
+
+### Hardcoded AWS IP Configuration (Latest Update)
+The frontend API configuration has been simplified to use hardcoded AWS IP addresses for better reliability:
+
+#### Configuration File: `frontend/src/config/api.ts`
+- **Removed:** All environment detection logic (isProduction, isDevelopment, isDocker)
+- **Removed:** Dynamic domain and port configuration functions
+- **Added:** Direct hardcoded AWS IP configuration
+
+#### Current API Configuration:
+```javascript
+// Hardcoded AWS IP configuration
+const DOMAIN = 'http://13.215.240.173';
+const API_CONFIG = {
+  DOMAIN: 'http://13.215.240.173',
+  API_URL: 'http://13.215.240.173:8000',
+  RASA_URL: 'http://13.215.240.173:5005',
+  WIDGET_URL: 'http://13.215.240.173:3000',
+  FRONTEND_URL: 'http://13.215.240.173:3000',
+  BACKEND_URL: 'http://13.215.240.173:8000'
+};
+```
+
+#### Benefits:
+- ✅ Eliminates environment detection complexity
+- ✅ Ensures consistent connection to AWS production server
+- ✅ Reduces configuration-related connection issues
+- ✅ Simplifies deployment and debugging
+
+#### API Endpoints Verified:
+- **Backend API:** `http://13.215.240.173:8000/docs` ✅ Working
+- **Client Login:** `http://13.215.240.173:8000/api/auth/client-login` ✅ Working
+- **Rasa Service:** `http://13.215.240.173:5005` ✅ Working
+
 ---
-**Last Updated:** January 2025 - Added AWS deployment configuration sync and fixed Unicode encoding issues
+**Last Updated:** January 2025 - Implemented hardcoded AWS IP configuration for frontend API

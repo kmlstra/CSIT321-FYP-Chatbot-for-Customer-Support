@@ -3,12 +3,13 @@ version: '3.8'
 services:
   # Unified Automotive Chatbot Service
   automotive-chatbot:
-    image: automotive-chatbot-unified:latest
+    image: ethernallove/automotive-chatbot:latest
     container_name: automotive-chatbot-unified
     ports:
       - "80:80"        # Frontend (Nginx)
       - "8000:8000"    # Backend API
-      - "5005:5005"    # Rasa
+      - "5005:5005"    # Rasa Core
+      - "5055:5055"    # Rasa Actions
       - "6379:6379"    # Redis
     environment:
       # Frontend Environment Variables
@@ -28,8 +29,8 @@ services:
       # Backend Environment Variables
       - ENVIRONMENT=production
       - MONGODB_URI=${MONGODB_URI}
-      - RASA_SERVER_URL=http://localhost:5005
-      - REDIS_URL=redis://localhost:6379
+      - RASA_SERVER_URL=http://127.0.0.1:5005
+      - REDIS_URL=redis://127.0.0.1:6379
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS}
       

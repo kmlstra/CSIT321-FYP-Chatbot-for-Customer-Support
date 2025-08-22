@@ -988,16 +988,19 @@ export default function ClientDashboard() {
     const embedCode = `<!-- CleverCompanion Chatbot Widget -->
 <script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
 <script async>
-    window.DOMAIN = window.DOMAIN || 'http://13.215.240.173';
+    // Force use AWS server for backend services (RASA and API)
+    // Frontend runs on localhost:3000, but backend services are on AWS
+    window.DOMAIN = 'http://13.215.240.173';
+    
     // Dynamically load scripts with domain configuration and cache-busting
     const timestamp = Date.now();
     const script1 = document.createElement('script');
-    script1.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.src = window.DOMAIN + ':8000/clevercompanion-widget.js?v=' + timestamp;
     script1.async = true;
     document.head.appendChild(script1);
     
     const script2 = document.createElement('script');
-    script2.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.src = window.DOMAIN + ':8000/page-interactions.js?v=' + timestamp;
     script2.async = true;
     document.head.appendChild(script2);
 </script>
@@ -2635,16 +2638,19 @@ export default function ClientDashboard() {
                     <pre>{`<!-- CleverCompanion Chatbot Widget -->
 <script async>window.CleverCompanionConfig = { clientId: '${clientId}' };</script>
 <script async>
-    window.DOMAIN = window.DOMAIN || 'http://13.215.240.173';
+    // Force use AWS server for backend services (RASA and API)
+    // Frontend runs on localhost:3000, but backend services are on AWS
+    window.DOMAIN = 'http://13.215.240.173';
+    
     // Dynamically load scripts with domain configuration and cache-busting
     const timestamp = Date.now();
     const script1 = document.createElement('script');
-    script1.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/clevercompanion-widget.js?v=' + timestamp;
+    script1.src = window.DOMAIN + ':8000/clevercompanion-widget.js?v=' + timestamp;
     script1.async = true;
     document.head.appendChild(script1);
     
     const script2 = document.createElement('script');
-    script2.src = (window.DOMAIN || 'http://13.215.240.173') + ':8000/page-interactions.js?v=' + timestamp;
+    script2.src = window.DOMAIN + ':8000/page-interactions.js?v=' + timestamp;
     script2.async = true;
     document.head.appendChild(script2);
 </script>

@@ -30,7 +30,7 @@
                 branding: {
                     primary_color: '#4F46E5',
                     company_name: 'CleverCompanion',
-                    logo_url: '/static/media/images/CleverCompanion-logo.png'
+                    logo_url: 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png'
                 },
                 features: {
                     menu_enabled: true,
@@ -223,7 +223,7 @@
             const menuDropdown = document.getElementById('cc-menu-dropdown');
             
             if (titleElement) {
-                const logoUrl = this.clientConfig.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+                const logoUrl = 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
                 titleElement.innerHTML = `
                     <span class="cc-logo">
                         <img src="${logoUrl}" alt="CleverCompanion" />
@@ -234,7 +234,7 @@
             
             // Update logo in toggle button
             logoElements.forEach(img => {
-                const logoUrl = this.clientConfig.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+                const logoUrl ='http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
                 img.src = logoUrl;
                 img.alt = 'CleverCompanion';
             });
@@ -422,7 +422,7 @@
 
         generateWidgetHTML() {
             const config = this.clientConfig;
-            const logoUrl = config.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+            const logoUrl ='http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
             
             return `
                 <!-- Toggle Button -->
@@ -2880,7 +2880,7 @@
 
         addWelcomeMessage() {
             const config = this.clientConfig;
-            const logoUrl = config.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+            const logoUrl = config.branding?.logo_url || 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
             
             const welcomeHTML = `
                 <div class="cc-message cc-bot">
@@ -3145,7 +3145,7 @@
             if (!messagesContainer) return;
 
             const config = this.clientConfig;
-            const logoUrl = config.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+            const logoUrl = 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
             
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
@@ -3204,7 +3204,7 @@
             if (!messagesContainer) return;
 
             const config = this.clientConfig;
-            const logoUrl = config.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+            const logoUrl = config.branding?.logo_url || 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
             
             // Use cached profile picture URL or initialize cache
             if (!this.cachedUserAvatarUrl) {
@@ -3604,7 +3604,7 @@
             this.hideTypingIndicator();
             
             const config = this.clientConfig;
-            const logoUrl = config.branding?.logo_url || '/static/media/images/CleverCompanion-logo.png';
+            const logoUrl = config.branding?.logo_url || 'http://13.215.240.173:8000/static/media/images/CleverCompanion-logo.png';
             
             const typingHTML = `
                 <div class="cc-message cc-bot cc-typing-message">

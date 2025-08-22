@@ -129,6 +129,8 @@ services:
     build:
       context: ../../
       dockerfile: aws-deployment/docker/Dockerfile.rasa
+    ports:
+      - "5005:5005"
     environment:
       - RASA_MODEL_PATH=/app/models
       - RASA_ENDPOINTS_PATH=/app/endpoints.yml
@@ -160,6 +162,8 @@ services:
     build:
       context: ../../
       dockerfile: aws-deployment/docker/Dockerfile.rasa-actions
+    ports:
+      - "5055:5055"
     environment:
       - RASA_SDK_ENDPOINT_URL=http://rasa-actions:5055/webhook
       - MONGODB_URI=${MONGODB_URI}

@@ -16,8 +16,8 @@ services:
       - MONGODB_DB=${MONGODB_DB:-automotive_chatbot_saas}
       - CHATBOT_MONGODB_URL=${MONGODB_URL:-mongodb+srv://CleverAdmin:P%40ssw0rd%211@clevercompanioncluster.ygakb6r.mongodb.net/?retryWrites=true&w=majority&appName=AiChatBot}
       - RASA_SERVER_URL=http://rasa:5005
-      - DOMAIN=${DOMAIN:-http://localhost}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - DOMAIN=http://13.215.240.173
+      - CORS_ORIGINS=http://13.215.240.173:3000,http://127.0.0.1:3000
     depends_on:
       - rasa-actions
     networks:
@@ -69,15 +69,15 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Next.js Environment Variables (NEXT_PUBLIC_ prefix required for client-side access)
+      # Next.js Environment Variables - Hardcoded to AWS IP 13.215.240.173
       - NODE_ENV=production
       - NEXT_PUBLIC_ENV=production
-      - NEXT_PUBLIC_DOMAIN=${DOMAIN:-http://localhost}
-      - NEXT_PUBLIC_API_URL=${DOMAIN:-http://localhost}:8000
-      - NEXT_PUBLIC_RASA_URL=${DOMAIN:-http://localhost}:5005
-      - NEXT_PUBLIC_WIDGET_URL=${DOMAIN:-http://localhost}:3000
-      - NEXT_PUBLIC_FRONTEND_URL=${DOMAIN:-http://localhost}:3000
-      - NEXT_PUBLIC_BACKEND_URL=${DOMAIN:-http://localhost}:8000
+      - NEXT_PUBLIC_DOMAIN=http://13.215.240.173
+      - NEXT_PUBLIC_API_URL=http://13.215.240.173:8000
+      - NEXT_PUBLIC_RASA_URL=http://13.215.240.173:5005
+      - NEXT_PUBLIC_WIDGET_URL=http://13.215.240.173:3000
+      - NEXT_PUBLIC_FRONTEND_URL=http://13.215.240.173:3000
+      - NEXT_PUBLIC_BACKEND_URL=http://13.215.240.173:8000
       - NEXT_PUBLIC_FRONTEND_PORT=3000
       - NEXT_PUBLIC_BACKEND_PORT=8000
       - NEXT_PUBLIC_RASA_PORT=5005

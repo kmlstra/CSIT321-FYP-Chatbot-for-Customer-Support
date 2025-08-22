@@ -71,10 +71,9 @@
 <!-- CleverCompanion Chatbot Widget -->
 <script async>window.CleverCompanionConfig = { clientId: '689c9761bc4138c381b17f66' };</script>
 <script async>
-    // Auto-detect environment: use current host if not localhost, otherwise default to AWS
-    const currentHost = window.location.hostname;
-    const isLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
-    window.DOMAIN = isLocalhost ? 'http://localhost' : 'http://13.215.240.173';
+    // Force use AWS server for backend services (RASA and API)
+    // Frontend runs on localhost:3000, but backend services are on AWS
+    window.DOMAIN = 'http://13.215.240.173';
     
     // Dynamically load scripts with domain configuration and cache-busting
     const timestamp = Date.now();

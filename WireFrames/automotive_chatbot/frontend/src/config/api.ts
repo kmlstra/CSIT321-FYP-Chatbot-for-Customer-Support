@@ -1,65 +1,24 @@
 // API Configuration
 // This file centralizes all API endpoint configurations with automatic environment detection
 
-// Environment Detection
-const isProduction = process.env.NODE_ENV === 'production';
-const isDevelopment = process.env.NODE_ENV === 'development';
-const envType = process.env.NEXT_PUBLIC_ENV || 'development';
-
-// Base Domain Configuration with Environment Detection
-const getBaseDomain = () => {
-  // Check if we're in production build
-  if (isProduction || envType === 'production') {
-    return process.env.NEXT_PUBLIC_DOMAIN || 'http://13.215.240.173';
-  }
-  // Default to localhost for development
-  return process.env.NEXT_PUBLIC_DOMAIN || 'http://localhost';
+// Hardcoded AWS IP configuration - 硬编码的AWS配置
+// 移除环境检测逻辑，直接使用AWS服务器IP地址
+const DOMAIN = 'http://13.215.240.173';
+const PORTS = {
+  FRONTEND: 3000,
+  BACKEND: 8000,
+  RASA: 5005
 };
 
-const DOMAIN = getBaseDomain();
-
-// Port Configuration with Environment Detection
-const getPorts = () => {
-  if (isProduction || envType === 'production') {
-    return {
-      FRONTEND: process.env.NEXT_PUBLIC_FRONTEND_PORT || '80',
-      BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8000',
-      RASA: process.env.NEXT_PUBLIC_RASA_PORT || '5005'
-    };
-  }
-  return {
-    FRONTEND: process.env.NEXT_PUBLIC_FRONTEND_PORT || '3000',
-    BACKEND: process.env.NEXT_PUBLIC_BACKEND_PORT || '8000',
-    RASA: process.env.NEXT_PUBLIC_RASA_PORT || '5005'
-  };
-};
-
-const PORTS = getPorts();
-
-// API Configuration with Environment-Aware URLs
+// API Configuration - 硬编码的API配置
 export const API_CONFIG = {
-  // Environment Info
-  ENVIRONMENT: envType,
-  IS_PRODUCTION: isProduction,
-  IS_DEVELOPMENT: isDevelopment,
-  
-  // Base Domain
-  DOMAIN: DOMAIN,
-  
-  // Backend API URL
-  API_URL: process.env.NEXT_PUBLIC_API_URL || `${DOMAIN}:${PORTS.BACKEND}`,
-  
-  // RASA API URL
-  RASA_URL: process.env.NEXT_PUBLIC_RASA_URL || `${DOMAIN}:${PORTS.RASA}`,
-  
-  // Widget URL
-  WIDGET_URL: process.env.NEXT_PUBLIC_WIDGET_URL || (isProduction ? DOMAIN : `${DOMAIN}:${PORTS.FRONTEND}`),
-  
-  // Frontend URL
-  FRONTEND_URL: process.env.NEXT_PUBLIC_FRONTEND_URL || (isProduction ? DOMAIN : `${DOMAIN}:${PORTS.FRONTEND}`),
-  
-  // Backend URL
-  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || `${DOMAIN}:${PORTS.BACKEND}`,
+  DOMAIN: 'http://13.215.240.173',
+  API_URL: 'http://13.215.240.173:8000',
+  RASA_URL: 'http://13.215.240.173:5005',
+  WIDGET_URL: 'http://13.215.240.173:3000',
+  FRONTEND_URL: 'http://13.215.240.173:3000',
+  BACKEND_URL: 'http://13.215.240.173:8000',
+  PORTS
 };
 
 // Debug logging for development removed
