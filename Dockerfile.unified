@@ -104,8 +104,12 @@ COPY ./WireFrames/automotive_chatbot/backend/data/ ./data/
 # Copy RASA endpoints from rasa directory
 COPY ./WireFrames/automotive_chatbot/rasa/endpoints.yml ./endpoints-rasa.yml
 
-# Train RASA model if needed
-RUN if [ -f "domain.yml" ] && [ -f "config.yml" ]; then rasa train; fi
+# Create models directory and copy existing trained model
+RUN mkdir -p /app/rasa/models
+COPY ./WireFrames/automotive_chatbot/backend/models/20250820-133553-synchronic-automaton.tar.gz /app/rasa/models/
+
+# Skip training - use existing model
+# RUN if [ -f "domain.yml" ] && [ -f "config.yml" ]; then rasa train; fi
 
 # Stage 5: Final Production Image
 FROM base AS production
@@ -244,7 +248,7 @@ stdout_logfile=/app/logs/backend.log
 stderr_logfile=/app/logs/backend.log
 
 [program:rasa]
-command=/app/venv/bin/rasa run --enable-api --cors "*" --port 5005
+command=/app/venv/bin/rasa run --enable-api --cors "*" --port 5005 --model /app/rasa/models/20250820-133553-synchronic-automaton.tar.gz
 directory=/app/rasa
 autostart=true
 autorestart=true
